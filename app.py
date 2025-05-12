@@ -17,9 +17,8 @@ import json
 import socket
 import calendar 
 
-# --- Gmail API Specific Imports (NEW) ---
-from email.mime.text import MIMEText
-import base64
+# NEW: For Email
+from flask_mail import Mail, Message # Import Flask-Mail
 
 # --- Google OAuth & API Imports ---
 from google_auth_oauthlib.flow import Flow
@@ -34,29 +33,19 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 PERSISTENT_DATA_ROOT = os.environ.get('PERSISTENT_DATA_DIR', BASE_DIR) 
 DATABASE_PATH = os.path.join(PERSISTENT_DATA_ROOT, 'grooming_business_v2.db')
 UPLOAD_FOLDER = os.path.join(PERSISTENT_DATA_ROOT, 'uploads') 
-SHARED_TOKEN_FILE = os.path.join(PERSISTENT_DATA_ROOT, 'shared_google_token.json') # Will store combined tokens
+SHARED_TOKEN_FILE = os.path.join(PERSISTENT_DATA_ROOT, 'shared_google_token.json')
 SHARED_GOOGLE_CALENDAR_ID = 'primary'
 
-# !!! IMPORTANT SECURITY WARNING !!!
-# The Client ID and Secret SHOULD NOT be hardcoded here in production.
-# Move these to Environment Variables in Railway.
-# Using placeholders for the values you provided. Replace with os.environ.get()
-GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "832000035869-b43ljrbcl33h2ksfkhha9a8kt48pefl4.apps.googleusercontent.com") # Replace with your actual ID or env var
-GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "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") # Replace with your actual secret or env var
-# --- End Security Warning ---
-
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "142623477405-usk2u3huejpoj62djb3gr267aov37cad.apps.googleusercontent.com")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "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")
 GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", 'http://127.0.0.1:5000/google/callback')
 
-# UPDATED: Added Gmail send scope
-GOOGLE_SCOPES = [
-    'https://www.googleapis.com/auth/calendar.readonly', 
-    'https://www.googleapis.com/auth/calendar.events',
-    'https://www.googleapis.com/auth/gmail.send' # Scope to send emails
-]
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1' # OK for local dev with http://127.0.0.1 redirect
+GOOGLE_SCOPES = ['https://www.googleapis.com/auth/calendar.readonly', 'https://www.googleapis.com/auth/calendar.events']
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1' 
 
 BUSINESS_TIMEZONE_NAME = os.environ.get("BUSINESS_TIMEZONE", 'America/New_York')
 BUSINESS_TIMEZONE = tz.gettz(BUSINESS_TIMEZONE_NAME)
+# app.logger not available globally at this point, use print for startup warnings if needed.
 if BUSINESS_TIMEZONE is None:
     BUSINESS_TIMEZONE = tz.tzlocal() 
     print(f"WARNING: Could not load timezone '{BUSINESS_TIMEZONE_NAME}'. Falling back to system local: {BUSINESS_TIMEZONE.zone}")
@@ -69,30 +58,35 @@ app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DATABASE_PATH}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER 
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 
-app.config['SHARED_TOKEN_FILE'] = SHARED_TOKEN_FILE # Used by get_shared_google_credentials
+app.config['SHARED_TOKEN_FILE'] = SHARED_TOKEN_FILE 
 
-# REMOVED: Flask-Mail Configuration as we are switching to Gmail API
-# app.config['MAIL_SERVER'] = ...
-# ... (all other MAIL_ config lines) ...
-# mail = Mail(app) # REMOVED
+# --- Flask-Mail Configuration ---
+# IMPORTANT: Set these as environment variables in Railway (or your .env file for local dev)
+app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.googlemail.com') # Example: Gmail
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'true').lower() in ['true', '1', 't']
+app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'false').lower() in ['true', '1', 't']
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME') # Your email address (e.g., yourbusiness@gmail.com)
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD') # Your email password or an App Password for Gmail
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', ("Pawfection Grooming", app.config.get('MAIL_USERNAME', 'noreply@example.com')))
 
-# --- Notification Settings Store (Remains the same for now) ---
+mail = Mail(app) # Initialize Flask-Mail
+
+# --- Notification Settings Store (Simple In-Memory for now, move to DB/config later) ---
+# This dictionary will hold the current notification settings.
+# In a real app, you'd load/save this from a database table or a configuration file.
 NOTIFICATION_PREFERENCES = {
-    'send_confirmation_email': True,
-    'send_reminder_email': True,
-    'reminder_days_before': [1, 3], 
-    'default_reminder_time': '09:00' 
+    'send_confirmation_email': True,    # Enable/disable appointment confirmation emails
+    'send_reminder_email': True,        # Enable/disable reminder emails
+    'reminder_days_before': [1, 3],     # List of days before appointment to send a reminder
+    'default_reminder_time': '09:00'    # Default time to send reminders (e.g., 9 AM in business timezone)
 }
-NOTIFICATION_SETTINGS_FILE = os.path.join(PERSISTENT_DATA_ROOT, 'notification_settings.json')
-
-# (load_notification_preferences and save_notification_preferences functions remain the same)
-# ...
+# To make it editable via the app, you'll need a way to persist these settings.
+# For now, these are hardcoded defaults. The manage_notifications route will allow viewing/changing them.
 
 db = SQLAlchemy(app)
 
 # --- Database Models ---
-# (Your User, Owner, Dog, Service, Appointment, ActivityLog models remain here)
-# The Appointment model already has confirmation_email_sent_at etc., which is good.
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -115,7 +109,7 @@ class Owner(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     phone_number = db.Column(db.String(20), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=True) 
+    email = db.Column(db.String(120), unique=True, nullable=True) # Crucial for email notifications
     address = db.Column(db.String(200), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.datetime.now(timezone.utc))
     created_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
@@ -161,9 +155,12 @@ class Appointment(db.Model):
     google_event_id = db.Column(db.String(255), nullable=True)
     groomer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     checkout_total_amount = db.Column(db.Float, nullable=True)
+    # NEW: Fields to track email notifications
     confirmation_email_sent_at = db.Column(db.DateTime, nullable=True)
+    # Example for one reminder type; you might have more if you allow multiple reminder schedules
     reminder_1_sent_at = db.Column(db.DateTime, nullable=True) 
     reminder_2_sent_at = db.Column(db.DateTime, nullable=True)
+
     def __repr__(self): return f"<Appointment ID: {self.id}, Dog ID: {self.dog_id}, DateTime: {self.appointment_datetime}, Status: {self.status}>"
 
 class ActivityLog(db.Model):
@@ -175,8 +172,6 @@ class ActivityLog(db.Model):
     def __repr__(self): return f"<ActivityLog ID: {self.id}, User ID: {self.user_id}, Action: {self.action}>"
 
 # --- Helper Functions ---
-# (allowed_file, check_initial_setup, log_activity, get_shared_google_credentials remain mostly the same)
-# get_shared_google_credentials will now load a token that potentially has more scopes.
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -195,14 +190,12 @@ def log_activity(action, details=None):
     else:
         app.logger.warning(f"Attempted to log activity '{action}' but no user in g.")
 
-def get_shared_google_credentials(): # This function now gets credentials with potentially more scopes
+def get_shared_google_credentials():
     token_file_path = app.config.get('SHARED_TOKEN_FILE', os.path.join(PERSISTENT_DATA_ROOT, 'shared_google_token.json'))
     if not os.path.exists(token_file_path):
         app.logger.info(f"Shared Google token file not found: {token_file_path}")
         return None
     try:
-        # When loading, ensure the scopes used here match what you expect to be in the token.
-        # If scopes change, re-authorization is needed.
         credentials = Credentials.from_authorized_user_file(token_file_path, GOOGLE_SCOPES)
         if credentials and credentials.expired and credentials.refresh_token:
             app.logger.info("Shared Google credentials expired, attempting refresh...")
@@ -215,10 +208,6 @@ def get_shared_google_credentials(): # This function now gets credentials with p
                 app.logger.error(f"Error refreshing shared Google token: {refresh_err}", exc_info=True)
                 return None
         if credentials and credentials.valid:
-            # Optionally, check if the necessary scopes (e.g., gmail.send) are present in credentials.scopes
-            # if 'https://www.googleapis.com/auth/gmail.send' not in credentials.scopes:
-            #    app.logger.warning("Gmail send scope missing from credentials.")
-            #    return None # Or handle appropriately
             return credentials
         else:
             app.logger.warning("Shared Google credentials are not valid after load/refresh attempt.")
@@ -227,86 +216,44 @@ def get_shared_google_credentials(): # This function now gets credentials with p
         app.logger.error(f"Unexpected error in get_shared_google_credentials: {e}", exc_info=True)
         return None
 
-# --- MODIFIED: Email Sending Helper Function (Now uses Gmail API) ---
+# NEW: Email Sending Helper Function
 def send_email_notification(to_email, subject, template_name, **kwargs):
-    """Renders an HTML email template and sends it using the Gmail API."""
-    app.logger.info(f"Attempting to send email '{subject}' to {to_email} using Gmail API.")
-    credentials = get_shared_google_credentials()
-
-    if not credentials or not credentials.valid:
-        app.logger.warning("No valid Google credentials available for sending email. Email not sent.")
-        if hasattr(g, 'user') and g.user and g.user.is_admin:
-            flash("Google Account not connected or token invalid. Email notifications cannot be sent. Please connect/reconnect via Management.", "danger")
+    """Renders an HTML email template and sends it."""
+    if not app.config.get('MAIL_USERNAME') or not app.config.get('MAIL_PASSWORD'):
+        app.logger.warning("Mail server not configured. Email notifications disabled.")
+        # Optionally flash a message to admin if they are logged in and try an action that should send email
+        # if hasattr(g, 'user') and g.user and g.user.is_admin:
+        #     flash("Email server is not configured. Notifications cannot be sent.", "warning")
         return False
     
-    if 'https://www.googleapis.com/auth/gmail.send' not in credentials.scopes:
-        app.logger.warning("Gmail send scope missing from current Google credentials. Email not sent.")
-        if hasattr(g, 'user') and g.user and g.user.is_admin:
-            flash("The connected Google Account does not have permission to send emails. Please re-authorize with the 'Send email on your behalf' permission.", "danger")
-        return False
-
     if not to_email:
         app.logger.warning(f"Attempted to send email '{subject}' but no recipient email provided.")
         return False
 
     try:
-        # Add business context to email if not already there
-        kwargs.setdefault('BUSINESS_TIMEZONE_NAME', BUSINESS_TIMEZONE_NAME)
-        # Try to get sender name from app config, or default
-        sender_name_config = app.config.get('MAIL_DEFAULT_SENDER', "Pawfection Grooming")
-        if isinstance(sender_name_config, tuple):
-            kwargs.setdefault('business_name', sender_name_config[0])
-        else:
-            kwargs.setdefault('business_name', sender_name_config)
-
-
         html_body = render_template(template_name, **kwargs)
-        
-        service = build('gmail', 'v1', credentials=credentials)
-        message = MIMEText(html_body, 'html')
-        message['to'] = to_email
-        # 'me' refers to the authenticated user (the admin who connected their Google account)
-        # You might want to set a specific "From" display name if your email client supports it via headers,
-        # or ensure the "From" address of the authorized account is what you want clients to see.
-        # For simplicity, Gmail API sends from the authorized user's primary email.
-        message['from'] = "me" 
-        message['subject'] = subject
-        
-        raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
-        email_body = {'raw': raw_message}
-        
-        sent_message = service.users().messages().send(userId='me', body=email_body).execute()
-        app.logger.info(f"Email sent via Gmail API to {to_email} with subject: {subject}. Message ID: {sent_message.get('id')}")
+        msg = Message(subject, recipients=[to_email], html=html_body)
+        # msg.sender = app.config['MAIL_DEFAULT_SENDER'] # Uses MAIL_DEFAULT_SENDER by default
+        mail.send(msg)
+        app.logger.info(f"Email sent to {to_email} with subject: {subject}")
         return True
-        
-    except HttpError as error:
-        app.logger.error(f"An HTTP error occurred sending email to {to_email} via Gmail API: {error.resp.status} - {error._get_reason()}", exc_info=True)
-        if hasattr(g, 'user') and g.user and g.user.is_admin:
-             flash(f"Gmail API error sending email: {error._get_reason()}. Check logs.", "danger")
-        return False
     except Exception as e:
-        app.logger.error(f"General error sending email to {to_email} via Gmail API: {e}", exc_info=True)
+        app.logger.error(f"Error sending email to {to_email} for subject '{subject}': {e}", exc_info=True)
+        # Avoid flashing to regular users for backend email errors, but log thoroughly.
+        # If admin is performing action, a flash might be okay.
         if hasattr(g, 'user') and g.user and g.user.is_admin:
-             flash(f"An error occurred trying to send an email notification to {to_email}. Check logs.", "danger")
+             flash(f"An error occurred trying to send an email notification to {to_email}.", "danger")
         return False
 
 # --- Context Processors ---
-# (inject_utilities context processor remains the same)
-# ...
 @app.context_processor
 def inject_utilities():
     shared_creds = get_shared_google_credentials()
     is_google_connected = bool(shared_creds and shared_creds.valid)
-    # Check if Gmail send scope is present in the current credentials
-    gmail_send_authorized = False
-    if shared_creds and shared_creds.valid and 'https://www.googleapis.com/auth/gmail.send' in shared_creds.scopes:
-        gmail_send_authorized = True
-
     return {
         'now': lambda: datetime.datetime.now(timezone.utc),
         'check_initial_setup': check_initial_setup,
-        'is_google_calendar_connected': is_google_connected, # Indicates calendar connection
-        'is_gmail_for_sending_connected': gmail_send_authorized, # NEW: Indicates Gmail sending is authorized
+        'is_google_calendar_connected': is_google_connected,
         'BUSINESS_TIMEZONE_NAME': BUSINESS_TIMEZONE_NAME,
         'BUSINESS_TIMEZONE': BUSINESS_TIMEZONE,
         'tz': tz,
@@ -315,8 +262,7 @@ def inject_utilities():
     }
 
 # --- Decorators ---
-# (login_required, admin_required decorators remain the same)
-# ...
+from functools import wraps
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -337,8 +283,6 @@ def admin_required(f):
     return decorated_function
 
 # --- Request Hooks ---
-# (load_logged_in_user request hook remains the same)
-# ...
 @app.before_request
 def load_logged_in_user():
     user_id = session.get('user_id')
@@ -348,16 +292,12 @@ def load_logged_in_user():
         app.logger.warning(f"User ID {user_id} in session but not in DB. Cleared session.")
 
 # --- Route for serving persistent uploads ---
-# (uploaded_persistent_file route remains the same)
-# ...
 @app.route('/persistent_uploads/<path:filename>')
 @login_required 
 def uploaded_persistent_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 # --- Core Routes ---
-# (index, initial_setup, login, logout routes remain the same)
-# ...
 @app.route('/')
 def index():
     if check_initial_setup(): return redirect(url_for('initial_setup'))
@@ -1008,7 +948,7 @@ def get_date_range(range_type, start_date_str=None, end_date_str=None):
             end_local = datetime.datetime.combine(end_local_date, datetime.time.max, tzinfo=BUSINESS_TIMEZONE)
             period_display = f"Custom: {start_local.strftime('%b %d, %Y')} - {end_local.strftime('%b %d, %Y')}"
         except ValueError:
-            flash("Invalid custom date format. Please use YYYY-MM-DD.", "danger") 
+            flash("Invalid custom date format. Please use YYYY-MM-DD.", "danger") # Corrected format display
             return None, None, "Error: Invalid Date Format"
     else:
         flash("Unknown date range type selected.", "danger")
@@ -1261,19 +1201,20 @@ def add_appointment():
             # Send confirmation email if enabled and owner has email
             if NOTIFICATION_PREFERENCES.get('send_confirmation_email') and selected_dog.owner and selected_dog.owner.email:
                 email_subject = f"Appointment Confirmation for {selected_dog.name}"
+                # Pass necessary data to the email template
                 email_sent = send_email_notification(
                     to_email=selected_dog.owner.email,
                     subject=email_subject,
-                    template_name='email/appointment_confirmation.html', # Ensure this template exists
+                    template_name='email/appointment_confirmation.html',
                     owner_name=selected_dog.owner.name,
                     dog_name=selected_dog.name,
-                    appointment_datetime_local=local_dt_for_log, 
+                    appointment_datetime_local=local_dt_for_log, # Pass the local datetime object
                     services_text=services_text or "Not specified",
-                    groomer_name=User.query.get(groomer_id).username if groomer_id else "Any Groomer"
+                    business_name="Pawfection Grooming Solutions" # Or get from a config
                 )
                 if email_sent:
                     new_appt.confirmation_email_sent_at = datetime.datetime.now(timezone.utc)
-                    db.session.commit() 
+                    db.session.commit() # Save the timestamp
                     flash("Confirmation email sent to owner.", "info")
                 else:
                     flash("Could not send confirmation email. Please check mail server settings or owner email.", "warning")
@@ -1424,21 +1365,47 @@ def google_callback():
 @admin_required
 def manage_notifications():
     if request.method == 'POST':
+        # This is where you'd save the settings from the form
+        # For now, we'll just update our global NOTIFICATION_PREFERENCES dictionary
+        # In a real app, save to DB or a config file
         NOTIFICATION_PREFERENCES['send_confirmation_email'] = 'send_confirmation_email' in request.form
         NOTIFICATION_PREFERENCES['send_reminder_email'] = 'send_reminder_email' in request.form
-        reminder_days_str = request.form.getlist('reminder_days_before')
+        
+        reminder_days_str = request.form.getlist('reminder_days_before') # Gets a list of selected day values
         try:
             NOTIFICATION_PREFERENCES['reminder_days_before'] = sorted([int(d) for d in reminder_days_str if d.isdigit()])
         except ValueError:
             flash("Invalid input for reminder days.", "danger")
-        NOTIFICATION_PREFERENCES['default_reminder_time'] = request.form.get('default_reminder_time', '09:00')
         
-        save_notification_preferences() # Save to JSON file
+        NOTIFICATION_PREFERENCES['default_reminder_time'] = request.form.get('default_reminder_time', '09:00')
+
         log_activity("Updated Notification Settings", details=str(NOTIFICATION_PREFERENCES))
         flash("Notification settings updated successfully!", "success")
+        # Persist NOTIFICATION_PREFERENCES to a file or database here if not using a global dict
+        # For example, to save to a JSON file:
+        # try:
+        #     settings_file_path = os.path.join(PERSISTENT_DATA_ROOT, 'notification_settings.json')
+        #     with open(settings_file_path, 'w') as f:
+        #         json.dump(NOTIFICATION_PREFERENCES, f, indent=4)
+        #     app.logger.info(f"Notification settings saved to {settings_file_path}")
+        # except Exception as e:
+        #     app.logger.error(f"Error saving notification settings: {e}", exc_info=True)
+        #     flash("Could not save notification settings.", "danger")
+
         return redirect(url_for('manage_notifications'))
+
+    # For GET request, load settings (from global dict for now)
+    # In a real app, load from DB or config file
+    # Example: Load from JSON file if it exists
+    # settings_file_path = os.path.join(PERSISTENT_DATA_ROOT, 'notification_settings.json')
+    # if os.path.exists(settings_file_path):
+    #     try:
+    #         with open(settings_file_path, 'r') as f:
+    #             loaded_settings = json.load(f)
+    #             NOTIFICATION_PREFERENCES.update(loaded_settings) # Update global dict
+    #     except Exception as e:
+    #         app.logger.error(f"Error loading notification settings: {e}", exc_info=True)
             
-    load_notification_preferences() # Load from JSON file for GET request
     log_activity("Viewed Manage Customer Notifications page")
     return render_template('manage_notifications.html', current_settings=NOTIFICATION_PREFERENCES)
 
@@ -1487,9 +1454,7 @@ def initialize_app_on_startup(current_app):
         db_file_path = current_app.config.get('SQLALCHEMY_DATABASE_URI', '').replace('sqlite:///', '')
         upload_folder_path = current_app.config.get('UPLOAD_FOLDER', '')
         shared_token_file_path = current_app.config.get('SHARED_TOKEN_FILE')
-        notification_settings_file_path = NOTIFICATION_SETTINGS_FILE # Use global constant
 
-        # Create directory for SQLite DB if it doesn't exist
         if db_file_path: 
             db_dir = os.path.dirname(db_file_path)
             if db_dir and not os.path.exists(db_dir): 
@@ -1499,7 +1464,6 @@ def initialize_app_on_startup(current_app):
                 except Exception as e:
                     current_app.logger.error(f"Failed to create database directory {db_dir}: {e}")
         
-        # Create UPLOAD_FOLDER if it doesn't exist
         if upload_folder_path and not os.path.exists(upload_folder_path):
             try:
                 os.makedirs(upload_folder_path, exist_ok=True)
@@ -1507,7 +1471,6 @@ def initialize_app_on_startup(current_app):
             except Exception as e:
                 current_app.logger.error(f"Failed to create upload folder {upload_folder_path}: {e}")
 
-        # Create directory for SHARED_TOKEN_FILE if it doesn't exist
         if shared_token_file_path:
             token_dir = os.path.dirname(shared_token_file_path)
             if token_dir and not os.path.exists(token_dir):
@@ -1516,19 +1479,6 @@ def initialize_app_on_startup(current_app):
                     current_app.logger.info(f"Created token directory: {token_dir}")
                 except Exception as e:
                     current_app.logger.error(f"Failed to create token directory {token_dir}: {e}")
-        
-        # Create directory for NOTIFICATION_SETTINGS_FILE if it doesn't exist
-        if notification_settings_file_path:
-            notif_settings_dir = os.path.dirname(notification_settings_file_path)
-            if notif_settings_dir and not os.path.exists(notif_settings_dir):
-                try:
-                    os.makedirs(notif_settings_dir, exist_ok=True)
-                    current_app.logger.info(f"Created notification settings directory: {notif_settings_dir}")
-                except Exception as e:
-                    current_app.logger.error(f"Failed to create notification settings directory {notif_settings_dir}: {e}")
-
-
-        # Create database tables if they don't exist
         try:
             inspector = db.inspect(db.engine)
             if not inspector.has_table("user"): 
@@ -1539,10 +1489,6 @@ def initialize_app_on_startup(current_app):
                 current_app.logger.info("Database tables already exist.")
         except Exception as e:
             current_app.logger.error(f"Error during database table check/creation: {e}", exc_info=True)
-        
-        # Load notification preferences on startup
-        load_notification_preferences()
-
 
 if os.environ.get('RAILWAY_ENVIRONMENT') or not os.environ.get('WERKZEUG_RUN_MAIN'):
     initialize_app_on_startup(app)
@@ -1564,11 +1510,6 @@ if __name__ == '__main__':
         if not os.path.exists(os.path.dirname(_token_file_for_local_dev)):
              os.makedirs(os.path.dirname(_token_file_for_local_dev), exist_ok=True)
              app.logger.info(f"Created local token directory: {os.path.dirname(_token_file_for_local_dev)}")
-        
-        _notif_settings_file_local = os.path.join(BASE_DIR, 'notification_settings.json')
-        if not os.path.exists(os.path.dirname(_notif_settings_file_local)):
-            os.makedirs(os.path.dirname(_notif_settings_file_local), exist_ok=True)
-            app.logger.info(f"Created local notification settings directory: {os.path.dirname(_notif_settings_file_local)}")
 
 
     def get_local_ip():
@@ -1596,8 +1537,6 @@ if __name__ == '__main__':
 
         if check_initial_setup():
             app.logger.info(f"Initial admin setup required. Navigate to {LOCAL_APP_URL}initial_setup")
-        
-        load_notification_preferences() # Load preferences for local dev too
 
 
     local_ip_address = get_local_ip()
