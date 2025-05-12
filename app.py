@@ -17,6 +17,9 @@ import json
 import socket
 import calendar 
 
+# NEW: For Email
+from flask_mail import Mail, Message # Import Flask-Mail
+
 # --- Google OAuth & API Imports ---
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
@@ -27,12 +30,9 @@ from dateutil import tz, parser as dateutil_parser
 
 # --- Configuration ---
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-
-# MODIFIED FOR RAILWAY: Use PERSISTENT_DATA_ROOT for paths that need to be on a volume
 PERSISTENT_DATA_ROOT = os.environ.get('PERSISTENT_DATA_DIR', BASE_DIR) 
-
 DATABASE_PATH = os.path.join(PERSISTENT_DATA_ROOT, 'grooming_business_v2.db')
-UPLOAD_FOLDER = os.path.join(PERSISTENT_DATA_ROOT, 'uploads') # Files uploaded by users
+UPLOAD_FOLDER = os.path.join(PERSISTENT_DATA_ROOT, 'uploads') 
 SHARED_TOKEN_FILE = os.path.join(PERSISTENT_DATA_ROOT, 'shared_google_token.json')
 SHARED_GOOGLE_CALENDAR_ID = 'primary'
 
@@ -40,15 +40,14 @@ GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "142623477405-usk2u3huejpo
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "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")
 GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", 'http://127.0.0.1:5000/google/callback')
 
-
 GOOGLE_SCOPES = ['https://www.googleapis.com/auth/calendar.readonly', 'https://www.googleapis.com/auth/calendar.events']
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1' 
 
 BUSINESS_TIMEZONE_NAME = os.environ.get("BUSINESS_TIMEZONE", 'America/New_York')
 BUSINESS_TIMEZONE = tz.gettz(BUSINESS_TIMEZONE_NAME)
+# app.logger not available globally at this point, use print for startup warnings if needed.
 if BUSINESS_TIMEZONE is None:
     BUSINESS_TIMEZONE = tz.tzlocal() 
-    # app.logger not available yet at top level
     print(f"WARNING: Could not load timezone '{BUSINESS_TIMEZONE_NAME}'. Falling back to system local: {BUSINESS_TIMEZONE.zone}")
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
@@ -61,6 +60,30 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 
 app.config['SHARED_TOKEN_FILE'] = SHARED_TOKEN_FILE 
 
+# --- Flask-Mail Configuration ---
+# IMPORTANT: Set these as environment variables in Railway (or your .env file for local dev)
+app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.googlemail.com') # Example: Gmail
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'true').lower() in ['true', '1', 't']
+app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'false').lower() in ['true', '1', 't']
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME') # Your email address (e.g., yourbusiness@gmail.com)
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD') # Your email password or an App Password for Gmail
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', ("Pawfection Grooming", app.config.get('MAIL_USERNAME', 'noreply@example.com')))
+
+mail = Mail(app) # Initialize Flask-Mail
+
+# --- Notification Settings Store (Simple In-Memory for now, move to DB/config later) ---
+# This dictionary will hold the current notification settings.
+# In a real app, you'd load/save this from a database table or a configuration file.
+NOTIFICATION_PREFERENCES = {
+    'send_confirmation_email': True,    # Enable/disable appointment confirmation emails
+    'send_reminder_email': True,        # Enable/disable reminder emails
+    'reminder_days_before': [1, 3],     # List of days before appointment to send a reminder
+    'default_reminder_time': '09:00'    # Default time to send reminders (e.g., 9 AM in business timezone)
+}
+# To make it editable via the app, you'll need a way to persist these settings.
+# For now, these are hardcoded defaults. The manage_notifications route will allow viewing/changing them.
+
 db = SQLAlchemy(app)
 
 # --- Database Models ---
@@ -72,35 +95,26 @@ class User(db.Model):
     is_groomer = db.Column(db.Boolean, default=False, nullable=False) 
     created_at = db.Column(db.DateTime, default=lambda: datetime.datetime.now(timezone.utc))
     picture_filename = db.Column(db.String(200), nullable=True)
-
     activity_logs = db.relationship('ActivityLog', backref='user', lazy=True)
     created_owners = db.relationship('Owner', backref='creator', lazy='dynamic', foreign_keys='Owner.created_by_user_id')
     created_dogs = db.relationship('Dog', backref='creator', lazy='dynamic', foreign_keys='Dog.created_by_user_id')
     created_services = db.relationship('Service', backref='creator', lazy='dynamic', foreign_keys='Service.created_by_user_id')
     created_appointments = db.relationship('Appointment', backref='creator', lazy='dynamic', foreign_keys='Appointment.created_by_user_id')
     assigned_appointments = db.relationship('Appointment', backref='groomer', lazy='dynamic', foreign_keys='Appointment.groomer_id')
-
-    def set_password(self, password):
-        self.password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-
-    def check_password(self, password):
-        return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
-
-    def __repr__(self):
-        return f"<User {self.username} (ID: {self.id}, Admin: {self.is_admin}, Groomer: {self.is_groomer})>"
+    def set_password(self, password): self.password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    def check_password(self, password): return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
+    def __repr__(self): return f"<User {self.username} (ID: {self.id}, Admin: {self.is_admin}, Groomer: {self.is_groomer})>"
 
 class Owner(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     phone_number = db.Column(db.String(20), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=True)
+    email = db.Column(db.String(120), unique=True, nullable=True) # Crucial for email notifications
     address = db.Column(db.String(200), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.datetime.now(timezone.utc))
     created_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     dogs = db.relationship('Dog', backref='owner', lazy='joined', cascade="all, delete-orphan")
-
-    def __repr__(self):
-        return f"<Owner {self.name} (ID: {self.id})>"
+    def __repr__(self): return f"<Owner {self.name} (ID: {self.id})>"
 
 class Dog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -117,9 +131,7 @@ class Dog(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.datetime.now(timezone.utc))
     created_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     appointments = db.relationship('Appointment', backref='dog', lazy='dynamic', cascade="all, delete-orphan", order_by="desc(Appointment.appointment_datetime)")
-
-    def __repr__(self):
-        return f"<Dog {self.name} (ID: {self.id}), Owner ID: {self.owner_id}>"
+    def __repr__(self): return f"<Dog {self.name} (ID: {self.id}), Owner ID: {self.owner_id}>"
 
 class Service(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -129,9 +141,7 @@ class Service(db.Model):
     item_type = db.Column(db.String(50), nullable=False, default='service')
     created_at = db.Column(db.DateTime, default=lambda: datetime.datetime.now(timezone.utc))
     created_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-
-    def __repr__(self):
-        return f"<Service {self.name} (ID: {self.id}), Price: {self.base_price}, Type: {self.item_type}>"
+    def __repr__(self): return f"<Service {self.name} (ID: {self.id}), Price: {self.base_price}, Type: {self.item_type}>"
 
 class Appointment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -145,9 +155,13 @@ class Appointment(db.Model):
     google_event_id = db.Column(db.String(255), nullable=True)
     groomer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     checkout_total_amount = db.Column(db.Float, nullable=True)
+    # NEW: Fields to track email notifications
+    confirmation_email_sent_at = db.Column(db.DateTime, nullable=True)
+    # Example for one reminder type; you might have more if you allow multiple reminder schedules
+    reminder_1_sent_at = db.Column(db.DateTime, nullable=True) 
+    reminder_2_sent_at = db.Column(db.DateTime, nullable=True)
 
-    def __repr__(self):
-        return f"<Appointment ID: {self.id}, Dog ID: {self.dog_id}, DateTime: {self.appointment_datetime}, Status: {self.status}>"
+    def __repr__(self): return f"<Appointment ID: {self.id}, Dog ID: {self.dog_id}, DateTime: {self.appointment_datetime}, Status: {self.status}>"
 
 class ActivityLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -155,9 +169,7 @@ class ActivityLog(db.Model):
     action = db.Column(db.String(200), nullable=False)
     timestamp = db.Column(db.DateTime, default=lambda: datetime.datetime.now(timezone.utc), nullable=False)
     details = db.Column(db.Text, nullable=True)
-
-    def __repr__(self):
-        return f"<ActivityLog ID: {self.id}, User ID: {self.user_id}, Action: {self.action}>"
+    def __repr__(self): return f"<ActivityLog ID: {self.id}, User ID: {self.user_id}, Action: {self.action}>"
 
 # --- Helper Functions ---
 def allowed_file(filename):
@@ -203,6 +215,35 @@ def get_shared_google_credentials():
     except Exception as e:
         app.logger.error(f"Unexpected error in get_shared_google_credentials: {e}", exc_info=True)
         return None
+
+# NEW: Email Sending Helper Function
+def send_email_notification(to_email, subject, template_name, **kwargs):
+    """Renders an HTML email template and sends it."""
+    if not app.config.get('MAIL_USERNAME') or not app.config.get('MAIL_PASSWORD'):
+        app.logger.warning("Mail server not configured. Email notifications disabled.")
+        # Optionally flash a message to admin if they are logged in and try an action that should send email
+        # if hasattr(g, 'user') and g.user and g.user.is_admin:
+        #     flash("Email server is not configured. Notifications cannot be sent.", "warning")
+        return False
+    
+    if not to_email:
+        app.logger.warning(f"Attempted to send email '{subject}' but no recipient email provided.")
+        return False
+
+    try:
+        html_body = render_template(template_name, **kwargs)
+        msg = Message(subject, recipients=[to_email], html=html_body)
+        # msg.sender = app.config['MAIL_DEFAULT_SENDER'] # Uses MAIL_DEFAULT_SENDER by default
+        mail.send(msg)
+        app.logger.info(f"Email sent to {to_email} with subject: {subject}")
+        return True
+    except Exception as e:
+        app.logger.error(f"Error sending email to {to_email} for subject '{subject}': {e}", exc_info=True)
+        # Avoid flashing to regular users for backend email errors, but log thoroughly.
+        # If admin is performing action, a flash might be okay.
+        if hasattr(g, 'user') and g.user and g.user.is_admin:
+             flash(f"An error occurred trying to send an email notification to {to_email}.", "danger")
+        return False
 
 # --- Context Processors ---
 @app.context_processor
@@ -343,7 +384,7 @@ def logout():
     flash("Logged out successfully.", "info")
     return redirect(url_for('auth_login'))
 
-# --- Directory Routes (Owners and Dogs) ---
+# --- Directory Routes ---
 @app.route('/directory')
 @login_required
 def directory():
@@ -907,7 +948,7 @@ def get_date_range(range_type, start_date_str=None, end_date_str=None):
             end_local = datetime.datetime.combine(end_local_date, datetime.time.max, tzinfo=BUSINESS_TIMEZONE)
             period_display = f"Custom: {start_local.strftime('%b %d, %Y')} - {end_local.strftime('%b %d, %Y')}"
         except ValueError:
-            flash("Invalid custom date format. Please use YYYY-MM-DD.", "danger")
+            flash("Invalid custom date format. Please use YYYY-MM-DD.", "danger") # Corrected format display
             return None, None, "Error: Invalid Date Format"
     else:
         flash("Unknown date range type selected.", "danger")
@@ -1142,11 +1183,42 @@ def add_appointment():
         if errors:
             for _, msg in errors.items(): flash(msg, "danger")
             return render_template('add_appointment.html', dogs=dogs, users=groomers_for_dropdown, appointment_data=request.form.to_dict()), 400
-        new_appt = Appointment(dog_id=selected_dog.id, appointment_datetime=utc_dt, requested_services_text=services_text or None, notes=notes or None, status='Scheduled', created_by_user_id=g.user.id, groomer_id=groomer_id)
+        
+        new_appt = Appointment(
+            dog_id=selected_dog.id, 
+            appointment_datetime=utc_dt, 
+            requested_services_text=services_text or None, 
+            notes=notes or None, 
+            status='Scheduled', 
+            created_by_user_id=g.user.id, 
+            groomer_id=groomer_id
+        )
         try:
             db.session.add(new_appt); db.session.commit()
             log_activity("Added Local Appt", details=f"Dog: {selected_dog.name}, Time: {local_dt_for_log.strftime('%Y-%m-%d %I:%M %p %Z') if local_dt_for_log else 'N/A'}")
             flash(f"Appt for {selected_dog.name} scheduled!", "success")
+            
+            # Send confirmation email if enabled and owner has email
+            if NOTIFICATION_PREFERENCES.get('send_confirmation_email') and selected_dog.owner and selected_dog.owner.email:
+                email_subject = f"Appointment Confirmation for {selected_dog.name}"
+                # Pass necessary data to the email template
+                email_sent = send_email_notification(
+                    to_email=selected_dog.owner.email,
+                    subject=email_subject,
+                    template_name='email/appointment_confirmation.html',
+                    owner_name=selected_dog.owner.name,
+                    dog_name=selected_dog.name,
+                    appointment_datetime_local=local_dt_for_log, # Pass the local datetime object
+                    services_text=services_text or "Not specified",
+                    business_name="Pawfection Grooming Solutions" # Or get from a config
+                )
+                if email_sent:
+                    new_appt.confirmation_email_sent_at = datetime.datetime.now(timezone.utc)
+                    db.session.commit() # Save the timestamp
+                    flash("Confirmation email sent to owner.", "info")
+                else:
+                    flash("Could not send confirmation email. Please check mail server settings or owner email.", "warning")
+            
             _sync_appointment_to_google_calendar(new_appt, event_type='create')
             return redirect(url_for('calendar_view'))
         except Exception as e:
@@ -1262,7 +1334,7 @@ def google_callback():
     
     redirect_uri_to_use = os.environ.get("GOOGLE_REDIRECT_URI", url_for('google_callback', _external=True))
     actual_request_url = request.url
-    if 'up.railway.app' in request.host_url and not actual_request_url.startswith('https'):
+    if 'up.railway.app' in request.host_url and not actual_request_url.startswith('https'): # Specific to Railway's proxy behavior
         actual_request_url = actual_request_url.replace('http://', 'https://', 1)
 
     client_config = {"web": {
@@ -1288,7 +1360,57 @@ def google_callback():
         flash(f'Failed to store Shared GCal credentials: {str(e)}', 'danger')
     return redirect(url_for('management'))
 
-# --- Legal Pages Routes (NEW) ---
+# --- NEW: Route for Managing Customer Notification Settings ---
+@app.route('/manage/notifications', methods=['GET', 'POST'])
+@admin_required
+def manage_notifications():
+    if request.method == 'POST':
+        # This is where you'd save the settings from the form
+        # For now, we'll just update our global NOTIFICATION_PREFERENCES dictionary
+        # In a real app, save to DB or a config file
+        NOTIFICATION_PREFERENCES['send_confirmation_email'] = 'send_confirmation_email' in request.form
+        NOTIFICATION_PREFERENCES['send_reminder_email'] = 'send_reminder_email' in request.form
+        
+        reminder_days_str = request.form.getlist('reminder_days_before') # Gets a list of selected day values
+        try:
+            NOTIFICATION_PREFERENCES['reminder_days_before'] = sorted([int(d) for d in reminder_days_str if d.isdigit()])
+        except ValueError:
+            flash("Invalid input for reminder days.", "danger")
+        
+        NOTIFICATION_PREFERENCES['default_reminder_time'] = request.form.get('default_reminder_time', '09:00')
+
+        log_activity("Updated Notification Settings", details=str(NOTIFICATION_PREFERENCES))
+        flash("Notification settings updated successfully!", "success")
+        # Persist NOTIFICATION_PREFERENCES to a file or database here if not using a global dict
+        # For example, to save to a JSON file:
+        # try:
+        #     settings_file_path = os.path.join(PERSISTENT_DATA_ROOT, 'notification_settings.json')
+        #     with open(settings_file_path, 'w') as f:
+        #         json.dump(NOTIFICATION_PREFERENCES, f, indent=4)
+        #     app.logger.info(f"Notification settings saved to {settings_file_path}")
+        # except Exception as e:
+        #     app.logger.error(f"Error saving notification settings: {e}", exc_info=True)
+        #     flash("Could not save notification settings.", "danger")
+
+        return redirect(url_for('manage_notifications'))
+
+    # For GET request, load settings (from global dict for now)
+    # In a real app, load from DB or config file
+    # Example: Load from JSON file if it exists
+    # settings_file_path = os.path.join(PERSISTENT_DATA_ROOT, 'notification_settings.json')
+    # if os.path.exists(settings_file_path):
+    #     try:
+    #         with open(settings_file_path, 'r') as f:
+    #             loaded_settings = json.load(f)
+    #             NOTIFICATION_PREFERENCES.update(loaded_settings) # Update global dict
+    #     except Exception as e:
+    #         app.logger.error(f"Error loading notification settings: {e}", exc_info=True)
+            
+    log_activity("Viewed Manage Customer Notifications page")
+    return render_template('manage_notifications.html', current_settings=NOTIFICATION_PREFERENCES)
+
+
+# --- Legal Pages Routes ---
 @app.route('/user-agreement')
 def view_user_agreement():
     return render_template('user_agreement.html')

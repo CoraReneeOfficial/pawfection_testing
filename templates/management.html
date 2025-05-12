@@ -4,53 +4,52 @@
 
 {% block head %}
 <style>
-    /* Add some specific styles for management page if needed */
-    .management-grid { /* Renamed from quick-links-grid for clarity if styles differ */
+    .management-grid { 
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 1.5rem; /* Consistent gap */
+        gap: 1.5rem; 
         margin-top: 1.5rem;
     }
-    .management-card { /* Using a more specific class for these cards */
+    .management-card { 
         background-color: #fff;
         border: 1px solid var(--border-color);
         border-radius: var(--border-radius);
-        padding: 1.5rem; /* Increased padding for a more spacious feel */
-        box-shadow: var(--box-shadow-sm); /* Softer shadow */
+        padding: 1.5rem; 
+        box-shadow: var(--box-shadow-sm); 
         transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
         text-decoration: none;
-        color: inherit; /* Inherit text color */
+        color: inherit; 
     }
     .management-card:hover {
         transform: translateY(-3px);
-        box-shadow: var(--box-shadow); /* Slightly larger shadow on hover */
+        box-shadow: var(--box-shadow); 
     }
     .management-card h3 {
         margin-top: 0;
-        margin-bottom: 0.75rem; /* Space below heading */
-        color: var(--primary-color); /* Consistent heading color */
-        display: flex; /* For icon alignment */
+        margin-bottom: 0.75rem; 
+        color: var(--primary-color); 
+        display: flex; 
         align-items: center;
-        gap: 0.5rem; /* Space between icon and text */
+        gap: 0.5rem; 
     }
-    .management-card h3 .icon { /* Simple class for emoji or SVG icons */
-        font-size: 1.2em; /* Adjust icon size */
+    .management-card h3 .icon { 
+        font-size: 1.2em; 
     }
     .management-card p {
         font-size: 0.9rem;
         color: var(--text-muted);
         line-height: 1.5;
     }
-    .google-calendar-card { /* Specific styling for the Google Calendar card */
-        padding: 1.5rem; /* Consistent padding */
-        background-color: #fefce8; /* Lighter yellow, more subtle */
-        border: 1px solid #fef08a; /* Matching border */
+    .google-calendar-card { 
+        padding: 1.5rem; 
+        background-color: #fefce8; 
+        border: 1px solid #fef08a; 
     }
     .google-calendar-card h3 {
-        color: #a16207; /* Darker yellow for heading text */
+        color: #a16207; 
     }
     .google-calendar-card p {
-        color: #78350f; /* Slightly darker text for readability */
+        color: #78350f; 
     }
 </style>
 {% endblock %}
@@ -58,7 +57,7 @@
 {% block content %} {# Defines the main content area for this page #}
 <div class="content-card"> {# Uses the card styling for the main content block #}
     <h1>Application Management</h1>
-    <p>Use the options below to manage users, services, reports, and integrations.</p>
+    <p>Use the options below to manage users, services, reports, notifications, and integrations.</p>
 
     {# Management Options Grid #}
     <div class="management-grid">
@@ -71,13 +70,20 @@
             <p>Add, edit, or remove services and pricing.</p>
         </a>
         
-        <a href="{{ url_for('view_sales_reports') }}" class="management-card"> <h3><span class="icon">📊</span> Sales Reports</h3>
+        <a href="{{ url_for('view_sales_reports') }}" class="management-card"> 
+            <h3><span class="icon">📊</span> Sales Reports</h3>
             <p>Generate and view sales reports by date and groomer.</p>
+        </a>
+
+        {# NEW: Card for Managing Notifications #}
+        <a href="{{ url_for('manage_notifications') }}" class="management-card">
+            <h3><span class="icon">✉️</span> Manage Customer Notifications</h3>
+            <p>Configure appointment confirmation and reminder emails.</p>
         </a>
 
         <div class="management-card google-calendar-card">
             <h3><span class="icon">📅</span> Google Calendar</h3>
-             {% if is_google_calendar_connected %} {# Use the variable from context_processor #}
+             {% if is_google_calendar_connected %} 
                  <p style="font-size: 0.9em; margin-bottom: 0.75rem; color: #15803d;">✅ Connected!</p>
                  <p style="font-size: 0.8em; margin-bottom: 0.5rem;">
                     The application is authorized to access the shared Google Calendar.

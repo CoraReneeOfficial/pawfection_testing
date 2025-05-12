@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Customer Notifications{% endblock %}
+
+{% block head %}
+<style>
+    .notification-settings-form .form-group {
+        margin-bottom: 1.5rem;
+    }
+    .notification-settings-form .form-group label {
+        font-weight: 600;
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+    .notification-settings-form .checkbox-group label {
+        font-weight: normal;
+        margin-left: 0.5rem;
+    }
+    .reminder-options-group .form-group-inline {
+        margin-bottom: 0.5rem;
+    }
+    .reminder-options-group legend {
+        font-size: 1em;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        color: var(--text-dark);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-card">
+    <div class="content-header">
+        <h1>Manage Customer Notifications</h1>
+        <a href="{{ url_for('management') }}" class="button button-secondary">Back to Management</a>
+    </div>
+
+    <p>Configure settings for automated email notifications sent to clients.</p>
+
+    <form method="POST" action="{{ url_for('manage_notifications') }}" class="notification-settings-form" style="margin-top: 2rem;">
+        <div class="form-section">
+            <h2>Appointment Confirmations</h2>
+            <div class="form-group form-group-inline">
+                <input type="checkbox" id="send_confirmation_email" name="send_confirmation_email" value="true" 
+                       {% if current_settings.get('send_confirmation_email') %}checked{% endif %}>
+                <label for="send_confirmation_email">Send email confirmation when an appointment is booked.</label>
+            </div>
+        </div>
+
+        <div class="form-section" style="margin-top: 2rem; padding-top:1.5rem; border-top: 1px solid var(--border-color-light);">
+            <h2>Appointment Reminders</h2>
+            <div class="form-group form-group-inline">
+                <input type="checkbox" id="send_reminder_email" name="send_reminder_email" value="true" 
+                       {% if current_settings.get('send_reminder_email') %}checked{% endif %}>
+                <label for="send_reminder_email">Enable automated reminder emails.</label>
+            </div>
+
+            <fieldset class="form-group reminder-options-group">
+                <legend>Send reminders:</legend>
+                <div class="form-group-inline">
+                    <input type="checkbox" id="reminder_1_day" name="reminder_days_before" value="1" 
+                           {% if 1 in current_settings.get('reminder_days_before', []) %}checked{% endif %}>
+                    <label for="reminder_1_day">1 day before appointment</label>
+                </div>
+                <div class="form-group-inline">
+                    <input type="checkbox" id="reminder_2_days" name="reminder_days_before" value="2"
+                           {% if 2 in current_settings.get('reminder_days_before', []) %}checked{% endif %}>
+                    <label for="reminder_2_days">2 days before appointment</label>
+                </div>
+                <div class="form-group-inline">
+                    <input type="checkbox" id="reminder_3_days" name="reminder_days_before" value="3"
+                           {% if 3 in current_settings.get('reminder_days_before', []) %}checked{% endif %}>
+                    <label for="reminder_3_days">3 days before appointment</label>
+                </div>
+                <div class="form-group-inline">
+                    <input type="checkbox" id="reminder_7_days" name="reminder_days_before" value="7"
+                           {% if 7 in current_settings.get('reminder_days_before', []) %}checked{% endif %}>
+                    <label for="reminder_7_days">7 days before appointment</label>
+                </div>
+            </fieldset>
+
+            <div class="form-group">
+                <label for="default_reminder_time">Default Reminder Time (Business Timezone: {{ BUSINESS_TIMEZONE_NAME }})</label>
+                <input type="time" id="default_reminder_time" name="default_reminder_time" class="form-input" 
+                       value="{{ current_settings.get('default_reminder_time', '09:00') }}" style="max-width: 150px;">
+                <small class="text-muted">Reminders will be scheduled around this time on the selected days.</small>
+            </div>
+        </div>
+
+        <div class="form-button-wrapper" style="margin-top: 2rem;">
+            <button type="submit" class="button button-primary">Save Notification Settings</button>
+        </div>
+    </form>
+
+    <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border-color-light);">
+        <p class="text-muted" style="font-size:0.9em;">
+            <strong>Note:</strong> For automated reminders to be sent, a background scheduling system needs to be active.
+            This page currently configures the preferences. The actual sending mechanism for scheduled reminders will be implemented separately.
+            Appointment confirmation emails will be sent immediately upon booking if enabled.
+        </p>
+    </div>
+</div>
+{% endblock %}
