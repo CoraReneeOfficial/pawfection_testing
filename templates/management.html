@@ -6,7 +6,7 @@
 <style>
     .management-grid { 
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Adjusted minmax for better spacing */
         gap: 1.5rem; 
         margin-top: 1.5rem;
     }
@@ -19,6 +19,9 @@
         transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
         text-decoration: none;
         color: inherit; 
+        display: flex; 
+        flex-direction: column; 
+        justify-content: space-between; 
     }
     .management-card:hover {
         transform: translateY(-3px);
@@ -39,60 +42,97 @@
         font-size: 0.9rem;
         color: var(--text-muted);
         line-height: 1.5;
+        flex-grow: 1; 
+        margin-bottom: 1rem; /* Ensure space before button if content is short */
     }
-    .google-calendar-card { 
+    .management-card .button-primary, .management-card .button-secondary {
+        margin-top: auto; /* Push button to the bottom of the card */
+        align-self: flex-start; /* Align button to the start of the flex item (left) */
+    }
+
+    .google-services-card { /* Renamed for clarity */
         padding: 1.5rem; 
-        background-color: #fefce8; 
-        border: 1px solid #fef08a; 
+        background-color: #fefce8; /* Light yellow */
+        border: 1px solid #fde047; /* Yellow-500ish */
     }
-    .google-calendar-card h3 {
-        color: #a16207; 
+    .google-services-card h3 {
+        color: #ca8a04; /* Amber-600ish */
     }
-    .google-calendar-card p {
-        color: #78350f; 
+    .google-services-card p {
+        color: #854d0e; /* Amber-800ish */
+    }
+    .status-indicator {
+        font-size: 0.9em;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    .status-indicator.connected {
+        color: #16a34a; /* Green-600 */
+    }
+    .status-indicator.not-connected {
+        color: #dc2626; /* Red-600 */
     }
 </style>
 {% endblock %}
 
 {% block content %} {# Defines the main content area for this page #}
-<div class="content-card"> {# Uses the card styling for the main content block #}
+<div class="content-card"> 
     <h1>Application Management</h1>
     <p>Use the options below to manage users, services, reports, notifications, and integrations.</p>
 
-    {# Management Options Grid #}
     <div class="management-grid">
         <a href="{{ url_for('manage_users') }}" class="management-card">
-            <h3><span class="icon">👥</span> Manage Users</h3>
-            <p>Add, edit, or remove groomer/staff accounts.</p>
+            <div>
+                <h3><span class="icon">👥</span> Manage Users</h3>
+                <p>Add, edit, or remove groomer/staff accounts.</p>
+            </div>
         </a>
         <a href="{{ url_for('manage_services') }}" class="management-card">
-            <h3><span class="icon">✂️</span> Manage Services</h3>
-            <p>Add, edit, or remove services and pricing.</p>
+            <div>
+                <h3><span class="icon">✂️</span> Manage Services</h3>
+                <p>Add, edit, or remove services and pricing.</p>
+            </div>
         </a>
         
         <a href="{{ url_for('view_sales_reports') }}" class="management-card"> 
-            <h3><span class="icon">📊</span> Sales Reports</h3>
-            <p>Generate and view sales reports by date and groomer.</p>
+            <div>
+                <h3><span class="icon">📊</span> Sales Reports</h3>
+                <p>Generate and view sales reports by date and groomer.</p>
+            </div>
         </a>
 
-        {# NEW: Card for Managing Notifications #}
         <a href="{{ url_for('manage_notifications') }}" class="management-card">
-            <h3><span class="icon">✉️</span> Manage Customer Notifications</h3>
-            <p>Configure appointment confirmation and reminder emails.</p>
+            <div>
+                <h3><span class="icon">✉️</span> Customer Notifications</h3>
+                <p>Configure appointment confirmation and reminder emails.</p>
+            </div>
         </a>
 
-        <div class="management-card google-calendar-card">
-            <h3><span class="icon">📅</span> Google Calendar</h3>
-             {% if is_google_calendar_connected %} 
-                 <p style="font-size: 0.9em; margin-bottom: 0.75rem; color: #15803d;">✅ Connected!</p>
-                 <p style="font-size: 0.8em; margin-bottom: 0.5rem;">
-                    The application is authorized to access the shared Google Calendar.
-                 </p>
-                 <a href="{{ url_for('google_authorize') }}" class="button button-secondary" style="font-size: 0.8rem; padding: 0.3rem 0.7rem;">Re-authorize / Change Account</a>
-             {% else %}
-                 <p style="font-size: 0.9em; margin-bottom: 0.75rem;">Connect the shared Google Calendar to sync appointments.</p>
-                 <a href="{{ url_for('google_authorize') }}" class="button button-primary" style="font-size: 0.9rem;">Connect Google Calendar</a>
-             {% endif %}
+        {# MODIFIED: Google Services Card #}
+        <div class="management-card google-services-card">
+            <div>
+                <h3><span class="icon">🌐</span> Google Services</h3>
+                <p style="margin-bottom: 1rem;">Connect your Google Account to enable Calendar synchronization and sending email notifications via Gmail.</p>
+                
+                <div>
+                    <span class="status-indicator {% if is_google_calendar_connected %}connected{% else %}not-connected{% endif %}">
+                        <strong>Calendar Sync:</strong> {% if is_google_calendar_connected %}✅ Connected{% else %}❌ Not Connected{% endif %}
+                    </span>
+                    <span class="status-indicator {% if is_gmail_for_sending_connected %}connected{% else %}not-connected{% endif %}">
+                        <strong>Email Sending (Gmail):</strong> {% if is_gmail_for_sending_connected %}✅ Authorized{% else %}❌ Not Authorized{% endif %}
+                    </span>
+                </div>
+
+                {% if is_google_calendar_connected or is_gmail_for_sending_connected %}
+                     <p style="font-size: 0.8em; margin-top: 0.75rem; margin-bottom: 0.5rem;">
+                        The application is authorized for the connected services.
+                     </p>
+                     <a href="{{ url_for('google_authorize') }}" class="button button-secondary" style="font-size: 0.8rem; padding: 0.3rem 0.7rem;">Re-authorize / Change Account</a>
+                 {% else %}
+                     <p style="font-size: 0.9em; margin-top: 0.75rem; margin-bottom: 0.75rem;">Connect your Google Account to enable these features.</p>
+                     <a href="{{ url_for('google_authorize') }}" class="button button-primary" style="font-size: 0.9rem;">Connect Google Account</a>
+                 {% endif %}
+            </div>
         </div>
     </div>
 
