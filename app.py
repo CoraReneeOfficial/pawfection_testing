@@ -17,16 +17,23 @@ import json
 import socket
 import calendar 
 
-# NEW: For Email
-from flask_mail import Mail, Message # Import Flask-Mail
+# --- Email Functionality ---
+# from flask_mail import Mail, Message # Commented out as we switched to Gmail API
+
+# --- Gmail API Specific Imports ---
+from email.mime.text import MIMEText
+import base64 
 
 # --- Google OAuth & API Imports ---
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
+from googleapiclient.discovery import build 
 from googleapiclient.errors import HttpError
 import google.auth.transport.requests 
 from dateutil import tz, parser as dateutil_parser 
+
+# --- Decorator Helper ---
+from functools import wraps # ADDED THIS LINE
 
 # --- Configuration ---
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -36,16 +43,19 @@ UPLOAD_FOLDER = os.path.join(PERSISTENT_DATA_ROOT, 'uploads')
 SHARED_TOKEN_FILE = os.path.join(PERSISTENT_DATA_ROOT, 'shared_google_token.json')
 SHARED_GOOGLE_CALENDAR_ID = 'primary'
 
-GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "142623477405-usk2u3huejpoj62djb3gr267aov37cad.apps.googleusercontent.com")
-GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "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")
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "832000035869-b43ljrbcl33h2ksfkhha9a8kt48pefl4.apps.googleusercontent.com")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "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")
 GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", 'http://127.0.0.1:5000/google/callback')
 
-GOOGLE_SCOPES = ['https://www.googleapis.com/auth/calendar.readonly', 'https://www.googleapis.com/auth/calendar.events']
+GOOGLE_SCOPES = [
+    'https://www.googleapis.com/auth/calendar.readonly', 
+    'https://www.googleapis.com/auth/calendar.events',
+    'https://www.googleapis.com/auth/gmail.send' 
+]
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1' 
 
 BUSINESS_TIMEZONE_NAME = os.environ.get("BUSINESS_TIMEZONE", 'America/New_York')
 BUSINESS_TIMEZONE = tz.gettz(BUSINESS_TIMEZONE_NAME)
-# app.logger not available globally at this point, use print for startup warnings if needed.
 if BUSINESS_TIMEZONE is None:
     BUSINESS_TIMEZONE = tz.tzlocal() 
     print(f"WARNING: Could not load timezone '{BUSINESS_TIMEZONE_NAME}'. Falling back to system local: {BUSINESS_TIMEZONE.zone}")
@@ -60,29 +70,46 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 
 app.config['SHARED_TOKEN_FILE'] = SHARED_TOKEN_FILE 
 
-# --- Flask-Mail Configuration ---
-# IMPORTANT: Set these as environment variables in Railway (or your .env file for local dev)
-app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.googlemail.com') # Example: Gmail
-app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'true').lower() in ['true', '1', 't']
-app.config['MAIL_USE_SSL'] = os.environ.get('MAIL_USE_SSL', 'false').lower() in ['true', '1', 't']
-app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME') # Your email address (e.g., yourbusiness@gmail.com)
-app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD') # Your email password or an App Password for Gmail
-app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', ("Pawfection Grooming", app.config.get('MAIL_USERNAME', 'noreply@example.com')))
-
-mail = Mail(app) # Initialize Flask-Mail
-
-# --- Notification Settings Store (Simple In-Memory for now, move to DB/config later) ---
-# This dictionary will hold the current notification settings.
-# In a real app, you'd load/save this from a database table or a configuration file.
-NOTIFICATION_PREFERENCES = {
-    'send_confirmation_email': True,    # Enable/disable appointment confirmation emails
-    'send_reminder_email': True,        # Enable/disable reminder emails
-    'reminder_days_before': [1, 3],     # List of days before appointment to send a reminder
-    'default_reminder_time': '09:00'    # Default time to send reminders (e.g., 9 AM in business timezone)
+# Notification Settings (persisted via JSON file)
+NOTIFICATION_PREFERENCES = { 
+    'send_confirmation_email': True,
+    'send_reminder_email': True,
+    'reminder_days_before': [1, 3], 
+    'default_reminder_time': '09:00',
+    'sender_name': 'Pawfection Grooming'
 }
-# To make it editable via the app, you'll need a way to persist these settings.
-# For now, these are hardcoded defaults. The manage_notifications route will allow viewing/changing them.
+NOTIFICATION_SETTINGS_FILE = os.path.join(PERSISTENT_DATA_ROOT, 'notification_settings.json')
+
+def load_notification_preferences():
+    global NOTIFICATION_PREFERENCES
+    default_prefs = {
+        'send_confirmation_email': True, 'send_reminder_email': True,
+        'reminder_days_before': [1, 3], 'default_reminder_time': '09:00',
+        'sender_name': 'Pawfection Grooming'
+    }
+    try:
+        if os.path.exists(NOTIFICATION_SETTINGS_FILE):
+            with open(NOTIFICATION_SETTINGS_FILE, 'r') as f:
+                loaded_settings = json.load(f)
+                for key, default_value in default_prefs.items():
+                    NOTIFICATION_PREFERENCES[key] = loaded_settings.get(key, default_value)
+                app.logger.info(f"Notification preferences loaded from {NOTIFICATION_SETTINGS_FILE}")
+        else:
+            NOTIFICATION_PREFERENCES = default_prefs.copy()
+            app.logger.info("Notification settings file not found, using and saving default preferences.")
+            save_notification_preferences() 
+    except Exception as e:
+        app.logger.error(f"Error loading notification preferences: {e}", exc_info=True)
+        NOTIFICATION_PREFERENCES = default_prefs.copy()
+
+def save_notification_preferences():
+    try:
+        os.makedirs(os.path.dirname(NOTIFICATION_SETTINGS_FILE), exist_ok=True)
+        with open(NOTIFICATION_SETTINGS_FILE, 'w') as f:
+            json.dump(NOTIFICATION_PREFERENCES, f, indent=4)
+        app.logger.info(f"Notification preferences saved to {NOTIFICATION_SETTINGS_FILE}")
+    except Exception as e:
+        app.logger.error(f"Error saving notification preferences: {e}", exc_info=True)
 
 db = SQLAlchemy(app)
 
@@ -109,7 +136,7 @@ class Owner(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     phone_number = db.Column(db.String(20), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=True) # Crucial for email notifications
+    email = db.Column(db.String(120), unique=True, nullable=True) 
     address = db.Column(db.String(200), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.datetime.now(timezone.utc))
     created_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
@@ -155,12 +182,9 @@ class Appointment(db.Model):
     google_event_id = db.Column(db.String(255), nullable=True)
     groomer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     checkout_total_amount = db.Column(db.Float, nullable=True)
-    # NEW: Fields to track email notifications
     confirmation_email_sent_at = db.Column(db.DateTime, nullable=True)
-    # Example for one reminder type; you might have more if you allow multiple reminder schedules
     reminder_1_sent_at = db.Column(db.DateTime, nullable=True) 
     reminder_2_sent_at = db.Column(db.DateTime, nullable=True)
-
     def __repr__(self): return f"<Appointment ID: {self.id}, Dog ID: {self.dog_id}, DateTime: {self.appointment_datetime}, Status: {self.status}>"
 
 class ActivityLog(db.Model):
@@ -190,7 +214,7 @@ def log_activity(action, details=None):
     else:
         app.logger.warning(f"Attempted to log activity '{action}' but no user in g.")
 
-def get_shared_google_credentials():
+def get_shared_google_credentials(): 
     token_file_path = app.config.get('SHARED_TOKEN_FILE', os.path.join(PERSISTENT_DATA_ROOT, 'shared_google_token.json'))
     if not os.path.exists(token_file_path):
         app.logger.info(f"Shared Google token file not found: {token_file_path}")
@@ -216,44 +240,78 @@ def get_shared_google_credentials():
         app.logger.error(f"Unexpected error in get_shared_google_credentials: {e}", exc_info=True)
         return None
 
-# NEW: Email Sending Helper Function
+# --- Email Sending Helper Function (Uses Gmail API) ---
 def send_email_notification(to_email, subject, template_name, **kwargs):
-    """Renders an HTML email template and sends it."""
-    if not app.config.get('MAIL_USERNAME') or not app.config.get('MAIL_PASSWORD'):
-        app.logger.warning("Mail server not configured. Email notifications disabled.")
-        # Optionally flash a message to admin if they are logged in and try an action that should send email
-        # if hasattr(g, 'user') and g.user and g.user.is_admin:
-        #     flash("Email server is not configured. Notifications cannot be sent.", "warning")
+    app.logger.info(f"Attempting to send email '{subject}' to {to_email} using Gmail API.")
+    credentials = get_shared_google_credentials()
+
+    if not credentials or not credentials.valid:
+        app.logger.warning("No valid Google credentials available for sending email. Email not sent.")
+        if hasattr(g, 'user') and g.user and g.user.is_admin:
+            flash("Google Account not connected or token invalid. Email notifications cannot be sent. Please connect/reconnect via Management.", "danger")
         return False
     
+    if 'https://www.googleapis.com/auth/gmail.send' not in credentials.scopes:
+        app.logger.warning("Gmail send scope missing from current Google credentials. Email not sent.")
+        if hasattr(g, 'user') and g.user and g.user.is_admin:
+            flash("The connected Google Account does not have permission to send emails. Please re-authorize with the 'Send email on your behalf' permission.", "danger")
+        return False
+
     if not to_email:
         app.logger.warning(f"Attempted to send email '{subject}' but no recipient email provided.")
         return False
 
     try:
+        kwargs.setdefault('BUSINESS_TIMEZONE_NAME', BUSINESS_TIMEZONE_NAME)
+        sender_name_config = NOTIFICATION_PREFERENCES.get('sender_name', "Pawfection Grooming") # Use configured sender name
+        kwargs.setdefault('business_name', sender_name_config)
+
         html_body = render_template(template_name, **kwargs)
-        msg = Message(subject, recipients=[to_email], html=html_body)
-        # msg.sender = app.config['MAIL_DEFAULT_SENDER'] # Uses MAIL_DEFAULT_SENDER by default
-        mail.send(msg)
-        app.logger.info(f"Email sent to {to_email} with subject: {subject}")
+        
+        service = build('gmail', 'v1', credentials=credentials)
+        message = MIMEText(html_body, 'html', _charset='utf-8') # Specify charset
+        message['to'] = to_email
+        message['from'] = "me" # 'me' indicates the authenticated user's email address
+        message['subject'] = subject
+        
+        raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+        email_body = {'raw': raw_message}
+        
+        sent_message = service.users().messages().send(userId='me', body=email_body).execute()
+        app.logger.info(f"Email sent via Gmail API to {to_email} with subject: {subject}. Message ID: {sent_message.get('id')}")
         return True
-    except Exception as e:
-        app.logger.error(f"Error sending email to {to_email} for subject '{subject}': {e}", exc_info=True)
-        # Avoid flashing to regular users for backend email errors, but log thoroughly.
-        # If admin is performing action, a flash might be okay.
+        
+    except HttpError as error:
+        app.logger.error(f"An HTTP error occurred sending email to {to_email} via Gmail API: {error.resp.status} - {error._get_reason()}", exc_info=True)
         if hasattr(g, 'user') and g.user and g.user.is_admin:
-             flash(f"An error occurred trying to send an email notification to {to_email}.", "danger")
+             flash(f"Gmail API error sending email: {error._get_reason()}. Check logs.", "danger")
+        return False
+    except Exception as e:
+        app.logger.error(f"General error sending email to {to_email} via Gmail API: {e}", exc_info=True)
+        if hasattr(g, 'user') and g.user and g.user.is_admin:
+             flash(f"An error occurred trying to send an email notification to {to_email}. Check logs.", "danger")
         return False
 
 # --- Context Processors ---
 @app.context_processor
 def inject_utilities():
     shared_creds = get_shared_google_credentials()
-    is_google_connected = bool(shared_creds and shared_creds.valid)
+    # Calendar connection status
+    is_google_calendar_connected = False
+    if shared_creds and shared_creds.valid and \
+       all(scope in shared_creds.scopes for scope in ['https://www.googleapis.com/auth/calendar.readonly', 'https://www.googleapis.com/auth/calendar.events']):
+        is_google_calendar_connected = True
+    
+    # Gmail sending authorization status
+    gmail_send_authorized = False
+    if shared_creds and shared_creds.valid and 'https://www.googleapis.com/auth/gmail.send' in shared_creds.scopes:
+        gmail_send_authorized = True
+
     return {
         'now': lambda: datetime.datetime.now(timezone.utc),
         'check_initial_setup': check_initial_setup,
-        'is_google_calendar_connected': is_google_connected,
+        'is_google_calendar_connected': is_google_calendar_connected,
+        'is_gmail_for_sending_connected': gmail_send_authorized, 
         'BUSINESS_TIMEZONE_NAME': BUSINESS_TIMEZONE_NAME,
         'BUSINESS_TIMEZONE': BUSINESS_TIMEZONE,
         'tz': tz,
@@ -262,7 +320,9 @@ def inject_utilities():
     }
 
 # --- Decorators ---
-from functools import wraps
+# (login_required, admin_required decorators are defined here - they use 'wraps')
+# from functools import wraps # This was already added at the top
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -298,6 +358,8 @@ def uploaded_persistent_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 # --- Core Routes ---
+# (index, initial_setup, login, logout routes)
+# ... (These routes remain the same)
 @app.route('/')
 def index():
     if check_initial_setup(): return redirect(url_for('initial_setup'))
@@ -385,6 +447,8 @@ def logout():
     return redirect(url_for('auth_login'))
 
 # --- Directory Routes ---
+# (directory, add_owner, view_owner, edit_owner routes remain the same)
+# ...
 @app.route('/directory')
 @login_required
 def directory():
@@ -475,6 +539,8 @@ def edit_owner(owner_id):
     return render_template('edit_owner.html', owner=owner_to_edit)
 
 # --- Dog Routes ---
+# (_handle_dog_picture_upload, add_dog, view_dog, edit_dog, delete_dog routes remain the same)
+# ...
 def _handle_dog_picture_upload(dog_instance, request_files):
     if 'dog_picture' not in request_files: return None
     file = request_files['dog_picture']
@@ -948,7 +1014,7 @@ def get_date_range(range_type, start_date_str=None, end_date_str=None):
             end_local = datetime.datetime.combine(end_local_date, datetime.time.max, tzinfo=BUSINESS_TIMEZONE)
             period_display = f"Custom: {start_local.strftime('%b %d, %Y')} - {end_local.strftime('%b %d, %Y')}"
         except ValueError:
-            flash("Invalid custom date format. Please use YYYY-MM-DD.", "danger") # Corrected format display
+            flash("Invalid custom date format. Please use YYYY-MM-DD.", "danger") 
             return None, None, "Error: Invalid Date Format"
     else:
         flash("Unknown date range type selected.", "danger")
@@ -1198,26 +1264,24 @@ def add_appointment():
             log_activity("Added Local Appt", details=f"Dog: {selected_dog.name}, Time: {local_dt_for_log.strftime('%Y-%m-%d %I:%M %p %Z') if local_dt_for_log else 'N/A'}")
             flash(f"Appt for {selected_dog.name} scheduled!", "success")
             
-            # Send confirmation email if enabled and owner has email
             if NOTIFICATION_PREFERENCES.get('send_confirmation_email') and selected_dog.owner and selected_dog.owner.email:
                 email_subject = f"Appointment Confirmation for {selected_dog.name}"
-                # Pass necessary data to the email template
                 email_sent = send_email_notification(
                     to_email=selected_dog.owner.email,
                     subject=email_subject,
-                    template_name='email/appointment_confirmation.html',
+                    template_name='email/appointment_confirmation.html', 
                     owner_name=selected_dog.owner.name,
                     dog_name=selected_dog.name,
-                    appointment_datetime_local=local_dt_for_log, # Pass the local datetime object
+                    appointment_datetime_local=local_dt_for_log, 
                     services_text=services_text or "Not specified",
-                    business_name="Pawfection Grooming Solutions" # Or get from a config
+                    groomer_name=User.query.get(groomer_id).username if groomer_id else "Any Groomer"
                 )
                 if email_sent:
                     new_appt.confirmation_email_sent_at = datetime.datetime.now(timezone.utc)
-                    db.session.commit() # Save the timestamp
+                    db.session.commit() 
                     flash("Confirmation email sent to owner.", "info")
                 else:
-                    flash("Could not send confirmation email. Please check mail server settings or owner email.", "warning")
+                    flash("Could not send confirmation email. Please check Google connection or owner email.", "warning")
             
             _sync_appointment_to_google_calendar(new_appt, event_type='create')
             return redirect(url_for('calendar_view'))
@@ -1291,33 +1355,58 @@ def delete_appointment(appointment_id):
         flash("Error deleting appointment.", "danger")
     return redirect(url_for('calendar_view'))
 
-# --- Google Calendar Integration Routes ---
+# --- Google Services Integration Routes (Calendar & Gmail API) ---
 @app.route('/google/authorize')
 @admin_required
 def google_authorize():
-    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET or "YOUR_GOOGLE_CLIENT_ID" in GOOGLE_CLIENT_ID:
-        flash("Google Calendar integration not configured by admin.", "danger")
-        app.logger.error("GCal OAuth: Client ID/Secret missing or placeholder.")
+    # Use GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET from app config or environment
+    # (They are already defined globally, defaulting to os.environ.get)
+    if not GOOGLE_CLIENT_ID or "YOUR_GOOGLE_CLIENT_ID" in GOOGLE_CLIENT_ID or \
+       not GOOGLE_CLIENT_SECRET or "YOUR_GOOGLE_CLIENT_SECRET" in GOOGLE_CLIENT_SECRET:
+        flash("Google API Client ID/Secret not configured by admin. Please set them as environment variables.", "danger")
+        app.logger.error("Google OAuth: Client ID or Secret missing or using placeholder values.")
         return redirect(url_for('management'))
+    
     session['oauth_state'] = str(uuid.uuid4())
-    redirect_uri_to_use = os.environ.get("GOOGLE_REDIRECT_URI", url_for('google_callback', _external=True))
-    client_config = {"web": {
-        "client_id": GOOGLE_CLIENT_ID, "client_secret": GOOGLE_CLIENT_SECRET, 
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth", 
-        "token_uri": "https://oauth2.googleapis.com/token", 
-        "redirect_uris": [redirect_uri_to_use]
-    }}
+    # Ensure the redirect_uri for the flow is the one configured for Railway/production
+    # It should be an environment variable.
+    redirect_uri_to_use = os.environ.get("GOOGLE_REDIRECT_URI")
+    if not redirect_uri_to_use: # Fallback for local development if not set
+        redirect_uri_to_use = url_for('google_callback', _external=True)
+        app.logger.warning(f"GOOGLE_REDIRECT_URI not set in environment, using local: {redirect_uri_to_use}")
+
+
+    # Client config dictionary for the flow
+    client_config_dict = {
+        "web": { # Even for a web app that will use server-side flow, this structure is common
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "redirect_uris": [redirect_uri_to_use] 
+        }
+    }
     try:
-        flow = Flow.from_client_config(client_config=client_config, scopes=GOOGLE_SCOPES, 
-                                       state=session['oauth_state'], 
-                                       redirect_uri=redirect_uri_to_use)
-        auth_url, state = flow.authorization_url(access_type='offline', prompt='consent', include_granted_scopes='true')
-        session['oauth_state'] = state 
-        log_activity("Admin initiated Shared GCal auth")
-        return redirect(auth_url)
+        flow = Flow.from_client_config(
+            client_config=client_config_dict,
+            scopes=GOOGLE_SCOPES, # Now includes gmail.send scope
+            state=session['oauth_state'],
+            redirect_uri=redirect_uri_to_use
+        )
+        # Request offline access to get a refresh token, prompt for consent to ensure all scopes are re-authorized
+        authorization_url, state = flow.authorization_url(
+            access_type='offline', 
+            prompt='consent', 
+            include_granted_scopes='true'
+        )
+        session['oauth_state'] = state # Update state as it might be modified
+        log_activity("Admin initiated Google Services authorization (Calendar & Gmail)")
+        app.logger.info(f"Redirecting to Google for OAuth. Scopes: {GOOGLE_SCOPES}. Redirect URI: {redirect_uri_to_use}")
+        return redirect(authorization_url)
     except Exception as e:
-        app.logger.error(f"Error creating GCal OAuth flow: {e}", exc_info=True)
-        flash("Could not initiate GCal authorization. Check server logs.", "danger"); return redirect(url_for('management'))
+        app.logger.error(f"Error creating Google OAuth flow: {e}", exc_info=True)
+        flash("Could not initiate Google authorization. Check server logs and OAuth configuration.", "danger")
+        return redirect(url_for('management'))
 
 @app.route('/google/callback')
 @admin_required
@@ -1326,86 +1415,85 @@ def google_callback():
     state_google = request.args.get('state')
     if state_session is None or state_session != state_google:
         app.logger.error(f"OAuth state mismatch. Session: {state_session}, Google: {state_google}")
-        flash('Invalid state from Google. Auth failed.', 'danger'); abort(400) 
+        flash('Invalid state parameter from Google. Authorization failed.', 'danger')
+        abort(400) 
     if 'error' in request.args:
         error_msg = request.args.get('error')
-        app.logger.error(f"GCal OAuth error on callback: {error_msg}")
-        flash(f"GCal authorization failed: {error_msg}", 'danger'); return redirect(url_for('management'))
+        app.logger.error(f"Google OAuth error on callback: {error_msg}")
+        flash(f"Google authorization failed: {error_msg}", 'danger')
+        return redirect(url_for('management'))
     
     redirect_uri_to_use = os.environ.get("GOOGLE_REDIRECT_URI", url_for('google_callback', _external=True))
+    # For Railway, ensure the request.url used by flow.fetch_token() is HTTPS if Railway terminates SSL
     actual_request_url = request.url
-    if 'up.railway.app' in request.host_url and not actual_request_url.startswith('https'): # Specific to Railway's proxy behavior
+    # A common pattern for proxies that terminate SSL (like Railway's default setup)
+    if 'up.railway.app' in request.host_url and not actual_request_url.startswith('https'):
         actual_request_url = actual_request_url.replace('http://', 'https://', 1)
+        app.logger.info(f"Adjusted callback URL for Railway HTTPS proxy: {actual_request_url}")
 
-    client_config = {"web": {
-        "client_id": GOOGLE_CLIENT_ID, "client_secret": GOOGLE_CLIENT_SECRET, 
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth", 
-        "token_uri": "https://oauth2.googleapis.com/token", 
-        "redirect_uris": [redirect_uri_to_use]
-    }}
-    flow = Flow.from_client_config(client_config=client_config, scopes=GOOGLE_SCOPES, 
-                                   state=state_google, redirect_uri=redirect_uri_to_use)
+
+    client_config_dict = {
+        "web": {
+            "client_id": GOOGLE_CLIENT_ID, "client_secret": GOOGLE_CLIENT_SECRET, 
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth", 
+            "token_uri": "https://oauth2.googleapis.com/token", 
+            "redirect_uris": [redirect_uri_to_use]
+        }
+    }
+    flow = Flow.from_client_config(
+        client_config=client_config_dict, 
+        scopes=GOOGLE_SCOPES, 
+        state=state_google, # Use state from Google response
+        redirect_uri=redirect_uri_to_use
+    )
     try:
-        flow.fetch_token(authorization_response=actual_request_url)
-        credentials = flow.credentials
+        flow.fetch_token(authorization_response=actual_request_url) # Use potentially adjusted URL
+        credentials = flow.credentials # This object now contains the access and refresh tokens with requested scopes
+        
         token_file_path = app.config.get('SHARED_TOKEN_FILE')
         os.makedirs(os.path.dirname(token_file_path), exist_ok=True)
         with open(token_file_path, 'w') as token_file: 
-            token_file.write(credentials.to_json())
-        log_activity("Completed Shared GCal authorization")
-        flash('Successfully connected to Shared Google Calendar!', 'success')
-        app.logger.info(f"Stored Shared GCal credentials: {token_file_path}")
+            token_file.write(credentials.to_json()) # Save the new credentials (with all scopes)
+        
+        log_activity("Completed Google Services authorization (Calendar & Gmail)")
+        flash_message = "Successfully connected to Google Services! "
+        if 'https://www.googleapis.com/auth/calendar.events' in credentials.scopes:
+            flash_message += "Calendar access authorized. "
+        if 'https://www.googleapis.com/auth/gmail.send' in credentials.scopes:
+            flash_message += "Gmail sending authorized."
+        else:
+            flash_message += "However, Gmail sending permission might not have been granted. Please check."
+            app.logger.warning("Gmail send scope might be missing after OAuth flow.")
+
+        flash(flash_message, 'success')
+        app.logger.info(f"Stored Google credentials (with Calendar & Gmail scopes) in: {token_file_path}")
+
     except Exception as e:
-        app.logger.error(f"Error during Shared GCal token fetch/store: {e}", exc_info=True)
-        flash(f'Failed to store Shared GCal credentials: {str(e)}', 'danger')
+        app.logger.error(f"Error during Google token fetch/store: {e}", exc_info=True)
+        flash(f'Failed to fetch or store Google credentials: {str(e)}', 'danger')
     return redirect(url_for('management'))
 
-# --- NEW: Route for Managing Customer Notification Settings ---
+# --- Route for Managing Customer Notification Settings ---
 @app.route('/manage/notifications', methods=['GET', 'POST'])
 @admin_required
 def manage_notifications():
     if request.method == 'POST':
-        # This is where you'd save the settings from the form
-        # For now, we'll just update our global NOTIFICATION_PREFERENCES dictionary
-        # In a real app, save to DB or a config file
         NOTIFICATION_PREFERENCES['send_confirmation_email'] = 'send_confirmation_email' in request.form
         NOTIFICATION_PREFERENCES['send_reminder_email'] = 'send_reminder_email' in request.form
-        
-        reminder_days_str = request.form.getlist('reminder_days_before') # Gets a list of selected day values
+        reminder_days_str = request.form.getlist('reminder_days_before')
         try:
             NOTIFICATION_PREFERENCES['reminder_days_before'] = sorted([int(d) for d in reminder_days_str if d.isdigit()])
         except ValueError:
             flash("Invalid input for reminder days.", "danger")
-        
         NOTIFICATION_PREFERENCES['default_reminder_time'] = request.form.get('default_reminder_time', '09:00')
-
+        NOTIFICATION_PREFERENCES['sender_name'] = request.form.get('sender_name', 'Pawfection Grooming').strip()
+        
+        save_notification_preferences() 
         log_activity("Updated Notification Settings", details=str(NOTIFICATION_PREFERENCES))
         flash("Notification settings updated successfully!", "success")
-        # Persist NOTIFICATION_PREFERENCES to a file or database here if not using a global dict
-        # For example, to save to a JSON file:
-        # try:
-        #     settings_file_path = os.path.join(PERSISTENT_DATA_ROOT, 'notification_settings.json')
-        #     with open(settings_file_path, 'w') as f:
-        #         json.dump(NOTIFICATION_PREFERENCES, f, indent=4)
-        #     app.logger.info(f"Notification settings saved to {settings_file_path}")
-        # except Exception as e:
-        #     app.logger.error(f"Error saving notification settings: {e}", exc_info=True)
-        #     flash("Could not save notification settings.", "danger")
-
         return redirect(url_for('manage_notifications'))
-
-    # For GET request, load settings (from global dict for now)
-    # In a real app, load from DB or config file
-    # Example: Load from JSON file if it exists
-    # settings_file_path = os.path.join(PERSISTENT_DATA_ROOT, 'notification_settings.json')
-    # if os.path.exists(settings_file_path):
-    #     try:
-    #         with open(settings_file_path, 'r') as f:
-    #             loaded_settings = json.load(f)
-    #             NOTIFICATION_PREFERENCES.update(loaded_settings) # Update global dict
-    #     except Exception as e:
-    #         app.logger.error(f"Error loading notification settings: {e}", exc_info=True)
             
+    load_notification_preferences() 
     log_activity("Viewed Manage Customer Notifications page")
     return render_template('manage_notifications.html', current_settings=NOTIFICATION_PREFERENCES)
 
@@ -1454,31 +1542,18 @@ def initialize_app_on_startup(current_app):
         db_file_path = current_app.config.get('SQLALCHEMY_DATABASE_URI', '').replace('sqlite:///', '')
         upload_folder_path = current_app.config.get('UPLOAD_FOLDER', '')
         shared_token_file_path = current_app.config.get('SHARED_TOKEN_FILE')
+        notification_settings_file_path = NOTIFICATION_SETTINGS_FILE 
 
-        if db_file_path: 
-            db_dir = os.path.dirname(db_file_path)
-            if db_dir and not os.path.exists(db_dir): 
-                try:
-                    os.makedirs(db_dir, exist_ok=True)
-                    current_app.logger.info(f"Created database directory: {db_dir}")
-                except Exception as e:
-                    current_app.logger.error(f"Failed to create database directory {db_dir}: {e}")
-        
-        if upload_folder_path and not os.path.exists(upload_folder_path):
-            try:
-                os.makedirs(upload_folder_path, exist_ok=True)
-                current_app.logger.info(f"Created upload folder: {upload_folder_path}")
-            except Exception as e:
-                current_app.logger.error(f"Failed to create upload folder {upload_folder_path}: {e}")
-
-        if shared_token_file_path:
-            token_dir = os.path.dirname(shared_token_file_path)
-            if token_dir and not os.path.exists(token_dir):
-                try:
-                    os.makedirs(token_dir, exist_ok=True)
-                    current_app.logger.info(f"Created token directory: {token_dir}")
-                except Exception as e:
-                    current_app.logger.error(f"Failed to create token directory {token_dir}: {e}")
+        paths_to_check_dirs_for = [db_file_path, upload_folder_path, shared_token_file_path, notification_settings_file_path]
+        for p in paths_to_check_dirs_for:
+            if p:
+                dir_to_check = os.path.dirname(p) if not os.path.isdir(p) else p # If it's a file, get dir; if dir, use as is
+                if dir_to_check and not os.path.exists(dir_to_check):
+                    try:
+                        os.makedirs(dir_to_check, exist_ok=True)
+                        current_app.logger.info(f"Created directory: {dir_to_check}")
+                    except Exception as e:
+                        current_app.logger.error(f"Failed to create directory {dir_to_check}: {e}")
         try:
             inspector = db.inspect(db.engine)
             if not inspector.has_table("user"): 
@@ -1489,6 +1564,8 @@ def initialize_app_on_startup(current_app):
                 current_app.logger.info("Database tables already exist.")
         except Exception as e:
             current_app.logger.error(f"Error during database table check/creation: {e}", exc_info=True)
+        
+        load_notification_preferences() # Load notification preferences on startup
 
 if os.environ.get('RAILWAY_ENVIRONMENT') or not os.environ.get('WERKZEUG_RUN_MAIN'):
     initialize_app_on_startup(app)
@@ -1502,15 +1579,11 @@ if __name__ == '__main__':
     LOCAL_APP_URL = f"http://127.0.0.1:{PORT}/"
 
     if PERSISTENT_DATA_ROOT == BASE_DIR: 
-        if not os.path.exists(UPLOAD_FOLDER):
-            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-            app.logger.info(f"Created local upload folder: {UPLOAD_FOLDER}")
-        
-        _token_file_for_local_dev = os.path.join(BASE_DIR, 'shared_google_token.json')
-        if not os.path.exists(os.path.dirname(_token_file_for_local_dev)):
-             os.makedirs(os.path.dirname(_token_file_for_local_dev), exist_ok=True)
-             app.logger.info(f"Created local token directory: {os.path.dirname(_token_file_for_local_dev)}")
-
+        # Ensure local directories exist for development if not using a separate volume mount
+        for path_to_create in [UPLOAD_FOLDER, os.path.dirname(SHARED_TOKEN_FILE), os.path.dirname(NOTIFICATION_SETTINGS_FILE)]:
+            if path_to_create and not os.path.exists(path_to_create):
+                os.makedirs(path_to_create, exist_ok=True)
+                app.logger.info(f"Created local directory: {path_to_create}")
 
     def get_local_ip():
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -1529,7 +1602,8 @@ if __name__ == '__main__':
             threading.Thread(target=_open, daemon=True).start()
 
     with app.app_context():
-        if not os.path.exists(DATABASE_PATH.replace(PERSISTENT_DATA_ROOT, BASE_DIR) if PERSISTENT_DATA_ROOT != BASE_DIR else DATABASE_PATH):
+        # For local dev, ensure DB exists. initialize_app_on_startup might handle this too if PERSISTENT_DATA_ROOT is BASE_DIR
+        if not os.path.exists(DATABASE_PATH): 
             app.logger.info(f"Local database not found at {DATABASE_PATH}, creating tables...")
             db.create_all()
         else:
@@ -1537,6 +1611,9 @@ if __name__ == '__main__':
 
         if check_initial_setup():
             app.logger.info(f"Initial admin setup required. Navigate to {LOCAL_APP_URL}initial_setup")
+        
+        if not os.environ.get('RAILWAY_ENVIRONMENT'): # Only load for local if not already loaded by the above conditional
+            load_notification_preferences()
 
 
     local_ip_address = get_local_ip()
