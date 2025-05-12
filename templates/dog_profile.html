@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile: {{ dog.name }}{% endblock %}
+
+{% block head %}
+<style>
+    .profile-details dt { 
+        font-weight: 600;
+        color: var(--secondary-color);
+        margin-top: 0.75rem;
+    }
+    .profile-details dd { 
+        margin-left: 0; 
+        margin-bottom: 0.75rem;
+        padding: 0.5rem;
+        background-color: var(--secondary-light); 
+        border-radius: var(--border-radius);
+        border: 1px solid var(--border-color);
+        white-space: pre-wrap; 
+        word-wrap: break-word; 
+    }
+    .profile-details dd.no-info { 
+        color: var(--text-muted);
+        font-style: italic;
+        background-color: transparent;
+        border: none;
+        padding: 0;
+    }
+    .profile-actions {
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap; 
+        align-items: center;
+    }
+    .profile-image-container {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%; 
+        overflow: hidden; 
+        background-color: var(--secondary-light); 
+        border: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        margin-bottom: 1.5rem;
+        float: right; 
+        margin-left: 1.5rem; 
+    }
+    .profile-image-container img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover; 
+    }
+     @media (max-width: 600px) { 
+        .profile-image-container {
+            float: none;
+            margin: 0 auto 1.5rem auto; 
+        }
+    }
+    .service-history-list {
+        list-style: none;
+        padding: 0;
+        margin-top: 0.5rem;
+    }
+    .service-history-item {
+        background-color: #f9f9f9; 
+        border: 1px solid var(--border-color);
+        border-left: 3px solid var(--secondary-color); 
+        border-radius: var(--border-radius);
+        margin-bottom: 0.75rem;
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
+    .service-history-item strong {
+        font-weight: 600;
+    }
+    .service-history-item .date-time {
+        font-weight: 500;
+        color: var(--secondary-dark);
+    }
+    .service-history-item .groomer-info {
+        font-size: 0.85em;
+        color: var(--secondary-dark);
+        margin-top: 0.2rem;
+        display: block; 
+    }
+    .service-history-item .status {
+        font-style: italic;
+        color: var(--text-muted);
+        font-size: 0.9em;
+    }
+    .no-service-history {
+        color: var(--text-muted);
+        font-style: italic;
+    }
+    .delete-form {
+        display: inline-block; 
+        margin: 0;
+    }
+    .status-badge {
+        display: inline-block; padding: 0.15em 0.5em; font-size: 0.75em;
+        font-weight: 600; line-height: 1; text-align: center;
+        white-space: nowrap; vertical-align: baseline; border-radius: 0.25rem;
+        margin-left: 0.5em; color: #fff;
+    }
+    .status-Scheduled { background-color: var(--primary-color); }
+    .status-Completed { background-color: var(--success-color); }
+    .status-Cancelled { background-color: var(--secondary-color); }
+    .status-No-Show { background-color: var(--danger-color); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-card">
+
+    <div class="profile-image-container">
+        {% if dog.picture_filename %}
+            {# MODIFIED: Use the new route for uploaded files #}
+            <img src="{{ url_for('uploaded_persistent_file', filename=dog.picture_filename) }}" alt="Picture of {{ dog.name }}">
+        {% else %}
+            <span>No Image</span>
+        {% endif %}
+    </div>
+
+    <h1>Dog Profile: {{ dog.name }}</h1>
+    <p><strong>Owner:</strong> <a href="{{ url_for('view_owner', owner_id=dog.owner.id) }}">{{ dog.owner.name }}</a> ({{ dog.owner.phone_number }})</p>
+    {% if dog.breed %}<p><strong>Breed:</strong> {{ dog.breed }}</p>{% endif %}
+    {% if dog.birthday %}<p><strong>Birthday:</strong> {{ dog.birthday }}</p>{% endif %}
+
+    <hr style="margin: 1.5rem 0;">
+
+    <h2>Details & Notes</h2>
+    <dl class="profile-details">
+        <dt>Temperament</dt>
+        <dd class="{{ 'no-info' if not dog.temperament }}">{{ dog.temperament or 'No temperament notes provided.' }}</dd>
+        <dt>Hair Style Notes</dt>
+        <dd class="{{ 'no-info' if not dog.hair_style_notes }}">{{ dog.hair_style_notes or 'No hair style notes provided.' }}</dd>
+        <dt>Aggression Issues</dt>
+        <dd class="{{ 'no-info' if not dog.aggression_issues }}">{{ dog.aggression_issues or 'No aggression issues noted.' }}</dd>
+        <dt>Anxiety Issues</dt>
+        <dd class="{{ 'no-info' if not dog.anxiety_issues }}">{{ dog.anxiety_issues or 'No anxiety issues noted.' }}</dd>
+        <dt>Other Notes</dt>
+        <dd class="{{ 'no-info' if not dog.other_notes }}">{{ dog.other_notes or 'No other notes provided.' }}</dd>
+    </dl>
+
+    <hr style="margin: 1.5rem 0;">
+
+    <h2>Service History</h2>
+    {# Ensure 'appointments' is passed to this template from the view_dog route #}
+    {% if appointments %} 
+        <ul class="service-history-list">
+            {% for appt in appointments %}
+            <li class="service-history-item">
+                {% set local_appt_time = appt.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(BUSINESS_TIMEZONE) if BUSINESS_TIMEZONE else appt.appointment_datetime %}
+                <span class="date-time">{{ local_appt_time.strftime('%a, %b %d, %Y @ %I:%M %p') }}</span>
+                <span class="status-badge status-{{ appt.status }}">{{ appt.status }}</span>
+                {% if appt.groomer %}
+                    <span class="groomer-info">Groomer: {{ appt.groomer.username }}</span>
+                {% else %}
+                     <span class="groomer-info">Groomer: Unassigned</span>
+                {% endif %}
+                {% if appt.requested_services_text %}
+                    <p style="margin-top: 0.25rem;"><strong>Services/Fees:</strong> {{ appt.requested_services_text }}</p>
+                {% endif %}
+                {% if appt.notes %}
+                    <p style="margin-top: 0.25rem;"><strong>Appointment Notes:</strong> {{ appt.notes }}</p>
+                {% endif %}
+                 <div style="margin-top: 0.5rem;">
+                    <a href="{{ url_for('edit_appointment', appointment_id=appt.id) }}" class="button button-sm">Edit Appointment</a>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="no-service-history">No service history found for {{ dog.name }}.</p>
+    {% endif %}
+
+
+    <div class="profile-actions">
+         <a href="{{ url_for('view_owner', owner_id=dog.owner_id) }}" class="button button-secondary">Back to Owner Profile</a>
+         <a href="{{ url_for('edit_dog', dog_id=dog.id) }}" class="button button-primary">Edit Dog Profile</a>
+         <form method="POST" action="{{ url_for('delete_dog', dog_id=dog.id) }}" class="delete-form"
+               onsubmit="return confirm('Are you absolutely sure you want to delete the profile for {{ dog.name }}? This action cannot be undone and will also delete any associated appointments.');">
+            <button type="submit" class="button button-danger">Delete Dog</button>
+         </form>
+    </div>
+</div>
+{% endblock %}

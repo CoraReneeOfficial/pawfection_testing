@@ -1,0 +1,31 @@
+Flask
+Flask-SQLAlchemy
+bcrypt
+google-api-python-client
+google-auth-oauthlib
+python-dateutil
+gunicorn
+
+# Optional, but often good to specify if you rely on specific versions:
+# Werkzeug
+# Jinja2
+# SQLAlchemy (Flask-SQLAlchemy will pull a compatible version, but you can pin it if needed)
+# itsdangerous (Flask dependency)
+# click (Flask dependency)
+# blinker
+# cachetools (Google library dependency)
+# pyasn1 (Google library dependency)
+# pyasn1-modules (Google library dependency)
+# rsa (Google library dependency)
+# six (Google library dependency)
+# httplib2 (Google library dependency)
+# uritemplate (Google library dependency)
+# google-auth-httplib2 (Google library dependency)
+# oauthlib (Google library dependency)
+# requests-oauthlib (Google library dependency)
+# certifi (requests dependency)
+# charset-normalizer (requests dependency)
+# idna (requests dependency)
+# urllib3 (requests dependency)
+# greenlet (SQLAlchemy dependency)
+# typing-extensions (often a dependency for type hinting)

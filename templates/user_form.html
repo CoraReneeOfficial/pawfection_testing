@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'Add New User' if mode == 'add' else 'Edit User: ' + user_data.username }}{% endblock %}
+
+{% block head %}
+<style>
+    .form-group-inline {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem; 
+        margin-bottom: 1rem; 
+    }
+    .form-group-inline input[type="checkbox"] {
+        width: auto; 
+        height: auto;
+        margin-top: 0; 
+    }
+    .form-group-inline label {
+        margin-bottom: 0; 
+        font-weight: normal; 
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-wrapper">
+    <div class="form-container form-container-sm">
+        <h2 class="form-title">{{ 'Add New User' if mode == 'add' else 'Edit User: ' + user_data.username }}</h2>
+
+        <form method="POST" action="{{ url_for('add_user') if mode == 'add' else url_for('edit_user', user_id=user_data.id) }}" enctype="multipart/form-data" novalidate>
+            <div class="form-group">
+                <label for="username">Username *</label>
+                <input type="text" id="username" name="username" required class="form-input" value="{{ user_data.username or '' }}" autofocus>
+            </div>
+            <div class="form-group">
+                <label for="password">Password {{ '*' if mode == 'add' else '(leave blank to keep current)' }}</label>
+                <input type="password" id="password" name="password" {{ 'required' if mode == 'add' else '' }} class="form-input">
+            </div>
+            <div class="form-group">
+                 <label for="confirm_password">Confirm Password {{ '*' if mode == 'add' else '' }}</label>
+                <input type="password" id="confirm_password" name="confirm_password" {{ 'required' if mode == 'add' else '' }} class="form-input">
+                 <small class="text-muted" style="display: block; margin-top: 0.2rem;">
+                    {% if mode == 'edit' %}Only required if changing the password.{% else %}Required.{% endif %}
+                 </small>
+            </div>
+
+            <div class="form-group form-group-inline">
+                <input type="checkbox" id="is_admin" name="is_admin" value="true" {% if user_data.is_admin %}checked{% endif %} style="width: auto; height: auto;">
+                <label for="is_admin">Is Administrator?</label>
+            </div>
+            
+            <div class="form-group form-group-inline">
+                <input type="checkbox" id="is_groomer" name="is_groomer" value="true" {% if user_data.is_groomer %}checked{% endif %} style="width: auto; height: auto;">
+                <label for="is_groomer">Is Groomer?</label>
+            </div>
+             <small class="text-muted" style="display: block; margin-bottom: 1rem;">
+                A user can be an Administrator, a Groomer, or both. Roles are independent.
+             </small>
+
+            <div class="form-group">
+                <label for="user_picture">Profile Picture</label>
+                <input type="file" id="user_picture" name="user_picture" class="form-input" accept="image/png, image/jpeg, image/gif, image/webp">
+                 <small class="text-muted">Optional. Uploading a new picture will replace the current one.</small>
+                 {% if mode == 'edit' and user_data.picture_filename %}
+                    <div style="margin-top: 0.5rem;">
+                        Current picture:
+                        {# MODIFIED: Use the new route for uploaded files #}
+                        <img src="{{ url_for('uploaded_persistent_file', filename=user_data.picture_filename) }}" alt="Current picture for {{ user_data.username }}" style="max-height: 60px; max-width: 60px; border-radius: 50%; margin-left: 1rem; vertical-align: middle;">
+                    </div>
+                 {% endif %}
+            </div>
+
+            <p style="font-size: 0.8rem; color: var(--text-muted);">* Required fields</p>
+
+            <div class="form-button-wrapper">
+                 <a href="{{ url_for('manage_users') }}" class="button button-secondary">Cancel</a>
+                <button type="submit" class="button button-primary">{{ 'Add User' if mode == 'add' else 'Save Changes' }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

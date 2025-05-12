@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+
+{% block title %}Sales Report - {{ report_period }}{% endblock %}
+
+{% block head %}
+<style>
+    .report-container {
+        margin-top: 1rem;
+    }
+    .report-header {
+        text-align: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--primary-color);
+    }
+    .report-header h1 {
+        margin-bottom: 0.25rem;
+        color: var(--primary-color);
+    }
+    .report-header p {
+        font-size: 1.1rem;
+        color: var(--text-muted);
+        margin-top: 0;
+    }
+
+    .report-table-container {
+        margin-bottom: 2.5rem;
+        padding: 1.5rem;
+        background-color: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-lg); /* Larger radius for container */
+        box-shadow: var(--box-shadow-lg); /* More prominent shadow */
+    }
+    .report-table-container h2 { /* Groomer name / Store Total */
+        font-size: 1.4rem;
+        color: var(--secondary-dark);
+        margin-top: 0;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--border-color-light);
+    }
+
+    .report-table {
+        width: 100%;
+        border-collapse: collapse; /* Cleaner table lines */
+        font-size: 0.9rem;
+    }
+    .report-table th, .report-table td {
+        border: 1px solid var(--border-color-light);
+        padding: 0.75rem 1rem; /* More padding */
+        text-align: left;
+        vertical-align: top;
+    }
+    .report-table th {
+        background-color: var(--primary-lighter); /* Light background for headers */
+        color: var(--primary-dark);
+        font-weight: 600;
+    }
+    .report-table td.amount, .report-table th.amount {
+        text-align: right;
+        min-width: 100px; /* Ensure amount columns have enough space */
+    }
+    .report-table tr:nth-child(even) td {
+        background-color: #f9fafb; /* Subtle striping for rows */
+    }
+    .report-table .subtotal-row td {
+        font-weight: bold;
+        background-color: var(--secondary-lighter) !important; /* Highlight subtotal */
+        color: var(--secondary-darker);
+    }
+    .report-table .grand-total-row td {
+        font-weight: bold;
+        font-size: 1.1em;
+        background-color: var(--primary-light) !important; /* Highlight grand total */
+        color: var(--primary-darker);
+        border-top: 2px solid var(--primary-color);
+    }
+    .no-data-message {
+        text-align: center;
+        padding: 2rem;
+        background-color: var(--secondary-lighter);
+        border: 1px solid var(--secondary-border);
+        border-radius: var(--border-radius);
+        color: var(--text-muted);
+        font-style: italic;
+    }
+    .report-actions {
+        margin-top: 2rem;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-card report-container">
+    <div class="report-header">
+        <h1>Sales Report</h1>
+        <p>{{ report_period_display }}</p>
+        {% if selected_groomer_name %}
+            <p><strong>Groomer:</strong> {{ selected_groomer_name }}</p>
+        {% else %}
+            <p><strong>All Groomers</strong></p>
+        {% endif %}
+    </div>
+
+    {% if report_data and (report_data.groomer_reports or report_data.store_summary.grand_total > 0) %}
+        {# Groomer Specific Reports (if any groomer was selected or if data exists for multiple) #}
+        {% if report_data.groomer_reports %}
+            {% for groomer_id, data in report_data.groomer_reports.items() %}
+            <div class="report-table-container">
+                <h2>{{ data.groomer_name }} - Sales Summary</h2>
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Service/Fee</th>
+                            <th class="amount">Quantity</th>
+                            <th class="amount">Total Sales</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item_name, item_data in data.items_sold.items() %}
+                        <tr>
+                            <td>{{ item_name }}</td>
+                            <td class="amount">{{ item_data.quantity }}</td>
+                            <td class="amount">${{ "%.2f"|format(item_data.total_sales) }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3" style="text-align:center; font-style:italic;">No sales recorded for this groomer in this period.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="subtotal-row">
+                            <td colspan="2"><strong>{{ data.groomer_name }}'s Total Sales:</strong></td>
+                            <td class="amount"><strong>${{ "%.2f"|format(data.total_groomer_sales) }}</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            {% endfor %}
+        {% endif %}
+
+        {# Store Summary Report #}
+        <div class="report-table-container">
+            <h2>Store-Wide Sales Summary</h2>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Service/Fee</th>
+                        <th class="amount">Total Quantity Sold</th>
+                        <th class="amount">Total Store Sales for Item</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item_name, item_data in report_data.store_summary.items_sold.items() %}
+                    <tr>
+                        <td>{{ item_name }}</td>
+                        <td class="amount">{{ item_data.quantity }}</td>
+                        <td class="amount">${{ "%.2f"|format(item_data.total_sales) }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" style="text-align:center; font-style:italic;">No sales recorded for the store in this period.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="grand-total-row">
+                        <td colspan="2"><strong>Total Store Sales (All Groomers):</strong></td>
+                        <td class="amount"><strong>${{ "%.2f"|format(report_data.store_summary.grand_total) }}</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+    {% else %}
+        <div class="no-data-message">
+            <p>No sales data found for the selected criteria.</p>
+        </div>
+    {% endif %}
+
+    <div class="report-actions">
+        <a href="{{ url_for('view_sales_reports') }}" class="button button-secondary">Generate Another Report</a>
+        <a href="{{ url_for('management') }}" class="button">Back to Management</a>
+    </div>
+</div>
+{% endblock %}

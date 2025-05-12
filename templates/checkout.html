@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+
+{% block title %}Checkout Appointment{% endblock %}
+
+{% block head %}
+<style>
+    .checkout-form-section {
+        margin-bottom: 1.5rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .checkout-form-section:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+    .checkout-form-section h2 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: var(--primary-color);
+    }
+    .checkout-form-section h3 {
+        font-size: 1.1rem;
+        font-weight: 500;
+        margin-top: 1rem;
+        margin-bottom: 0.5rem;
+        color: var(--secondary-dark);
+    }
+    .item-list {
+        list-style: none;
+        padding: 0;
+        max-height: 180px;
+        overflow-y: auto;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        padding: 0.5rem;
+        background-color: #fff;
+        margin-bottom: 1rem;
+    }
+    .item-list li {
+        padding: 0.4rem 0.2rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .item-list li input[type="checkbox"] {
+        width: auto;
+        height: auto;
+        margin-right: 0.5rem;
+    }
+    .item-list li label {
+        flex-grow: 1;
+        margin-bottom: 0;
+        font-weight: normal;
+    }
+    .item-list li .item-price-display {
+        font-size: 0.9em;
+        color: var(--text-muted);
+        white-space: nowrap;
+    }
+
+    .results-section {
+        margin-top: 2rem;
+        padding: 1.5rem;
+        background-color: var(--primary-lighter);
+        border: 1px solid var(--primary-border);
+        border-radius: var(--border-radius);
+    }
+    .results-section h2 {
+        margin-top: 0;
+        color: var(--primary-color);
+    }
+    .results-table {
+        width: 100%;
+        max-width: 400px;
+        margin-top: 1rem;
+    }
+    .results-table td {
+        padding: 0.5rem 0;
+    }
+    .results-table td:last-child {
+        text-align: right;
+        font-weight: 600;
+    }
+    .results-table .total-row td {
+        font-size: 1.2em;
+        border-top: 2px solid var(--primary-border);
+        padding-top: 0.75rem;
+        color: var(--text-dark);
+    }
+    .results-dog-service-info {
+         margin-bottom: 1rem;
+         font-size: 0.95rem;
+    }
+    .results-dog-service-info strong {
+        color: var(--text-dark);
+    }
+    .results-dog-service-info ul {
+        list-style: disc;
+        margin-left: 1.5rem;
+        padding-left: 0.5rem;
+        margin-top: 0.25rem;
+    }
+    .checkout-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin-top: 1.5rem;
+        flex-wrap: wrap;
+    }
+    .checkout-buttons button {
+        padding: 0.75rem 1.5rem;
+        font-size: 1.1rem;
+    }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-card">
+    <h1>Checkout Appointment</h1>
+    <p>Select a scheduled appointment, confirm the services performed and add any fees, then complete the checkout.</p>
+
+    <form method="POST" action="{{ url_for('checkout') }}">
+
+        {# Section 1: Select Appointment #}
+        <div class="checkout-form-section">
+            <h2>1. Select Appointment</h2>
+            <div class="form-group">
+                <label for="appointment_id">Scheduled Appointment *</label>
+                <select name="appointment_id" id="appointment_id" required class="form-input">
+                    <option value="" disabled {% if not selected_appointment_id %}selected{% endif %}>-- Select an Appointment --</option>
+                    {% for appt in scheduled_appointments %}
+                        {% set local_appt_time = appt.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(BUSINESS_TIMEZONE) if BUSINESS_TIMEZONE else appt.appointment_datetime %}
+                        <option value="{{ appt.id }}" {% if appt.id == selected_appointment_id %}selected{% endif %}>
+                            {{ local_appt_time.strftime('%a, %b %d @ %I:%M %p') }} - {{ appt.dog.name }} ({{ appt.dog.owner.name }})
+                        </option>
+                    {% endfor %}
+                </select>
+                {% if not scheduled_appointments %}
+                 <small class="text-muted" style="color: var(--danger-color);">No 'Scheduled' appointments found. Please <a href="{{ url_for('add_appointment')}}">schedule an appointment</a> first.</small>
+                 {% endif %}
+            </div>
+        </div>
+
+        {# Section 2: Select Services & Fees Performed #}
+        <div class="checkout-form-section">
+            <h2>2. Select Services & Fees Performed *</h2>
+            <h3>Services</h3>
+            <div class="form-group">
+                {% if all_services %}
+                    <ul class="item-list">
+                        {% for service in all_services %}
+                        <li>
+                            <input type="checkbox" name="service_ids" id="service_{{ service.id }}" value="{{ service.id }}"
+                                   {% if service.id in selected_item_ids %}checked{% endif %}>
+                            <label for="service_{{ service.id }}">{{ service.name }}</label>
+                            <span class="item-price-display">${{ "%.2f"|format(service.base_price) }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">No services found. Please add services in the <a href="{{ url_for('manage_services') }}">Management</a> section.</p>
+                {% endif %}
+            </div>
+             <h3>Additional Fees</h3>
+            <div class="form-group">
+                {% if all_fees %}
+                    <ul class="item-list">
+                        {% for fee in all_fees %}
+                        <li>
+                            {# Corrected pre-selection to use selected_item_ids and ensure type consistency #}
+                            <input type="checkbox" name="fee_ids" id="fee_{{ fee.id }}" value="{{ fee.id }}"
+                                   {% if fee.id in selected_item_ids or fee.id|string in selected_item_ids|map('string') %}checked{% endif %}>
+                            <label for="fee_{{ fee.id }}">{{ fee.name }}</label>
+                            <span class="item-price-display">${{ "%.2f"|format(fee.base_price) }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">No additional fees found. You can add fees in the <a href="{{ url_for('manage_services') }}">Management</a> section.</p>
+                {% endif %}
+            </div>
+             <small class="text-muted">Select all services and fees that apply to this visit.</small>
+        </div>
+
+        {# Section 3: Calculate/Complete Buttons #}
+        <div class="checkout-buttons">
+            <button type="submit" name="action" value="calculate_total" class="button button-secondary" style="background-color: var(--secondary-color); color: white;">Calculate Total</button>
+            {% if calculated_data %}
+            <button type="submit" name="action" value="complete_checkout" class="button button-primary">Complete Checkout</button>
+            {% endif %}
+        </div>
+    </form>
+
+
+    {# Section 4: Display Results #}
+    {% if calculated_data %}
+    <div class="results-section">
+        <h2>Checkout Summary</h2>
+        <div class="results-dog-service-info">
+            <p><strong>Appointment For:</strong> {{ calculated_data.dog.name }} (Owner: {{ calculated_data.owner.name }})</p> {# Changed from calculated_data.dog.owner.name #}
+            <p><strong>Date & Time:</strong>
+                {# Ensure calculated_data.appointment.appointment_datetime exists before trying to format #}
+                {% if calculated_data.appointment and calculated_data.appointment.appointment_datetime %}
+                    {% set display_time = calculated_data.appointment.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(BUSINESS_TIMEZONE) if BUSINESS_TIMEZONE else calculated_data.appointment.appointment_datetime %}
+                    {{ display_time.strftime('%a, %b %d, %Y @ %I:%M %p') }}
+                {% else %}
+                    N/A
+                {% endif %}
+            </p>
+            <p><strong>Items Billed:</strong></p>
+            <ul>
+                {% for item in calculated_data.billed_items %}
+                <li>{{ item.name }} (${{ "%.2f"|format(item.base_price) }})</li>
+                {% else %}
+                <li>None Selected</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <table class="results-table">
+            <tbody>
+                <tr>
+                    <td>Subtotal:</td>
+                    <td>${{ "%.2f"|format(calculated_data.subtotal) }}</td>
+                </tr>
+                <tr class="total-row">
+                    <td><strong>Total Amount Due:</strong></td>
+                    <td><strong>${{ "%.2f"|format(calculated_data.total) }}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+        <p style="margin-top: 1rem; font-size: 0.9rem; text-align: center;">
+            Please enter the total amount due into your payment system (e.g., Square).
+            <br>Click "Complete Checkout" above to mark this appointment as completed.
+        </p>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

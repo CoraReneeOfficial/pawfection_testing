@@ -1,0 +1,47 @@
+{% extends 'base.html' %} {# Inherits the base layout, navbar, footer, etc. #}
+
+{# Set the page title dynamically based on the owner being edited #}
+{% block title %}Edit Owner: {{ owner.name }}{% endblock %}
+
+{% block content %} {# Defines the main content area for this page #}
+<div class="form-wrapper"> {# Centers the form container #}
+    <div class="form-container"> {# Styles the form box #}
+        <h2 class="form-title">Edit Owner: {{ owner.name }}</h2>
+        <p class="form-description">Update the client's information below.</p>
+
+        {# Form submits data back to the '/owner/<owner_id>/edit' route using POST #}
+        {# The owner.id is passed from the Flask route to ensure we're editing the correct owner #}
+        <form method="POST" action="{{ url_for('edit_owner', owner_id=owner.id) }}" novalidate>
+            <div class="form-group">
+                <label for="name">Owner Name *</label>
+                {# Pre-fill the input with the owner's current name. The 'or ''' handles cases where owner.name might be None (though unlikely here) #}
+                <input type="text" id="name" name="name" required class="form-input" value="{{ owner.name or '' }}" autofocus>
+            </div>
+            <div class="form-group">
+                <label for="phone">Phone Number *</label>
+                {# Pre-fill with current phone number #}
+                <input type="tel" id="phone" name="phone" required class="form-input" value="{{ owner.phone_number or '' }}" placeholder="e.g., 919-555-1234">
+                 <small class="text-muted">Primary contact number.</small>
+            </div>
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                {# Pre-fill with current email address #}
+                <input type="email" id="email" name="email" class="form-input" value="{{ owner.email or '' }}" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="address">Address</label>
+                {# Pre-fill with current address. Textarea content goes between the tags. #}
+                <textarea id="address" name="address" rows="3" class="form-input" placeholder="Optional">{{ owner.address or '' }}</textarea>
+            </div>
+
+            <p style="font-size: 0.8rem; color: var(--text-muted);">* Required fields</p>
+
+            <div class="form-button-wrapper" style="display: flex; gap: 1rem; justify-content: flex-end;">
+                 {# Cancel button goes back to the main directory page #}
+                 <a href="{{ url_for('directory') }}" class="button" style="background-color: var(--secondary-color); color: white;">Cancel</a>
+                <button type="submit" class="button button-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

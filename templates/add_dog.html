@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block title %}Add New Dog for {{ owner.name }}{% endblock %}
+
+{% block content %}
+<div class="form-wrapper">
+    <div class="form-container">
+        <h2 class="form-title">Add New Dog</h2>
+        <p class="form-description">Enter the details for the new dog belonging to <strong>{{ owner.name }}</strong>.</p>
+
+        {# *** IMPORTANT: Add enctype="multipart/form-data" to the form tag for file uploads *** #}
+        <form method="POST" action="{{ url_for('add_dog', owner_id=owner.id) }}" enctype="multipart/form-data" novalidate>
+            <div class="form-group">
+                <label for="dog_name">Dog Name *</label>
+                {# Use get() on the 'dog' dict passed back on error #}
+                <input type="text" id="dog_name" name="dog_name" required class="form-input" value="{{ dog.get('dog_name', '') }}" autofocus>
+            </div>
+            <div class="form-group">
+                <label for="breed">Breed</label>
+                <input type="text" id="breed" name="breed" class="form-input" value="{{ dog.get('breed', '') }}" placeholder="Optional">
+            </div>
+             <div class="form-group">
+                <label for="birthday">Birthday</label>
+                <input type="text" id="birthday" name="birthday" class="form-input" value="{{ dog.get('birthday', '') }}" placeholder="Optional, e.g., MM/DD/YYYY or Year">
+            </div>
+
+            {# *** NEW: Dog Picture Upload *** #}
+            <div class="form-group">
+                <label for="dog_picture">Dog Picture</label>
+                <input type="file" id="dog_picture" name="dog_picture" class="form-input" accept="image/png, image/jpeg, image/gif, image/webp">
+                 <small class="text-muted">Optional. Allowed types: png, jpg, jpeg, gif, webp.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="temperament">Temperament Notes</label>
+                <textarea id="temperament" name="temperament" rows="3" class="form-input" placeholder="Optional: e.g., Friendly, nervous, good with dryer">{{ dog.get('temperament', '') }}</textarea>
+            </div>
+             <div class="form-group">
+                <label for="hair_style_notes">Hair Style Notes</label>
+                <textarea id="hair_style_notes" name="hair_style_notes" rows="3" class="form-input" placeholder="Optional: e.g., Teddy bear cut, clean face, #7 body">{{ dog.get('hair_style_notes', '') }}</textarea>
+            </div>
+             <div class="form-group">
+                <label for="aggression_issues">Aggression Issues</label>
+                <textarea id="aggression_issues" name="aggression_issues" rows="2" class="form-input" placeholder="Optional: Note any triggers or specific issues">{{ dog.get('aggression_issues', '') }}</textarea>
+            </div>
+             <div class="form-group">
+                <label for="anxiety_issues">Anxiety Issues</label>
+                <textarea id="anxiety_issues" name="anxiety_issues" rows="2" class="form-input" placeholder="Optional: Note any triggers or specific issues">{{ dog.get('anxiety_issues', '') }}</textarea>
+            </div>
+            <div class="form-group">
+                <label for="other_notes">Other Notes</label>
+                <textarea id="other_notes" name="other_notes" rows="3" class="form-input" placeholder="Optional: Any other relevant information">{{ dog.get('other_notes', '') }}</textarea>
+            </div>
+
+            <p style="font-size: 0.8rem; color: var(--text-muted);">* Required fields</p>
+
+            <div class="form-button-wrapper" style="display: flex; gap: 1rem; justify-content: flex-end;">
+                 {# Cancel button goes back to the main directory page #}
+                 <a href="{{ url_for('directory') }}" class="button" style="background-color: var(--secondary-color); color: white;">Cancel</a>
+                <button type="submit" class="button button-primary">Add Dog</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

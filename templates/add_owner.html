@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}Add New Owner{% endblock %}
+
+{% block content %}
+<div class="form-wrapper">
+    <div class="form-container">
+        <h2 class="form-title">Add New Owner</h2>
+        <p class="form-description">Enter the details for the new client.</p>
+
+        <form method="POST" action="{{ url_for('add_owner') }}" novalidate>
+            <div class="form-group">
+                <label for="name">Owner Name *</label>
+                <input type="text" id="name" name="name" required class="form-input" value="{{ owner.name or '' }}" autofocus>
+            </div>
+            <div class="form-group">
+                <label for="phone">Phone Number *</label>
+                <input type="tel" id="phone" name="phone" required class="form-input" value="{{ owner.phone or '' }}" placeholder="e.g., 919-555-1234">
+                 <small class="text-muted">Primary contact number.</small>
+            </div>
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" class="form-input" value="{{ owner.email or '' }}" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="address">Address</label>
+                <textarea id="address" name="address" rows="3" class="form-input" placeholder="Optional">{{ owner.address or '' }}</textarea>
+            </div>
+
+            <p style="font-size: 0.8rem; color: var(--text-muted);">* Required fields</p>
+
+            <div class="form-button-wrapper" style="display: flex; gap: 1rem; justify-content: flex-end;">
+                 <a href="{{ url_for('directory') }}" class="button" style="background-color: var(--secondary-color); color: white;">Cancel</a>
+                <button type="submit" class="button button-primary">Add Owner</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

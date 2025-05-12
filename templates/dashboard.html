@@ -1,0 +1,121 @@
+{% extends 'base.html' %} {# Inherits from base.html #}
+
+{% block title %}Dashboard{% endblock %} {# Sets the page title #}
+
+{% block head %}
+<style>
+    .dashboard-welcome {
+        display: flex; align-items: center; gap: 1rem;
+        margin-bottom: 1.5rem; padding-bottom: 1rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .dashboard-user-pic {
+        width: 60px; height: 60px; border-radius: 50%; overflow: hidden;
+        background-color: var(--secondary-light); border: 1px solid var(--border-color);
+        flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    }
+    .dashboard-user-pic img { width: 100%; height: 100%; object-fit: cover; }
+    .dashboard-user-pic .default-user-pic-svg { width: 36px; height: 36px; color: var(--secondary-color); }
+    .dashboard-welcome-text h1 { margin-bottom: 0.25rem; }
+    .dashboard-welcome-text p { margin-bottom: 0; }
+
+    .appointments-summary { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); }
+    .appointments-summary h2 { margin-bottom: 1rem; }
+    .appointment-summary-list { list-style: none; padding: 0; }
+    .appointment-summary-item {
+        background-color: #fff; border: 1px solid var(--border-color);
+        border-left: 4px solid var(--primary-color); border-radius: var(--border-radius);
+        margin-bottom: 0.75rem; padding: 0.75rem 1rem; font-size: 0.9rem;
+        display: flex; align-items: center; gap: 1rem; flex-wrap: nowrap;
+    }
+    .appointment-dog-pic {
+        width: 40px; height: 40px; border-radius: 50%; overflow: hidden;
+        background-color: var(--secondary-light); border: 1px solid var(--border-color);
+        flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    }
+    .appointment-dog-pic img { width: 100%; height: 100%; object-fit: cover; }
+    .appointment-dog-pic .default-dog-pic-svg { width: 24px; height: 24px; color: var(--secondary-color); }
+     .appointment-summary-item > .appointment-details-summary { flex-grow: 1; min-width: 0; }
+    .appointment-summary-item strong { font-weight: 600; }
+    .appointment-summary-item .date-time { font-weight: 500; color: var(--primary-color); }
+    .appointment-groomer-info {
+        font-size: 0.85em;
+        color: var(--secondary-dark);
+        margin-top: 0.2rem;
+        display: block; 
+    }
+    .no-upcoming-appointments { color: var(--text-muted); font-style: italic; }
+    .status-badge { display: inline-block; padding: 0.15em 0.5em; font-size: 0.75em; font-weight: 600; line-height: 1; text-align: center; white-space: nowrap; vertical-align: baseline; border-radius: 0.25rem; margin-left: 0.5em; color: #fff; flex-shrink: 0; }
+    .status-Scheduled { background-color: var(--primary-color); } .status-Completed { background-color: var(--success-color); } .status-Cancelled { background-color: var(--secondary-color); } .status-No-Show { background-color: var(--danger-color); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-card">
+
+    <div class="dashboard-welcome">
+        <div class="dashboard-user-pic">
+            {% if g.user.picture_filename %}
+                {# MODIFIED: Use the new route for uploaded files #}
+                <img src="{{ url_for('uploaded_persistent_file', filename=g.user.picture_filename) }}" alt="Profile picture for {{ g.user.username }}">
+            {% else %}
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="default-user-pic-svg">
+                    <path fill-rule="evenodd" d="M18.685 19.097A9.723 9.723 0 0021.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 003.065 7.097A9.716 9.716 0 0012 21.75a9.716 9.716 0 006.685-2.653zm-12.54-1.285A7.486 7.486 0 0112 15a7.486 7.486 0 015.855 2.812A8.224 8.224 0 0112 20.25a8.224 8.224 0 01-5.855-2.438zM15.75 9a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" clip-rule="evenodd" />
+                </svg>
+            {% endif %}
+        </div>
+        <div class="dashboard-welcome-text">
+            <h1>Dashboard</h1>
+            <p class="highlight">Welcome back, {{ g.user.username if g.user else "User" }}!</p>
+        </div>
+    </div>
+    <p>Select an option below or use the navigation bar to get started.</p>
+
+    <div class="quick-links-grid">
+        <a href="{{ url_for('calendar_view') }}" class="quick-link-card blue"><h3>📅 View Calendar</h3><p>Check and manage upcoming appointments.</p></a>
+        <a href="{{ url_for('directory') }}" class="quick-link-card green"><h3>📂 Directory</h3><p>Manage client and pet profiles.</p></a>
+        <a href="{{ url_for('checkout') }}" class="quick-link-card yellow"><h3>🛒 Checkout</h3><p>Process appointments and payments.</p></a>
+        <a href="{{ url_for('view_logs') }}" class="quick-link-card gray"><h3>📜 Activity Log</h3><p>Review recent actions in the app.</p></a>
+        {% if g.user.is_admin %}
+        <a href="{{ url_for('management') }}" class="quick-link-card red"><h3>⚙️ Management</h3><p>Manage users, services, and reports.</p></a>
+        {% endif %}
+    </div>
+
+    <div class="appointments-summary">
+        <h2>Upcoming Appointments (Next 5 Scheduled)</h2>
+        {% if upcoming_appointments %}
+            <ul class="appointment-summary-list">
+                {% for appt in upcoming_appointments %}
+                <li class="appointment-summary-item">
+                    <div class="appointment-dog-pic">
+                        {% if appt.dog.picture_filename %}
+                            {# MODIFIED: Use the new route for uploaded files #}
+                            <img src="{{ url_for('uploaded_persistent_file', filename=appt.dog.picture_filename) }}" alt="Pic of {{ appt.dog.name }}">
+                        {% else %}
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="default-dog-pic-svg">
+                              <path d="M11.06 1.988a.75.75 0 10-1.06-.076L10 2.012l-.06.076a.75.75 0 101.06-.076ZM8.28 3.56a.75.75 0 00-1.06 1.06l1.06-1.06zM11.72 3.56a.75.75 0 111.06 1.06l-1.06-1.06zM3.75 6.75a.75.75 0 000 1.5h12.5a.75.75 0 000-1.5H3.75zM10 17.25a8.25 8.25 0 110-16.5 8.25 8.25 0 010 16.5zM9.94 2.064a6.75 6.75 0 00-6.22 8.97l-.001.002-.002.003-.003.006a7.004 7.004 0 00.018.06 7.074 7.074 0 00.11-.318l.04.106.048.124.05.116.058.124.06.115.063.111.067.108.068.102.07.098.07.092.074.088.074.082.076.078.077.073.08.069.08.064.083.06.084.055.086.05.087.046.09.041.09.037.093.032.094.028.096.024.097.02.1.015.1.011.103.007.103.003h.002a6.73 6.73 0 0011.96 0h.002l.103-.003.103-.007.1-.011.1-.015.097-.02.096-.024.094-.028.093-.032.09-.037.09-.041.087-.046.086-.05.084-.055.083-.06.08-.064.08-.069.077-.073.076-.078.074-.082.074-.088.07-.092.07-.098.068-.102.067-.108.063-.111.06-.115.058-.124.05-.116.048-.124.04-.106a6.95 6.95 0 00.11-.318 7.004 7.004 0 00.018-.06l-.003-.006-.002-.003-.001-.002a6.75 6.75 0 00-6.22-8.97z"/>
+                            </svg>
+                        {% endif %}
+                    </div>
+                    <div class="appointment-details-summary">
+                        {% set local_appt_time = appt.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(BUSINESS_TIMEZONE) if BUSINESS_TIMEZONE else appt.appointment_datetime %}
+                        <span class="date-time">{{ local_appt_time.strftime('%a, %b %d @ %I:%M %p') }}</span> -
+                        <strong>{{ appt.dog.name }}</strong> ({{ appt.dog.owner.name }})
+                        {% if appt.requested_services_text %} - {{ appt.requested_services_text }}{% endif %}
+                        {% if appt.groomer %}
+                            <span class="appointment-groomer-info">Groomer: {{ appt.groomer.username }}</span>
+                        {% endif %}
+                    </div>
+                    <span class="status-badge status-{{ appt.status }}">{{ appt.status }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            <p><a href="{{ url_for('calendar_view') }}">View Full Calendar &raquo;</a></p>
+        {% else %}
+            <p class="no-upcoming-appointments">No upcoming appointments scheduled in the app.</p>
+            <p><a href="{{ url_for('add_appointment') }}" class="button button-primary" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">Schedule an Appointment</a></p>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

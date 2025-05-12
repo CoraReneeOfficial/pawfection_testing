@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Pawfection Grooming Solutions{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body x-data="{ navMenuOpen: false }">
+    <div class="page-wrapper">
+
+        {% if g.user %}
+        <nav class="main-nav">
+            <div class="nav-container">
+                <div class="nav-brand">
+                    <a href="{{ url_for('index') }}">
+                        <span aria-hidden="true">🐾</span>
+                        Pawfection Grooming Solutions
+                    </a>
+                </div>
+
+                <div class="nav-user-menu-area">
+                    <div class="nav-user-pic">
+                        {% if g.user.picture_filename %}
+                            {# MODIFIED: Use the new route for uploaded files #}
+                            <img src="{{ url_for('uploaded_persistent_file', filename=g.user.picture_filename) }}" alt="User profile picture">
+                        {% else %}
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="default-user-pic-svg">
+                                <path fill-rule="evenodd" d="M18.685 19.097A9.723 9.723 0 0021.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 003.065 7.097A9.716 9.716 0 0012 21.75a9.716 9.716 0 006.685-2.653zm-12.54-1.285A7.486 7.486 0 0112 15a7.486 7.486 0 015.855 2.812A8.224 8.224 0 0112 20.25a8.224 8.224 0 01-5.855-2.438zM15.75 9a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" clip-rule="evenodd" />
+                            </svg>
+                        {% endif %}
+                    </div>
+
+                    <div class="nav-menu-container" @click.outside="navMenuOpen = false">
+                        <button @click="navMenuOpen = !navMenuOpen" class="nav-menu-button" aria-controls="main-navigation-dropdown" :aria-expanded="navMenuOpen.toString()">
+                            Menu
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="nav-menu-chevron" :class="{ 'rotate-180': navMenuOpen }">
+                                <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.23 8.29a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                        <div class="nav-dropdown-menu" id="main-navigation-dropdown" x-show="navMenuOpen" x-cloak
+                             x-transition:enter="transition ease-out duration-100 transform"
+                             x-transition:enter-start="opacity-0 scale-95"
+                             x-transition:enter-end="opacity-100 scale-100"
+                             x-transition:leave="transition ease-in duration-75 transform"
+                             x-transition:leave-start="opacity-100 scale-100"
+                             x-transition:leave-end="opacity-0 scale-95">
+                            <a href="{{ url_for('index') }}" class="nav-dropdown-item {% if request.endpoint == 'index' %}active{% endif %}">Dashboard</a>
+                            <a href="{{ url_for('calendar_view') }}" class="nav-dropdown-item {% if request.endpoint == 'calendar_view' %}active{% endif %}">Calendar</a>
+                            <a href="{{ url_for('directory') }}" class="nav-dropdown-item {% if request.endpoint == 'directory' %}active{% endif %}">Directory</a>
+                            <a href="{{ url_for('checkout') }}" class="nav-dropdown-item {% if request.endpoint == 'checkout' %}active{% endif %}">Checkout</a>
+                            <a href="{{ url_for('view_logs') }}" class="nav-dropdown-item {% if request.endpoint == 'view_logs' %}active{% endif %}">Activity Log</a>
+                            {% if g.user.is_admin %}
+                            <a href="{{ url_for('management') }}" class="nav-dropdown-item {% if request.endpoint == 'management' or request.endpoint.startswith('manage_') or request.endpoint == 'view_sales_reports' %}active{% endif %}">Management</a>
+                            {% endif %}
+                            <div class="nav-dropdown-divider"></div>
+                            <div class="nav-dropdown-user-info">
+                                Hello, {{ g.user.username if g.user else "User" }}!
+                            </div>
+                            <a href="{{ url_for('logout') }}" class="nav-dropdown-item logout">Logout</a>
+                        </div>
+                    </div>
+                </div> 
+            </div>
+        </nav>
+        {% endif %}
+
+        <div class="flash-messages container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        {% set category_class = 'flash-' + category if category in ['danger', 'success', 'warning', 'info'] else 'flash-info' %}
+                        <div class="flash-message {{ category_class }}" role="alert">
+                            <p>{{ message }}</p>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <main class="main-content container">
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer class="main-footer">
+            <p>Pawfection Grooming Solutions by Cora Kirkpatrick &copy; {{ now().year if now else "" }}</p>
+        </footer>
+
+    </div>
+    <script src="//unpkg.com/alpinejs" defer></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

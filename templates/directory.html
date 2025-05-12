@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+
+{% block title %}Client & Pet Directory{% endblock %}
+
+{% block head %}
+<style>
+    /* Simple styles for the directory list */
+    .directory-list {
+        list-style: none;
+        padding: 0;
+    }
+    .owner-group {
+        background-color: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        margin-bottom: 1.5rem;
+        padding: 1.5rem;
+        box-shadow: var(--box-shadow);
+    }
+    .owner-header {
+        display: flex;
+        flex-wrap: wrap; /* Allow wrapping on smaller screens */
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.5rem; /* Add gap for wrapped items */
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .owner-info {
+         flex-basis: 60%; /* Give owner info more space initially */
+         min-width: 250px; /* Prevent it from getting too small */
+    }
+    .owner-name {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-dark);
+        margin-right: 0.5rem; /* Space between name and contact */
+    }
+    .owner-contact {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        word-break: break-all; /* Prevent long emails/phones from overflowing */
+    }
+    .dog-list {
+        list-style: none;
+        padding-left: 0; /* Remove default padding */
+        margin-top: 0.5rem;
+    }
+    .dog-list li {
+        padding: 0.6rem 0.5rem; /* Adjust padding */
+        border-bottom: 1px dashed var(--border-color);
+        display: flex;
+        flex-wrap: wrap; /* Allow wrapping */
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.5rem; /* Add gap */
+    }
+    .dog-list li:last-child {
+        border-bottom: none;
+    }
+    .dog-info {
+        flex-basis: 60%; /* Give dog info more space */
+        min-width: 150px;
+    }
+    .dog-name a {
+        font-weight: 500;
+        color: var(--primary-color);
+    }
+    .dog-name a:hover {
+        color: var(--primary-hover);
+    }
+    .search-form {
+        margin-bottom: 1.5rem;
+        display: flex;
+        flex-wrap: wrap; /* Allow wrapping on small screens */
+        gap: 0.75rem; /* Increased gap */
+        align-items: center;
+    }
+    .search-input {
+        flex-grow: 1; /* Allow input to take available space */
+        min-width: 200px; /* Minimum width for the search input */
+    }
+    .search-form .button {
+        padding: 0.6rem 1rem; /* Adjust button padding slightly */
+    }
+    .no-results {
+        text-align: center;
+        padding: 2rem;
+        color: var(--text-muted);
+        background-color: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        margin-top: 1rem;
+    }
+    /* Action links styling */
+    .action-links {
+        display: flex;
+        gap: 0.5rem; /* Space between links */
+        flex-shrink: 0; /* Prevent links from shrinking too much */
+        flex-wrap: wrap; /* Allow links to wrap */
+        justify-content: flex-end; /* Align links to the right */
+    }
+    .action-links a, .action-button { /* Style links and potentially buttons similarly */
+        font-size: 0.8rem;
+        text-decoration: none;
+        padding: 0.25rem 0.6rem; /* Adjust padding */
+        border: 1px solid var(--primary-border);
+        border-radius: var(--border-radius);
+        background-color: var(--primary-lighter);
+        color: var(--primary-color);
+        white-space: nowrap; /* Prevent wrapping within a link */
+        transition: background-color 0.15s ease, border-color 0.15s ease;
+    }
+     .action-links a:hover, .action-button:hover {
+        background-color: var(--primary-light);
+        border-color: var(--primary-color);
+        text-decoration: none;
+        color: var(--primary-hover);
+     }
+     .content-header {
+         display: flex;
+         flex-wrap: wrap; /* Allow wrapping */
+         justify-content: space-between;
+         align-items: center;
+         gap: 1rem; /* Add gap between title and button */
+         margin-bottom: 1.5rem;
+     }
+     .content-header h1 {
+         margin-bottom: 0; /* Remove bottom margin from h1 in this context */
+     }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <h1>Client & Pet Directory</h1>
+    <a href="{{ url_for('add_owner') }}" class="button button-primary">Add New Owner</a>
+</div>
+
+
+<form method="GET" action="{{ url_for('directory') }}" class="search-form">
+    <label for="search-input" class="sr-only">Search Directory</label> <input type="search" id="search-input" name="q" placeholder="Search Owner Name, Phone, or Dog Name..." value="{{ search_query or '' }}" class="form-input search-input">
+    <button type="submit" class="button button-primary">Search</button>
+    {% if search_query %}
+    <a href="{{ url_for('directory') }}" class="button" style="background-color: var(--secondary-color); color: white; border-color: var(--secondary-color);">Clear Search</a>
+    {% endif %}
+</form>
+
+{% if owners %}
+    <ul class="directory-list">
+        {% for owner in owners %}
+        <li class="owner-group">
+            <div class="owner-header">
+                <div class="owner-info">
+                    <span class="owner-name">{{ owner.name }}</span><br class="d-sm-none"> <span class="owner-contact">
+                        {{ owner.phone_number }}
+                        {% if owner.email %} | {{ owner.email }}{% endif %}
+                    </span>
+                </div>
+                <div class="action-links">
+                    <a href="{{ url_for('view_owner', owner_id=owner.id) }}">View Profile</a>
+                    <a href="{{ url_for('add_dog', owner_id=owner.id) }}">Add Dog</a>
+                    <a href="{{ url_for('edit_owner', owner_id=owner.id) }}">Edit Owner</a>
+                </div>
+            </div>
+
+            {% if owner.dogs %}
+                <ul class="dog-list">
+                    {% for dog in owner.dogs %}
+                    <li>
+                        <div class="dog-info">
+                            <span class="dog-name">
+                                <a href="{{ url_for('view_dog', dog_id=dog.id) }}">{{ dog.name }}</a>
+                            </span>
+                            {% if dog.breed %} <span style="font-size: 0.85em; color: var(--text-muted);">({{ dog.breed }})</span>{% endif %}
+                        </div>
+                        <div class="action-links">
+                             <a href="{{ url_for('view_dog', dog_id=dog.id) }}">View Dog Profile</a>
+                             {# This link correctly points to the 'edit_dog' route with the dog's ID #}
+                            <a href="{{ url_for('edit_dog', dog_id=dog.id) }}">Edit Dog</a>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-muted" style="padding-left: 0.5rem; font-size: 0.9rem; margin-bottom: 0;">No dogs listed for this owner.</p>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <div class="no-results">
+        {% if search_query %}
+            <p>No owners or dogs found matching your search term: "<strong>{{ search_query }}</strong>"</p>
+            <p><a href="{{ url_for('directory') }}">Clear search results</a> or <a href="{{ url_for('add_owner') }}">Add a New Owner</a>.</p>
+        {% else %}
+            <p>The directory is currently empty.</p>
+            <p><a href="{{ url_for('add_owner') }}" class="button button-primary" style="margin-top: 0.5rem;">Add the First Owner</a></p>
+        {% endif %}
+    </div>
+{% endif %}
+
+{# Pagination (if you implement it for owners) #}
+{% if pagination and pagination.pages > 1 %}
+<nav aria-label="Owner list navigation" class="pagination-container" style="margin-top: 2rem; text-align:center;">
+    {% if pagination.has_prev %}
+        <a href="{{ url_for('directory', page=pagination.prev_num, q=search_query) }}" class="button">&laquo; Previous Owners</a>
+    {% else %}
+        <button class="button" disabled>&laquo; Previous Owners</button>
+    {% endif %}
+
+    <span style="margin: 0 1rem;">Page {{ pagination.page }} of {{ pagination.pages }}</span>
+
+    {% if pagination.has_next %}
+        <a href="{{ url_for('directory', page=pagination.next_num, q=search_query) }}" class="button">Next Owners &raquo;</a>
+    {% else %}
+        <button class="button" disabled>Next Owners &raquo;</button>
+    {% endif %}
+</nav>
+{% endif %}
+
+{% endblock %}

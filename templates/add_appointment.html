@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+
+{% block title %}Add New Appointment{% endblock %}
+
+{% block head %}
+<style>
+    /* Add any specific styles for this page if needed */
+    /* For example, to ensure consistent spacing for form groups: */
+    .form-group {
+        margin-bottom: 1.25rem; /* Consistent bottom margin */
+    }
+    .form-group label {
+        display: block; /* Ensure labels are on their own line */
+        margin-bottom: 0.35rem; /* Space between label and input */
+        font-weight: 500; /* Slightly bolder labels */
+    }
+    .form-input, select.form-input, textarea.form-input {
+        width: 100%;
+        padding: 0.6rem 0.75rem;
+        border: 1px solid var(--border-color); /* Use CSS variable */
+        border-radius: var(--border-radius-sm); /* Use CSS variable */
+        background-color: #fff;
+        box-sizing: border-box;
+        font-size: 0.95rem;
+        transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+    .form-input:focus, select.form-input:focus, textarea.form-input:focus {
+        border-color: var(--primary-color); /* Highlight focus with primary color */
+        box-shadow: 0 0 0 0.2rem var(--primary-color-transparent); /* Subtle focus ring */
+        outline: none;
+    }
+    select.form-input { /* Basic custom arrow for select */
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236b7280'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.23 8.29a.75.75 0 01.02-1.06z' clip-rule='evenodd' /%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.7rem center;
+        background-size: 1.25em 1.25em;
+        padding-right: 2.5rem;
+    }
+    .form-button-wrapper {
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-end; /* Align buttons to the right */
+        margin-top: 1.5rem; /* Space above buttons */
+        padding-top: 1rem; /* Space within the wrapper */
+        border-top: 1px solid var(--border-color-light); /* Separator line */
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-wrapper">
+    <div class="form-container">
+        <h2 class="form-title">Schedule New Appointment</h2>
+        <p class="form-description">Enter the details for the new appointment.</p>
+
+        {# Form submits to the add_appointment route #}
+        <form method="POST" action="{{ url_for('add_appointment') }}" novalidate>
+
+            <div class="form-group">
+                <label for="dog_id">Dog *</label>
+                <select name="dog_id" id="dog_id" required class="form-input">
+                    <option value="" disabled {% if not appointment_data.get('dog_id') %}selected{% endif %}>-- Select a Dog --</option>
+                    {# Loop through dogs passed from Flask #}
+                    {% for dog in dogs %}
+                        {# Check if this dog was selected in a previous failed submission #}
+                        {# Ensure consistent type comparison (string to string, or int to int) #}
+                        <option value="{{ dog.id }}" {% if dog.id|string == appointment_data.get('dog_id') %}selected{% endif %}>
+                            {{ dog.name }} (Owner: {{ dog.owner.name }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="appointment_date">Date *</label>
+                {# Pre-fill if value exists from previous submission, otherwise default to today #}
+                <input type="date" id="appointment_date" name="appointment_date" required class="form-input" value="{{ appointment_data.get('appointment_date', today_date_iso) }}">
+            </div>
+
+            <div class="form-group">
+                <label for="appointment_time">Time *</label>
+                {# Pre-fill if value exists from previous submission #}
+                <input type="time" id="appointment_time" name="appointment_time" required class="form-input" value="{{ appointment_data.get('appointment_time', '') }}">
+                 <small class="text-muted">Select the start time for the appointment.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="groomer_id">Assign Groomer</label>
+                <select name="groomer_id" id="groomer_id" class="form-input">
+                    <option value="">-- Unassigned --</option> {# Option for no groomer #}
+                    {# Loop through users passed from Flask #}
+                    {% for user in users %}
+                        {# Pre-select if value exists from previous submission #}
+                        <option value="{{ user.id }}" {% if user.id|string == appointment_data.get('groomer_id') %}selected{% endif %}>
+                            {{ user.username }}
+                        </option>
+                    {% endfor %}
+                </select>
+                 <small class="text-muted">Optional: Select the groomer for this appointment.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="services_text">Requested Services</label>
+                {# Pre-fill if value exists from previous submission #}
+                <input type="text" id="services_text" name="services_text" class="form-input" value="{{ appointment_data.get('services_text', '') }}" placeholder="Optional: e.g., Full Groom, Bath & Brush">
+                <small class="text-muted">List the main services requested (will appear on calendar).</small>
+            </div>
+
+            <div class="form-group">
+                <label for="notes">Appointment Notes</label>
+                {# Pre-fill if value exists from previous submission #}
+                <textarea id="notes" name="notes" rows="3" class="form-input" placeholder="Optional: e.g., Owner requests specific shampoo, dog is matted">{{ appointment_data.get('notes', '') }}</textarea>
+            </div>
+
+            <p style="font-size: 0.8rem; color: var(--text-muted);">* Required fields</p>
+
+            <div class="form-button-wrapper">
+                 {# Cancel button goes back to the main calendar view #}
+                 {# Corrected url_for to 'calendar_view' #}
+                 <a href="{{ url_for('calendar_view') }}" class="button button-secondary">Cancel</a>
+                <button type="submit" class="button button-primary">Schedule Appointment</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

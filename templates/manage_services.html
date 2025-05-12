@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Services & Fees{% endblock %}
+
+{% block head %}
+<style>
+    .item-actions form {
+        display: inline-block; /* Keep delete button next to edit */
+        margin-left: 0.5rem;
+    }
+    .item-actions .button, .item-actions a.button {
+         padding: 0.2rem 0.6rem;
+         font-size: 0.8rem;
+    }
+    .item-price {
+        text-align: right;
+        white-space: nowrap;
+    }
+    .item-description {
+        font-size: 0.9em;
+        color: var(--text-muted);
+        max-width: 40ch; /* Limit description width */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .data-table th:nth-child(1), .data-table td:nth-child(1) { width: 30%; } /* Name */
+    .data-table th:nth-child(2), .data-table td:nth-child(2) { width: 35%; } /* Description */
+    .data-table th:nth-child(3), .data-table td:nth-child(3) { width: 15%; } /* Price */
+    .data-table th:nth-child(4), .data-table td:nth-child(4) { width: 20%; text-align: center;} /* Actions */
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 2rem; /* Add space above section headers */
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+     .section-header:first-of-type {
+         margin-top: 0; /* No top margin for the very first section */
+     }
+    .section-header h2 {
+        margin: 0; /* Remove default heading margins */
+        font-size: 1.4rem;
+    }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-card">
+    <div class="content-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h1>Manage Services & Fees</h1>
+        {# Button still goes to the same 'add_service' route, which handles both types #}
+        <a href="{{ url_for('add_service') }}" class="button button-primary">Add New Item</a>
+    </div>
+
+    <p>Here you can add, edit, and delete grooming services and additional fees.</p>
+
+    {# --- Services Section --- #}
+    <div class="section-header">
+        <h2>Services</h2>
+    </div>
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Service Name</th>
+                    <th>Description</th>
+                    <th style="text-align: right;">Base Price</th>
+                    <th style="text-align: center;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {# Loop through the 'services' list passed from Flask #}
+                {% if services %}
+                    {% for item in services %}
+                    <tr>
+                        <td>{{ item.name }}</td>
+                        <td class="item-description" title="{{ item.description or '' }}">{{ item.description or '-' }}</td>
+                        <td class="item-price">${{ "%.2f"|format(item.base_price) }}</td>
+                        <td class="item-actions" style="text-align: center;">
+                            <a href="{{ url_for('edit_service', service_id=item.id) }}" class="button">Edit</a>
+                            <form method="POST" action="{{ url_for('delete_service', service_id=item.id) }}"
+                                  onsubmit="return confirm('Are you sure you want to delete \'{{ item.name }}\'?');">
+                                <button type="submit" class="button" style="background-color: var(--danger-color); color: white; border-color: var(--danger-color);">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr class="table-placeholder-row">
+                        <td colspan="4" class="table-placeholder">
+                            No services have been added yet.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    {# --- Fees Section --- #}
+    <div class="section-header">
+        <h2>Fees</h2>
+    </div>
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Fee Name</th>
+                    <th>Description</th>
+                    <th style="text-align: right;">Base Price</th>
+                    <th style="text-align: center;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                 {# Loop through the 'fees' list passed from Flask #}
+                {% if fees %}
+                    {% for item in fees %}
+                    <tr>
+                        <td>{{ item.name }}</td>
+                        <td class="item-description" title="{{ item.description or '' }}">{{ item.description or '-' }}</td>
+                        <td class="item-price">${{ "%.2f"|format(item.base_price) }}</td>
+                        <td class="item-actions" style="text-align: center;">
+                            <a href="{{ url_for('edit_service', service_id=item.id) }}" class="button">Edit</a>
+                            <form method="POST" action="{{ url_for('delete_service', service_id=item.id) }}"
+                                  onsubmit="return confirm('Are you sure you want to delete \'{{ item.name }}\'?');">
+                                <button type="submit" class="button" style="background-color: var(--danger-color); color: white; border-color: var(--danger-color);">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr class="table-placeholder-row">
+                        <td colspan="4" class="table-placeholder">
+                            No additional fees have been added yet.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+     <div style="margin-top: 1.5rem;">
+         <a href="{{ url_for('management') }}" class="button" style="background-color: var(--secondary-color); color: white;">Back to Management</a>
+    </div>
+</div>
+{% endblock %}

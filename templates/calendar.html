@@ -1,0 +1,165 @@
+{% extends 'base.html' %} {# Inherits the base layout #}
+
+{% block title %}Appointment Calendar{% endblock %} {# Sets the page title #}
+
+{% block head %}
+<style>
+    /* Style the iframe container */
+    .google-calendar-embed {
+        position: relative;
+        overflow: hidden;
+        max-width: 100%;
+        background: #eee;
+        border-radius: var(--border-radius);
+        border: 1px solid var(--border-color);
+        box-shadow: var(--box-shadow);
+        margin-top: 2rem; /* Add space above embed */
+        margin-bottom: 1.5rem; /* Space below embed */
+        min-height: 600px; /* Ensure minimum height */
+    }
+    .google-calendar-embed iframe {
+        width: 100%;
+        height: 800px; /* Match iframe height attribute */
+        border: 0;
+    }
+    .calendar-actions-header {
+        margin-top: 1.5rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    .local-appointments-section h2 {
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .appointment-list { list-style: none; padding: 0; }
+    .appointment-item {
+        background-color: #fff; border: 1px solid var(--border-color);
+        border-radius: var(--border-radius); margin-bottom: 1rem;
+        padding: 1rem 1.5rem; box-shadow: var(--box-shadow);
+        display: flex; align-items: flex-start;
+        flex-wrap: wrap; gap: 1rem;
+    }
+    .appointment-dog-pic {
+        width: 45px; height: 45px; border-radius: 50%; overflow: hidden;
+        background-color: var(--secondary-light); border: 1px solid var(--border-color);
+        flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    }
+    .appointment-dog-pic img { width: 100%; height: 100%; object-fit: cover; }
+    .appointment-dog-pic .default-dog-pic-svg { width: 28px; height: 28px; color: var(--secondary-color); }
+
+    .appointment-info { flex-grow: 1; min-width: 200px; }
+    .appointment-info strong { font-weight: 600; }
+    .appointment-datetime { font-weight: 600; color: var(--primary-color); white-space: nowrap; display: block; margin-bottom: 0.25rem; }
+    .appointment-dog-owner { font-size: 0.9em; color: var(--text-muted); }
+    .appointment-groomer-info {
+        font-size: 0.85em;
+        color: var(--secondary-dark);
+        margin-top: 0.2rem;
+        display: block; 
+    }
+    .appointment-notes-services { font-size: 0.9em; margin-top: 0.5rem; margin-bottom: 0; color: #444; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word; }
+    .appointment-notes-services p { margin-bottom: 0.25rem; }
+    .appointment-actions { display: flex; gap: 0.5rem; align-items: center; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; padding-top: 0.5rem; margin-left: auto; }
+    .appointment-actions form { display: inline-block; margin: 0; }
+    .appointment-actions .button, .appointment-actions a.button { font-size: 0.8rem; padding: 0.2rem 0.6rem; white-space: nowrap; }
+    .no-appointments { text-align: center; padding: 2rem; color: var(--text-muted); background-color: #fff; border: 1px solid var(--border-color); border-radius: var(--border-radius); margin-top: 1rem; }
+    .status-badge { display: inline-block; padding: 0.15em 0.5em; font-size: 0.75em; font-weight: 600; line-height: 1; text-align: center; white-space: nowrap; vertical-align: baseline; border-radius: 0.25rem; margin-left: 0.5em; color: #fff; }
+    .status-Scheduled { background-color: var(--primary-color); } .status-Completed { background-color: var(--success-color); } .status-Cancelled { background-color: var(--secondary-color); } .status-No-Show { background-color: var(--danger-color); }
+</style>
+{% endblock %}
+
+{% block content %} {# Main content block #}
+<div class="content-card">
+    <div class="content-header">
+        <h1>Appointment Calendar</h1>
+        <a href="{{ url_for('add_appointment') }}" class="button button-primary">Add New Appointment (In App)</a>
+    </div>
+
+    <p>
+        Manage appointments directly in this app below. These will attempt to sync with the shared Google Calendar if connected by an admin.
+        The embedded Google Calendar view follows.
+    </p>
+    {% if not is_google_calendar_connected %}
+    <p class="flash-message flash-warning" style="text-align: center;">
+        The application is not currently connected to the shared Google Calendar. Appointments added/edited here will not be synced.
+        An administrator needs to <a href="{{ url_for('management') }}">connect it via the Management page</a>.
+    </p>
+    {% endif %}
+
+    {# --- Local App Appointments List --- #}
+    <div class="local-appointments-section">
+        <h2>Scheduled Appointments (Managed in App)</h2> {# Updated title to reflect filtering #}
+        {# 'local_appointments' is passed from the /calendar route in app.py #}
+        {% if local_appointments %}
+            <ul class="appointment-list">
+                {% for appointment in local_appointments %}
+                <li class="appointment-item">
+                    <div class="appointment-dog-pic">
+                        {% if appointment.dog.picture_filename %}
+                            {# MODIFIED: Use the new route for uploaded files #}
+                            <img src="{{ url_for('uploaded_persistent_file', filename=appointment.dog.picture_filename) }}" alt="Pic of {{ appointment.dog.name }}">
+                        {% else %}
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="default-dog-pic-svg">
+                              <path d="M11.06 1.988a.75.75 0 10-1.06-.076L10 2.012l-.06.076a.75.75 0 101.06-.076ZM8.28 3.56a.75.75 0 00-1.06 1.06l1.06-1.06zM11.72 3.56a.75.75 0 111.06 1.06l-1.06-1.06zM3.75 6.75a.75.75 0 000 1.5h12.5a.75.75 0 000-1.5H3.75zM10 17.25a8.25 8.25 0 110-16.5 8.25 8.25 0 010 16.5zM9.94 2.064a6.75 6.75 0 00-6.22 8.97l-.001.002-.002.003-.003.006a7.004 7.004 0 00.018.06 7.074 7.074 0 00.11-.318l.04.106.048.124.05.116.058.124.06.115.063.111.067.108.068.102.07.098.07.092.074.088.074.082.076.078.077.073.08.069.08.064.083.06.084.055.086.05.087.046.09.041.09.037.093.032.094.028.096.024.097.02.1.015.1.011.103.007.103.003h.002a6.73 6.73 0 0011.96 0h.002l.103-.003.103-.007.1-.011.1-.015.097-.02.096-.024.094-.028.093-.032.09-.037.09-.041.087-.046.086-.05.084-.055.083-.06.08-.064.08-.069.077-.073.076-.078.074-.082.074-.088.07-.092.07-.098.068-.102.067-.108.063-.111.06-.115.058-.124.05-.116.048-.124.04-.106a6.95 6.95 0 00.11-.318 7.004 7.004 0 00.018-.06l-.003-.006-.002-.003-.001-.002a6.75 6.75 0 00-6.22-8.97z"/>
+                            </svg>
+                        {% endif %}
+                    </div>
+                    <div class="appointment-info">
+                        {% set local_appt_time = appointment.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(BUSINESS_TIMEZONE) if BUSINESS_TIMEZONE else appointment.appointment_datetime %}
+                        <span class="appointment-datetime">{{ local_appt_time.strftime('%a, %b %d, %Y @ %I:%M %p') }}</span>
+                        <span class="status-badge status-{{ appointment.status }}">{{ appointment.status }}</span>
+                        <br>
+                        <span class="appointment-dog-owner">
+                            <strong>Dog:</strong> {{ appointment.dog.name }}
+                            (Owner: {{ appointment.dog.owner.name }})
+                        </span>
+                        {% if appointment.groomer %}
+                            <span class="appointment-groomer-info">Groomer: {{ appointment.groomer.username }}</span>
+                        {% endif %}
+                         <div class="appointment-notes-services">
+                             {% if appointment.requested_services_text %}
+                                <p><strong>Services:</strong> {{ appointment.requested_services_text }}</p>
+                             {% endif %}
+                             {% if appointment.notes %}
+                                <p><strong>Notes:</strong> {{ appointment.notes }}</p>
+                             {% endif %}
+                         </div>
+                    </div>
+                     <div class="appointment-actions">
+                         <a href="{{ url_for('view_dog', dog_id=appointment.dog.id) }}" class="button" title="View Dog Profile">Details</a>
+                         <a href="{{ url_for('edit_appointment', appointment_id=appointment.id) }}" class="button">Edit</a>
+                         <form method="POST" action="{{ url_for('delete_appointment', appointment_id=appointment.id) }}"
+                               onsubmit="return confirm('Are you sure you want to delete this appointment for {{ appointment.dog.name }} on {{ local_appt_time.strftime('%b %d') }}?');">
+                            <button type="submit" class="button button-danger">Delete</button>
+                        </form>
+                     </div>
+                </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="no-appointments" style="padding: 1rem; margin-top:0;">
+                <p>No 'Scheduled' appointments found in this app.</p> {# Updated message #}
+            </div>
+        {% endif %}
+    </div>
+
+    {# --- Google Calendar Embed --- #}
+    <div class="section-header">
+        <h2>Shared Google Calendar View</h2>
+    </div>
+    <div class="google-calendar-embed">
+        <iframe src="https://calendar.google.com/calendar/embed?height=800&wkst=1&ctz=America%2FNew_York&mode=AGENDA&title=Dog%20Schedule&src=cGF3ZmVjdGlvbi5ncm9vbWluZy5zb2x1dGlvbnNAZ21haWwuY29t&src=ZW4udXNhI2hvbGlkYXlAZ3JvdXAudi5jYWxlbmRhci5nb29nbGUuY29t&color=%23039BE5&color=%230B8043" style="border:solid 1px #777" width="1000" height="800" frameborder="0" scrolling="no"></iframe>
+    </div>
+
+    <div class="calendar-actions-header">
+         <a href="https://calendar.google.com/" target="_blank" class="button">Open Shared Google Calendar</a>
+         <a href="{{ url_for('index') }}" class="button button-secondary">Back to Dashboard</a>
+    </div>
+
+</div> {# End of content-card #}
+{% endblock %}

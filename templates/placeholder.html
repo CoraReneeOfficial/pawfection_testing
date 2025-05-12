@@ -1,0 +1,16 @@
+{% extends 'base.html' %} {# Inherits from base.html #}
+
+{% block title %}{{ page_name }}{% endblock %} {# Sets title dynamically based on page_name variable #}
+
+{% block content %}
+<div class="content-card placeholder-content"> {# Card styling, centered text #}
+    <h1>{{ page_name }}</h1> {# Display the name of the section #}
+    <p>🚧 This section is currently under construction. 🚧</p> {# Placeholder message #}
+    <p>Functionality for {{ page_name.lower() }} will be added soon.</p>
+    <div>
+        <a href="{{ url_for('index') }}" class="button button-primary">
+            Go to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

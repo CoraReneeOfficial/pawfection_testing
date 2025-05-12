@@ -1,0 +1,89 @@
+{% extends 'base.html' %} {# Inherits from base.html #}
+
+{% block title %}Activity Log{% endblock %} {# Sets the page title #}
+
+{% block head %}
+<style>
+    .pagination-container {
+        margin-top: 2rem;
+        text-align: center;
+    }
+    .pagination-container .button {
+        margin-left: 0.5rem;
+        margin-right: 0.5rem;
+    }
+    .pagination-container .current-page {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        margin: 0 0.5rem;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        background-color: var(--primary-lighter);
+        color: var(--primary-dark);
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-card"> {# Wrap content in a card #}
+    <div class="content-header">
+        <h1>Activity Log</h1>
+        <a href="{{ url_for('management') }}" class="button button-secondary">Back to Management</a>
+    </div>
+    <p>This log shows recent actions performed within the application. Displaying page {{ logs_pagination.page }} of {{ logs_pagination.pages }}.</p>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Timestamp (UTC)</th>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {# Check if the pagination object has items #}
+                {% if logs_pagination and logs_pagination.items %}
+                    {# Loop through items from the pagination object #}
+                    {% for log_entry in logs_pagination.items %}  {# Changed loop variable to log_entry to avoid conflict #}
+                    <tr>
+                        <td>{{ log_entry.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>{{ log_entry.user.username if log_entry.user else 'System/Unknown' }}</td>
+                        <td>{{ log_entry.action }}</td>
+                        <td>{{ log_entry.details if log_entry.details else '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr class="table-placeholder-row">
+                        <td colspan="4" class="table-placeholder">
+                            No activity logs found yet.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    {# Pagination Controls #}
+    {% if logs_pagination and logs_pagination.pages > 1 %}
+    <div class="pagination-container">
+        {% if logs_pagination.has_prev %}
+            <a href="{{ url_for('view_logs', page=logs_pagination.prev_num) }}" class="button">&laquo; Previous</a>
+        {% else %}
+            <button class="button" disabled>&laquo; Previous</button>
+        {% endif %}
+
+        <span class="current-page">Page {{ logs_pagination.page }} of {{ logs_pagination.pages }}</span>
+
+        {% if logs_pagination.has_next %}
+            <a href="{{ url_for('view_logs', page=logs_pagination.next_num) }}" class="button">Next &raquo;</a>
+        {% else %}
+            <button class="button" disabled>Next &raquo;</button>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+
+{% block title %}User Agreement - Pawfection Grooming Solutions{% endblock %}
+
+{% block head %}
+<style>
+    .legal-content-container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background-color: #fff;
+        border-radius: var(--border-radius-lg);
+        box-shadow: var(--box-shadow-lg);
+        line-height: 1.6;
+    }
+    .legal-content-container h1 {
+        color: var(--primary-dark);
+        border-bottom: 2px solid var(--primary-color);
+        padding-bottom: 0.5rem;
+        margin-bottom: 1.5rem;
+        font-size: 2rem;
+    }
+    .legal-content-container h2 {
+        color: var(--secondary-dark);
+        margin-top: 2rem;
+        margin-bottom: 0.75rem;
+        font-size: 1.5rem;
+    }
+    .legal-content-container p, 
+    .legal-content-container ul, 
+    .legal-content-container ol {
+        margin-bottom: 1rem;
+        color: var(--text-color);
+    }
+    .legal-content-container ul, 
+    .legal-content-container ol {
+        padding-left: 1.5rem; /* Standard indentation for lists */
+    }
+    .legal-content-container strong {
+        font-weight: 600; /* Bolder strong tags */
+    }
+    .back-link-container {
+        margin-top: 2.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border-color-light);
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="legal-content-container">
+    <h1>User Agreement</h1>
+    <p><strong>Last Updated:</strong> {{ now().strftime('%B %d, %Y') }}</p>
+
+    <p>Welcome to Pawfection Grooming Solutions (the "Application")! These terms and conditions ("Terms", "Agreement") outline the rules and regulations for the use of the Application provided by Charles Durane Kirkpatrick Jr. or Cora Renee Kirkpatrick.</p>
+
+    <p>By accessing or using this Application, we assume you accept these terms and conditions in full. Do not continue to use Pawfection Grooming Solutions if you do not agree to all of the terms and conditions stated on this page.</p>
+
+    <h2>1. Definitions</h2>
+    <p>The following terminology applies to these Terms and Conditions, Privacy Statement and Disclaimer Notice and all Agreements: "Client", "User", "You" and "Your" refers to you, the person accessing or using this Application and compliant to the Company’s terms and conditions. "The Company", "Ourselves", "We", "Our" and "Us", refers to our Company, Charles Durane Kirkpatrick Jr. "Party", "Parties", or "Us", refers to both the Client and ourselves. All terms refer to the offer, acceptance, and consideration of payment necessary to undertake the process of our assistance to the Client in the most appropriate manner for the express purpose of meeting the Client’s needs in respect of provision of the Company’s stated services, in accordance with and subject to, prevailing law of [Your Jurisdiction, e.g., Your State, USA].</p>
+
+    <h2>2. License to Use Application</h2>
+    <p>Unless otherwise stated, Charles Durane Kirkpatrick Jr and/or its licensors own the intellectual property rights for all material on Pawfection Grooming Solutions. All intellectual property rights are reserved.</p>
+    <p>You are granted a limited license only for purposes of viewing and using the material contained on this Application for your business operations related to pet grooming scheduling and management, subject to the restrictions provided in these terms.</p>
+    <p>You must not:</p>
+    <ul>
+        <li>Republish material from Pawfection Grooming Solutions</li>
+        <li>Sell, rent or sub-license material from Pawfection Grooming Solutions</li>
+        <li>Reproduce, duplicate or copy material from Pawfection Grooming Solutions</li>
+        <li>Redistribute content from Pawfection Grooming Solutions</li>
+    </ul>
+
+    <h2>3. User Accounts</h2>
+    <p>If you create an account in the Application, you are responsible for maintaining the security of your account and you are fully responsible for all activities that occur under the account and any other actions taken in connection with it. You must immediately notify us of any unauthorized uses of your account or any other breaches of security. We will not be liable for any acts or omissions by You, including any damages of any kind incurred as a result of such acts or omissions.</p>
+
+    <h2>4. Acceptable Use</h2>
+    <p>You agree not to use the Application in any way that causes, or may cause, damage to the Application or impairment of the availability or accessibility of the Application; or in any way which is unlawful, illegal, fraudulent or harmful, or in connection with any unlawful, illegal, fraudulent or harmful purpose or activity.</p>
+    <p>You agree not to use the Application to store or transmit any data that is illegal, harmful, or infringes on the rights of others, including but not limited to client data, pet information, and appointment details.</p>
+
+    <h2>5. Data Management and Client Information</h2>
+    <p>You are responsible for the accuracy, legality, and integrity of all data you input into the Application, including client information, pet details, and appointment records. You agree to comply with all applicable data privacy laws and regulations concerning the collection and use of personal information of your clients and their pets.</p>
+    <p>While the Application provides tools for managing this data, the ultimate responsibility for data privacy compliance rests with you, the user of the Application.</p>
+
+    <h2>6. Google Calendar Integration</h2>
+    <p>If you choose to use the Google Calendar integration feature, you authorize the Application to access and modify your Google Calendar data as described during the authorization process. The use of your Google Calendar data will be subject to Google's own terms of service and privacy policies, in addition to this Agreement. We are not responsible for any data loss or issues arising from your use of the Google Calendar service.</p>
+
+    <h2>7. Fees and Payments (If Applicable)</h2>
+    <p>Access to Pawfection Grooming Solutions is provided on a subscription basis. Fees are one of the following $175 monthly, $420 every 3 months, $840 every 6 months $1,365 a year. Payment is due based on the subscription chosen. Failure to pay WILL result in suspension or termination of access.</p>
+
+    <h2>8. Termination</h2>
+    <p>We may terminate or suspend access to our Application immediately, without prior notice or liability, for any reason whatsoever, including without limitation if you breach the Terms.</p>
+    <p>All provisions of the Terms which by their nature should survive termination shall survive termination, including, without limitation, ownership provisions, warranty disclaimers, indemnity and limitations of liability.</p>
+
+    <h2>9. Limitation of Liability</h2>
+    <p>In no event shall Charles Durane Kirkpatrick Jr, nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from (i) your access to or use of or inability to access or use the Application; (ii.ii) any conduct or content of any third party on the Application; (iii) any content obtained from the Application; and (iv) unauthorized access, use or alteration of your transmissions or content, whether based on warranty, contract, tort (including negligence) or any other legal theory, whether or not we have been informed of the possibility of such damage, and even if a remedy set forth herein is found to have failed of its essential purpose.</p>
+
+    <h2>10. Disclaimer</h2>
+    <p>The Application is provided on an "AS IS" and "AS AVAILABLE" basis. The Application is provided without warranties of any kind, whether express or implied, including, but not limited to, implied warranties of merchantability, fitness for a particular purpose, non-infringement or course of performance.</p>
+    <p>Charles Durane Kirkpatrick Jr, its subsidiaries, affiliates, and its licensors do not warrant that a) the Application will function uninterrupted, secure or available at any particular time or location; b) any errors or defects will be corrected; c) the Application is free of viruses or other harmful components; or d) the results of using the Application will meet your requirements.</p>
+
+    <h2>11. Governing Law</h2>
+    <p>These Terms shall be governed and construed in accordance with the laws of North Carolina, USA, without regard to its conflict of law provisions.</p>
+
+    <h2>12. Changes to Terms</h2>
+    <p>We reserve the right, at our sole discretion, to modify or replace these Terms at any time. If a revision is material we will try to provide at least 30 days' notice prior to any new terms taking effect. What constitutes a material change will be determined at our sole discretion.</p>
+    <p>By continuing to access or use our Application after those revisions become effective, you agree to be bound by the revised terms. If you do not agree to the new terms, please stop using the Application.</p>
+
+    <h2>13. Contact Us</h2>
+    <p>If you have any questions about these Terms, please contact us at corasings93@gmail.com.</p>
+
+    <div class="back-link-container">
+        <a href="{{ url_for('auth_login') }}" class="button button-secondary">Back to Login</a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+
+{% block title %}Sales Reports{% endblock %}
+
+{% block head %}
+<style>
+    .report-form-container {
+        max-width: 700px; /* Limit width for better readability */
+        margin: 0 auto; /* Center the form */
+    }
+    .form-section {
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border-color-light); /* Lighter border */
+    }
+    .form-section:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+    .form-section h2 {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: var(--primary-color);
+    }
+    .date-range-options label {
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+    .date-range-options input[type="radio"],
+    .date-range-options input[type="date"] {
+        margin-right: 0.5rem;
+    }
+    .custom-date-fields {
+        margin-top: 0.75rem;
+        padding-left: 1.5rem; /* Indent custom date fields */
+        display: flex;
+        gap: 1rem; /* Space between date inputs */
+        align-items: center;
+    }
+    .custom-date-fields label {
+        margin-bottom: 0; /* Adjust for inline display */
+        margin-right: 0.5rem;
+    }
+    .custom-date-fields input[type="date"] {
+        padding: 0.5rem;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-sm);
+    }
+    /* Ensure form inputs have consistent styling */
+    .form-input, select.form-input {
+        width: 100%;
+        padding: 0.6rem 0.75rem;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-sm);
+        background-color: #fff;
+        box-sizing: border-box; /* Important for width 100% */
+        font-size: 0.95rem;
+    }
+    select.form-input {
+        appearance: none; /* Remove default select arrow for custom styling if desired */
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236b7280'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.23 8.29a.75.75 0 01.02-1.06z' clip-rule='evenodd' /%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.7rem center;
+        background-size: 1.25em 1.25em;
+        padding-right: 2.5rem; /* Make space for the arrow */
+    }
+
+    .submit-button-container {
+        text-align: center; /* Center the button */
+        margin-top: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-card report-form-container">
+    <div class="content-header">
+        <h1>Sales Reports</h1>
+        <a href="{{ url_for('management') }}" class="button button-secondary">Back to Management</a>
+    </div>
+
+    <p>Select criteria below to generate a sales report. Reports include 'Completed' appointments only.</p>
+
+    <form method="POST" action="{{ url_for('view_sales_reports') }}">
+        {# CSRF Token if using Flask-WTF, otherwise ensure your app handles CSRF protection if needed #}
+        {# {{ form.csrf_token }} #}
+
+        <div class="form-section">
+            <h2>Date Range</h2>
+            <div class="form-group date-range-options">
+                <div>
+                    <input type="radio" id="range_today" name="date_range_type" value="today" {% if request.form.date_range_type == 'today' or not request.form.date_range_type %}checked{% endif %}>
+                    <label for="range_today">Today</label>
+                </div>
+                <div>
+                    <input type="radio" id="range_this_week" name="date_range_type" value="this_week" {% if request.form.date_range_type == 'this_week' %}checked{% endif %}>
+                    <label for="range_this_week">This Week (Mon-Sun)</label>
+                </div>
+                <div>
+                    <input type="radio" id="range_this_month" name="date_range_type" value="this_month" {% if request.form.date_range_type == 'this_month' %}checked{% endif %}>
+                    <label for="range_this_month">This Month</label>
+                </div>
+                <div>
+                    <input type="radio" id="range_custom" name="date_range_type" value="custom" {% if request.form.date_range_type == 'custom' %}checked{% endif %}>
+                    <label for="range_custom">Custom Date Range:</label>
+                    <div class="custom-date-fields" id="custom_date_inputs" style="display: {% if request.form.date_range_type == 'custom' %}flex{% else %}none{% endif %};">
+                        <label for="start_date">From:</label>
+                        <input type="date" id="start_date" name="start_date" value="{{ request.form.start_date or today_date_iso }}" class="form-input" style="width: auto;">
+                        <label for="end_date">To:</label>
+                        <input type="date" id="end_date" name="end_date" value="{{ request.form.end_date or today_date_iso }}" class="form-input" style="width: auto;">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2>Groomer</h2>
+            <div class="form-group">
+                <label for="groomer_id">Select Groomer (Optional)</label>
+                <select name="groomer_id" id="groomer_id" class="form-input">
+                    <option value="">All Groomers</option>
+                    {% for groomer in all_groomers %}
+                    <option value="{{ groomer.id }}" {% if request.form.groomer_id == groomer.id|string %}selected{% endif %}>
+                        {{ groomer.username }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <small class="text-muted">If no groomer is selected, the report will include sales for all groomers.</small>
+            </div>
+        </div>
+
+        <div class="submit-button-container">
+            <button type="submit" class="button button-primary button-lg">Generate Report</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    // JavaScript to show/hide custom date fields based on radio button selection
+    document.addEventListener('DOMContentLoaded', function () {
+        const customRadio = document.getElementById('range_custom');
+        const customDateInputs = document.getElementById('custom_date_inputs');
+        const dateRangeRadios = document.querySelectorAll('input[name="date_range_type"]');
+
+        function toggleCustomDateFields() {
+            if (customRadio.checked) {
+                customDateInputs.style.display = 'flex';
+            } else {
+                customDateInputs.style.display = 'none';
+            }
+        }
+
+        dateRangeRadios.forEach(radio => {
+            radio.addEventListener('change', toggleCustomDateFields);
+        });
+
+        // Initial check in case the page is loaded with "custom" already selected (e.g., form validation error)
+        toggleCustomDateFields();
+    });
+</script>
+{% endblock %}

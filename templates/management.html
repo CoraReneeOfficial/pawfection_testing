@@ -1,0 +1,97 @@
+{% extends 'base.html' %} {# Inherits the base layout, navbar, footer, etc. #}
+
+{% block title %}Application Management{% endblock %} {# Sets the title for this specific page #}
+
+{% block head %}
+<style>
+    /* Add some specific styles for management page if needed */
+    .management-grid { /* Renamed from quick-links-grid for clarity if styles differ */
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem; /* Consistent gap */
+        margin-top: 1.5rem;
+    }
+    .management-card { /* Using a more specific class for these cards */
+        background-color: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        padding: 1.5rem; /* Increased padding for a more spacious feel */
+        box-shadow: var(--box-shadow-sm); /* Softer shadow */
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        text-decoration: none;
+        color: inherit; /* Inherit text color */
+    }
+    .management-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--box-shadow); /* Slightly larger shadow on hover */
+    }
+    .management-card h3 {
+        margin-top: 0;
+        margin-bottom: 0.75rem; /* Space below heading */
+        color: var(--primary-color); /* Consistent heading color */
+        display: flex; /* For icon alignment */
+        align-items: center;
+        gap: 0.5rem; /* Space between icon and text */
+    }
+    .management-card h3 .icon { /* Simple class for emoji or SVG icons */
+        font-size: 1.2em; /* Adjust icon size */
+    }
+    .management-card p {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        line-height: 1.5;
+    }
+    .google-calendar-card { /* Specific styling for the Google Calendar card */
+        padding: 1.5rem; /* Consistent padding */
+        background-color: #fefce8; /* Lighter yellow, more subtle */
+        border: 1px solid #fef08a; /* Matching border */
+    }
+    .google-calendar-card h3 {
+        color: #a16207; /* Darker yellow for heading text */
+    }
+    .google-calendar-card p {
+        color: #78350f; /* Slightly darker text for readability */
+    }
+</style>
+{% endblock %}
+
+{% block content %} {# Defines the main content area for this page #}
+<div class="content-card"> {# Uses the card styling for the main content block #}
+    <h1>Application Management</h1>
+    <p>Use the options below to manage users, services, reports, and integrations.</p>
+
+    {# Management Options Grid #}
+    <div class="management-grid">
+        <a href="{{ url_for('manage_users') }}" class="management-card">
+            <h3><span class="icon">👥</span> Manage Users</h3>
+            <p>Add, edit, or remove groomer/staff accounts.</p>
+        </a>
+        <a href="{{ url_for('manage_services') }}" class="management-card">
+            <h3><span class="icon">✂️</span> Manage Services</h3>
+            <p>Add, edit, or remove services and pricing.</p>
+        </a>
+        
+        <a href="{{ url_for('view_sales_reports') }}" class="management-card"> <h3><span class="icon">📊</span> Sales Reports</h3>
+            <p>Generate and view sales reports by date and groomer.</p>
+        </a>
+
+        <div class="management-card google-calendar-card">
+            <h3><span class="icon">📅</span> Google Calendar</h3>
+             {% if is_google_calendar_connected %} {# Use the variable from context_processor #}
+                 <p style="font-size: 0.9em; margin-bottom: 0.75rem; color: #15803d;">✅ Connected!</p>
+                 <p style="font-size: 0.8em; margin-bottom: 0.5rem;">
+                    The application is authorized to access the shared Google Calendar.
+                 </p>
+                 <a href="{{ url_for('google_authorize') }}" class="button button-secondary" style="font-size: 0.8rem; padding: 0.3rem 0.7rem;">Re-authorize / Change Account</a>
+             {% else %}
+                 <p style="font-size: 0.9em; margin-bottom: 0.75rem;">Connect the shared Google Calendar to sync appointments.</p>
+                 <a href="{{ url_for('google_authorize') }}" class="button button-primary" style="font-size: 0.9rem;">Connect Google Calendar</a>
+             {% endif %}
+        </div>
+    </div>
+
+     <div style="margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+         <a href="{{ url_for('index') }}" class="button button-secondary">Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}
