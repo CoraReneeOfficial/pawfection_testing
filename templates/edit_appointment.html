@@ -63,7 +63,7 @@
 
         {# Form submits data to the /appointment/<appointment_id>/edit route using POST #}
         {# Use appointment_data.id or the passed appointment_id for the action URL #}
-        <form method="POST" action="{{ url_for('edit_appointment', appointment_id=appointment_data.id) }}" novalidate>
+        <form method="POST" action="{{ url_for('appointments.edit_appointment', appointment_id=appointment_data.id) }}" novalidate>
 
             <div class="form-group">
                 <label for="dog_id">Dog *</label>
@@ -135,8 +135,8 @@
             <p style="font-size: 0.8rem; color: var(--text-muted);">* Required fields</p>
 
             <div class="form-button-wrapper">
-                 {# Corrected url_for to 'calendar_view' #}
-                 <a href="{{ url_for('calendar_view') }}" class="button button-secondary">Cancel</a>
+                 {# Corrected url_for to 'appointments.calendar_view' #}
+                 <a href="{{ url_for('appointments.calendar_view') }}" class="button button-secondary">Cancel</a>
                 <button type="submit" class="button button-primary">Save Changes</button>
             </div>
         </form>

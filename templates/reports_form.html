@@ -77,12 +77,12 @@
 <div class="content-card report-form-container">
     <div class="content-header">
         <h1>Sales Reports</h1>
-        <a href="{{ url_for('management') }}" class="button button-secondary">Back to Management</a>
+        <a href="{{ url_for('management.management') }}" class="button button-secondary">Back to Management</a>
     </div>
 
     <p>Select criteria below to generate a sales report. Reports include 'Completed' appointments only.</p>
 
-    <form method="POST" action="{{ url_for('view_sales_reports') }}">
+    <form method="POST" action="{{ url_for('management.view_sales_reports') }}">
         {# CSRF Token if using Flask-WTF, otherwise ensure your app handles CSRF protection if needed #}
         {# {{ form.csrf_token }} #}
 

@@ -129,7 +129,7 @@
     </div>
 
     <h1>Dog Profile: {{ dog.name }}</h1>
-    <p><strong>Owner:</strong> <a href="{{ url_for('view_owner', owner_id=dog.owner.id) }}">{{ dog.owner.name }}</a> ({{ dog.owner.phone_number }})</p>
+    <p><strong>Owner:</strong> <a href="{{ url_for('owners.view_owner', owner_id=dog.owner.id) }}">{{ dog.owner.name }}</a> ({{ dog.owner.phone_number }})</p>
     {% if dog.breed %}<p><strong>Breed:</strong> {{ dog.breed }}</p>{% endif %}
     {% if dog.birthday %}<p><strong>Birthday:</strong> {{ dog.birthday }}</p>{% endif %}
 
@@ -172,7 +172,7 @@
                     <p style="margin-top: 0.25rem;"><strong>Appointment Notes:</strong> {{ appt.notes }}</p>
                 {% endif %}
                  <div style="margin-top: 0.5rem;">
-                    <a href="{{ url_for('edit_appointment', appointment_id=appt.id) }}" class="button button-sm">Edit Appointment</a>
+                    <a href="{{ url_for('appointments.edit_appointment', appointment_id=appt.id) }}" class="button button-sm">Edit Appointment</a>
                 </div>
             </li>
             {% endfor %}
@@ -183,9 +183,9 @@
 
 
     <div class="profile-actions">
-         <a href="{{ url_for('view_owner', owner_id=dog.owner_id) }}" class="button button-secondary">Back to Owner Profile</a>
-         <a href="{{ url_for('edit_dog', dog_id=dog.id) }}" class="button button-primary">Edit Dog Profile</a>
-         <form method="POST" action="{{ url_for('delete_dog', dog_id=dog.id) }}" class="delete-form"
+         <a href="{{ url_for('owners.view_owner', owner_id=dog.owner_id) }}" class="button button-secondary">Back to Owner Profile</a>
+         <a href="{{ url_for('dogs.edit_dog', dog_id=dog.id) }}" class="button button-primary">Edit Dog Profile</a>
+         <form method="POST" action="{{ url_for('dogs.delete_dog', dog_id=dog.id) }}" class="delete-form"
                onsubmit="return confirm('Are you absolutely sure you want to delete the profile for {{ dog.name }}? This action cannot be undone and will also delete any associated appointments.');">
             <button type="submit" class="button button-danger">Delete Dog</button>
          </form>

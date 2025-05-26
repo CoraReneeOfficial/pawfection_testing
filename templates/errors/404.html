@@ -35,7 +35,7 @@
         {% if request and request.path %}
             <p>The requested URL was: <code>{{ request.path }}</code></p>
         {% endif %}
-        <a href="{{ url_for('index') }}" class="button button-primary">Go to Dashboard</a>
+        <a href="{{ url_for('dashboard') }}" class="button button-primary">Go to Dashboard</a>
         {% if g.user and g.user.is_admin %}
             <p style="margin-top: 2rem; font-size: 0.9em;">
                 Admin info: An attempt was made to access a non-existent page. This has been logged.

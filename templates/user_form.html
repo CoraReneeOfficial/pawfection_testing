@@ -27,7 +27,7 @@
     <div class="form-container form-container-sm">
         <h2 class="form-title">{{ 'Add New User' if mode == 'add' else 'Edit User: ' + user_data.username }}</h2>
 
-        <form method="POST" action="{{ url_for('add_user') if mode == 'add' else url_for('edit_user', user_id=user_data.id) }}" enctype="multipart/form-data" novalidate>
+        <form method="POST" action="{{ url_for('management.add_user') if mode == 'add' else url_for('management.edit_user', user_id=user_data.id) }}" enctype="multipart/form-data" novalidate>
             <div class="form-group">
                 <label for="username">Username *</label>
                 <input type="text" id="username" name="username" required class="form-input" value="{{ user_data.username or '' }}" autofocus>
@@ -73,7 +73,7 @@
             <p style="font-size: 0.8rem; color: var(--text-muted);">* Required fields</p>
 
             <div class="form-button-wrapper">
-                 <a href="{{ url_for('manage_users') }}" class="button button-secondary">Cancel</a>
+                 <a href="{{ url_for('management.manage_users') }}" class="button button-secondary">Cancel</a>
                 <button type="submit" class="button button-primary">{{ 'Add User' if mode == 'add' else 'Save Changes' }}</button>
             </div>
         </form>

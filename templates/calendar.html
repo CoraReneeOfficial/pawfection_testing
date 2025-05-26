@@ -87,7 +87,7 @@
     {% if not is_google_calendar_connected %}
     <p class="flash-message flash-warning" style="text-align: center;">
         The application is not currently connected to the shared Google Calendar. Appointments added/edited here will not be synced.
-        An administrator needs to <a href="{{ url_for('management') }}">connect it via the Management page</a>.
+        An administrator needs to <a href="{{ url_for('management.management') }}">connect it via the Management page</a>.
     </p>
     {% endif %}
 
@@ -131,9 +131,9 @@
                          </div>
                     </div>
                      <div class="appointment-actions">
-                         <a href="{{ url_for('view_dog', dog_id=appointment.dog.id) }}" class="button" title="View Dog Profile">Details</a>
-                         <a href="{{ url_for('edit_appointment', appointment_id=appointment.id) }}" class="button">Edit</a>
-                         <form method="POST" action="{{ url_for('delete_appointment', appointment_id=appointment.id) }}"
+                         <a href="{{ url_for('dogs.view_dog', dog_id=appointment.dog.id) }}" class="button" title="View Dog Profile">Details</a>
+                         <a href="{{ url_for('appointments.edit_appointment', appointment_id=appointment.id) }}" class="button">Edit</a>
+                         <form method="POST" action="{{ url_for('appointments.delete_appointment', appointment_id=appointment.id) }}"
                                onsubmit="return confirm('Are you sure you want to delete this appointment for {{ appointment.dog.name }} on {{ local_appt_time.strftime('%b %d') }}?');">
                             <button type="submit" class="button button-danger">Delete</button>
                         </form>

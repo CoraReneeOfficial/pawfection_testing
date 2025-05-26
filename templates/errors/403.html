@@ -25,11 +25,11 @@
 <div class="error-container content-card">
     <h1>Access Forbidden (403)</h1>
     <p>Sorry, you do not have permission to access this page or resource.</p>
-    <a href="{{ url_for('index') }}" class="button button-primary">Go to Dashboard</a>
+    <a href="{{ url_for('dashboard') }}" class="button button-primary">Go to Dashboard</a>
      {% if g.user %}
         <p style="margin-top:1rem; font-size:0.9em;">If you believe you should have access, please contact an administrator.</p>
     {% else %}
-        <p style="margin-top:1rem; font-size:0.9em;">You may need to <a href="{{ url_for('auth_login', next=request.url) }}">log in</a> to access this page.</p>
+        <p style="margin-top:1rem; font-size:0.9em;">You may need to <a href="{{ url_for('auth.login', next=request.url) }}">log in</a> to access this page.</p>
     {% endif %}
 </div>
 {% endblock %}

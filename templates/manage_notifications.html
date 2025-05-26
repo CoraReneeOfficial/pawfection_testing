@@ -32,12 +32,12 @@
 <div class="content-card">
     <div class="content-header">
         <h1>Manage Customer Notifications</h1>
-        <a href="{{ url_for('management') }}" class="button button-secondary">Back to Management</a>
+        <a href="{{ url_for('management.management') }}" class="button button-secondary">Back to Management</a>
     </div>
 
     <p>Configure settings for automated email notifications sent to clients.</p>
 
-    <form method="POST" action="{{ url_for('manage_notifications') }}" class="notification-settings-form" style="margin-top: 2rem;">
+    <form method="POST" action="{{ url_for('management.manage_notifications') }}" class="notification-settings-form" style="margin-top: 2rem;">
         <div class="form-section">
             <h2>Appointment Confirmations</h2>
             <div class="form-group form-group-inline">

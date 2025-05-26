@@ -60,7 +60,7 @@
         </p>
 
         {# Form submits to add_service or edit_service route based on mode #}
-        <form method="POST" action="{{ url_for('add_service') if mode == 'add' else url_for('edit_service', service_id=item_data.id) }}" novalidate>
+        <form method="POST" action="{{ url_for('management.add_service') if mode == 'add' else url_for('management.edit_service', service_id=item_data.id) }}" novalidate>
             
             <div class="form-group">
                 <label for="name">{{ item_type_display }} Name *</label>
@@ -92,7 +92,7 @@
             <p style="font-size: 0.8rem; color: var(--text-muted);">* Required fields</p>
 
             <div class="form-button-wrapper">
-                 <a href="{{ url_for('manage_services') }}" class="button button-secondary">Cancel</a>
+                 <a href="{{ url_for('management.manage_services') }}" class="button button-secondary">Cancel</a>
                 <button type="submit" class="button button-primary">{{ 'Add ' + item_type_display if mode == 'add' else 'Save Changes' }}</button>
             </div>
         </form>

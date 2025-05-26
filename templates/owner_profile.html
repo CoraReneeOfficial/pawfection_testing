@@ -83,11 +83,11 @@
             {% for dog in owner.dogs %}
             <li>
                 <span class="dog-name">
-                    <a href="{{ url_for('view_dog', dog_id=dog.id) }}">{{ dog.name }}</a>
+                    <a href="{{ url_for('dogs.view_dog', dog_id=dog.id) }}">{{ dog.name }}</a>
                     {% if dog.breed %} ({{ dog.breed }}) {% endif %}
                 </span>
                 <div class="action-links">
-                    <a href="{{ url_for('view_dog', dog_id=dog.id) }}" class="button" style="font-size: 0.8rem; padding: 0.2rem 0.5rem;">View Dog Profile</a>
+                    <a href="{{ url_for('dogs.view_dog', dog_id=dog.id) }}" class="button" style="font-size: 0.8rem; padding: 0.2rem 0.5rem;">View Dog Profile</a>
                 </div>
             </li>
             {% endfor %}
@@ -96,13 +96,13 @@
         <p class="text-muted">This owner has no dogs registered in the system.</p>
     {% endif %}
     <div style="margin-top: 1rem;">
-         <a href="{{ url_for('add_dog', owner_id=owner.id) }}" class="button button-primary" style="font-size: 0.9rem;">Add New Dog for {{ owner.name }}</a>
+         <a href="{{ url_for('dogs.add_dog', owner_id=owner.id) }}" class="button button-primary" style="font-size: 0.9rem;">Add New Dog for {{ owner.name }}</a>
     </div>
 
 
     <div class="profile-actions">
-         <a href="{{ url_for('directory') }}" class="button" style="background-color: var(--secondary-color); color: white;">Back to Directory</a>
-         <a href="{{ url_for('edit_owner', owner_id=owner.id) }}" class="button button-primary">Edit Owner Info</a>
+         <a href="{{ url_for('owners.directory') }}" class="button" style="background-color: var(--secondary-color); color: white;">Back to Directory</a>
+         <a href="{{ url_for('owners.edit_owner', owner_id=owner.id) }}" class="button button-primary">Edit Owner Info</a>
          {# TODO: Add Delete Owner button/link (needs confirmation and careful consideration of associated dogs) #}
          </div>
 </div>

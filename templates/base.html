@@ -53,7 +53,7 @@
                             <a href="{{ url_for('management.view_logs') }}" class="nav-dropdown-item {% if request.endpoint == 'management.view_logs' %}active{% endif %}">Activity Log</a>
                             {# MODIFIED: Added check for request.endpoint before using startswith or other comparisons #}
                             {% if g.user.is_admin %}
-                            <a href="{{ url_for('management.management') }}" class="nav-dropdown-item {% if request.endpoint and (request.endpoint == 'management.management' or request.endpoint.startswith('manage_') or request.endpoint == 'management.view_sales_reports' or request.endpoint == 'management.view_user_agreement' or request.endpoint == 'management.view_privacy_policy') %}active{% endif %}">Management</a>
+                            <a href="{{ url_for('management.management') }}" class="nav-dropdown-item {% if request.endpoint and (request.endpoint == 'management.management' or request.endpoint.startswith('management.') or request.endpoint == 'management.view_sales_reports' or request.endpoint == 'management.view_user_agreement' or request.endpoint == 'management.view_privacy_policy') %}active{% endif %}">Management</a>
                             {% endif %}
                             <div class="nav-dropdown-divider"></div>
                             <div class="nav-dropdown-user-info">

@@ -8,7 +8,7 @@
         <h2 class="form-title">Add New Owner</h2>
         <p class="form-description">Enter the details for the new client.</p>
 
-        <form method="POST" action="{{ url_for('add_owner') }}" novalidate>
+        <form method="POST" action="{{ url_for('owners.add_owner') }}" novalidate>
             <div class="form-group">
                 <label for="name">Owner Name *</label>
                 <input type="text" id="name" name="name" required class="form-input" value="{{ owner.name or '' }}" autofocus>
@@ -30,7 +30,7 @@
             <p style="font-size: 0.8rem; color: var(--text-muted);">* Required fields</p>
 
             <div class="form-button-wrapper" style="display: flex; gap: 1rem; justify-content: flex-end;">
-                 <a href="{{ url_for('directory') }}" class="button" style="background-color: var(--secondary-color); color: white;">Cancel</a>
+                 <a href="{{ url_for('owners.directory') }}" class="button button-secondary">Cancel</a>
                 <button type="submit" class="button button-primary">Add Owner</button>
             </div>
         </form>

@@ -181,8 +181,8 @@
     {% endif %}
 
     <div class="report-actions">
-        <a href="{{ url_for('view_sales_reports') }}" class="button button-secondary">Generate Another Report</a>
-        <a href="{{ url_for('management') }}" class="button">Back to Management</a>
+        <a href="{{ url_for('management.view_sales_reports') }}" class="button button-secondary">Generate Another Report</a>
+        <a href="{{ url_for('management.management') }}" class="button">Back to Management</a>
     </div>
 </div>
 {% endblock %}

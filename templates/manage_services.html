@@ -54,7 +54,7 @@
     <div class="content-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
         <h1>Manage Services & Fees</h1>
         {# Button still goes to the same 'add_service' route, which handles both types #}
-        <a href="{{ url_for('add_service') }}" class="button button-primary">Add New Item</a>
+        <a href="{{ url_for('management.add_service') }}" class="button button-primary">Add New Item</a>
     </div>
 
     <p>Here you can add, edit, and delete grooming services and additional fees.</p>
@@ -82,8 +82,8 @@
                         <td class="item-description" title="{{ item.description or '' }}">{{ item.description or '-' }}</td>
                         <td class="item-price">${{ "%.2f"|format(item.base_price) }}</td>
                         <td class="item-actions" style="text-align: center;">
-                            <a href="{{ url_for('edit_service', service_id=item.id) }}" class="button">Edit</a>
-                            <form method="POST" action="{{ url_for('delete_service', service_id=item.id) }}"
+                            <a href="{{ url_for('management.edit_service', service_id=item.id) }}" class="button">Edit</a>
+                            <form method="POST" action="{{ url_for('management.delete_service', service_id=item.id) }}"
                                   onsubmit="return confirm('Are you sure you want to delete \'{{ item.name }}\'?');">
                                 <button type="submit" class="button" style="background-color: var(--danger-color); color: white; border-color: var(--danger-color);">Delete</button>
                             </form>
@@ -124,8 +124,8 @@
                         <td class="item-description" title="{{ item.description or '' }}">{{ item.description or '-' }}</td>
                         <td class="item-price">${{ "%.2f"|format(item.base_price) }}</td>
                         <td class="item-actions" style="text-align: center;">
-                            <a href="{{ url_for('edit_service', service_id=item.id) }}" class="button">Edit</a>
-                            <form method="POST" action="{{ url_for('delete_service', service_id=item.id) }}"
+                            <a href="{{ url_for('management.edit_service', service_id=item.id) }}" class="button">Edit</a>
+                            <form method="POST" action="{{ url_for('management.delete_service', service_id=item.id) }}"
                                   onsubmit="return confirm('Are you sure you want to delete \'{{ item.name }}\'?');">
                                 <button type="submit" class="button" style="background-color: var(--danger-color); color: white; border-color: var(--danger-color);">Delete</button>
                             </form>
@@ -144,7 +144,7 @@
     </div>
 
      <div style="margin-top: 1.5rem;">
-         <a href="{{ url_for('management') }}" class="button" style="background-color: var(--secondary-color); color: white;">Back to Management</a>
+         <a href="{{ url_for('management.management') }}" class="button" style="background-color: var(--secondary-color); color: white;">Back to Management</a>
     </div>
 </div>
 {% endblock %}
