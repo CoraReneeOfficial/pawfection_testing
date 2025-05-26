@@ -9,7 +9,7 @@
         <p class="form-description">
             Create the first administrator account. This account will have access to all management features.
         </p>
-        <form method="POST" action="{{ url_for('initial_setup') }}" novalidate> {# novalidate disables browser validation, relying on server-side #}
+        <form method="POST" action="{{ url_for('auth.initial_setup') }}" novalidate> {# novalidate disables browser validation, relying on server-side #}
             <div class="form-group">
                 <label for="username">Admin Username</label>
                 <input type="text" id="username" name="username" required class="form-input" autofocus>
