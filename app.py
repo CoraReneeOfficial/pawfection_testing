@@ -22,7 +22,12 @@ def create_app():
     NOTIFICATION_SETTINGS_FILE = os.path.join(PERSISTENT_DATA_ROOT, 'notification_settings.json')
 
     app.config['SECRET_KEY'] = os.environ.get("FLASK_SECRET_KEY", os.urandom(32))
-    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DATABASE_PATH}'
+    # Use DATABASE_URL for PostgreSQL if set, otherwise fallback to SQLite
+    database_url = os.environ.get('DATABASE_URL')
+    if database_url:
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    else:
+        app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DATABASE_PATH}'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
