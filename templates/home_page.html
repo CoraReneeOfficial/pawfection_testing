@@ -1,13 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pawfection Grooming Solutions</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-</head>
-<body>
+{% extends 'base.html' %}
+
+{% block title %}Pawfection Grooming Solutions{% endblock %}
+
+{% block head %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
     <div class="container">
         <header style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 2rem;">
             <div style="display: flex; gap: 1rem;">
@@ -64,5 +63,4 @@
             <button onclick="window.location.href='/calendar'" class="button button-primary" style="font-size: 1.1rem; padding: 1rem 2.5rem;">Book Appointment</button>
         </section>
     </div>
-</body>
-</html>
+{% endblock %}
