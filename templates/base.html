@@ -59,7 +59,7 @@
                             <div class="nav-dropdown-user-info">
                                 Hello, {{ g.user.username if g.user else "User" }}!
                             </div>
-                            <a href="{{ url_for('logout') }}" class="nav-dropdown-item logout">Logout</a>
+                            <a href="{{ url_for('auth.logout') }}" class="nav-dropdown-item logout">Logout</a>
                         </div>
                     </div>
                 </div> 
