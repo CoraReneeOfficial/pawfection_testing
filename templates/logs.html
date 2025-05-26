@@ -29,7 +29,7 @@
 <div class="content-card"> {# Wrap content in a card #}
     <div class="content-header">
         <h1>Activity Log</h1>
-        <a href="{{ url_for('management') }}" class="button button-secondary">Back to Management</a>
+        <a href="{{ url_for('management.management') }}" class="button button-secondary">Back to Management</a>
     </div>
     <p>This log shows recent actions performed within the application. Displaying page {{ logs_pagination.page }} of {{ logs_pagination.pages }}.</p>
 
@@ -70,7 +70,7 @@
     {% if logs_pagination and logs_pagination.pages > 1 %}
     <div class="pagination-container">
         {% if logs_pagination.has_prev %}
-            <a href="{{ url_for('view_logs', page=logs_pagination.prev_num) }}" class="button">&laquo; Previous</a>
+            <a href="{{ url_for('management.view_logs', page=logs_pagination.prev_num) }}" class="button">&laquo; Previous</a>
         {% else %}
             <button class="button" disabled>&laquo; Previous</button>
         {% endif %}
@@ -78,7 +78,7 @@
         <span class="current-page">Page {{ logs_pagination.page }} of {{ logs_pagination.pages }}</span>
 
         {% if logs_pagination.has_next %}
-            <a href="{{ url_for('view_logs', page=logs_pagination.next_num) }}" class="button">Next &raquo;</a>
+            <a href="{{ url_for('management.view_logs', page=logs_pagination.next_num) }}" class="button">Next &raquo;</a>
         {% else %}
             <button class="button" disabled>Next &raquo;</button>
         {% endif %}

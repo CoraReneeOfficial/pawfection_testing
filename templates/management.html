@@ -81,27 +81,27 @@
     <p>Use the options below to manage users, services, reports, notifications, and integrations.</p>
 
     <div class="management-grid">
-        <a href="{{ url_for('manage_users') }}" class="management-card">
+        <a href="{{ url_for('management.manage_users') }}" class="management-card">
             <div>
                 <h3><span class="icon">👥</span> Manage Users</h3>
                 <p>Add, edit, or remove groomer/staff accounts.</p>
             </div>
         </a>
-        <a href="{{ url_for('manage_services') }}" class="management-card">
+        <a href="{{ url_for('management.manage_services') }}" class="management-card">
             <div>
                 <h3><span class="icon">✂️</span> Manage Services</h3>
                 <p>Add, edit, or remove services and pricing.</p>
             </div>
         </a>
         
-        <a href="{{ url_for('view_sales_reports') }}" class="management-card"> 
+        <a href="{{ url_for('management.view_sales_reports') }}" class="management-card"> 
             <div>
                 <h3><span class="icon">📊</span> Sales Reports</h3>
                 <p>Generate and view sales reports by date and groomer.</p>
             </div>
         </a>
 
-        <a href="{{ url_for('manage_notifications') }}" class="management-card">
+        <a href="{{ url_for('management.manage_notifications') }}" class="management-card">
             <div>
                 <h3><span class="icon">✉️</span> Customer Notifications</h3>
                 <p>Configure appointment confirmation and reminder emails.</p>
@@ -127,17 +127,17 @@
                      <p style="font-size: 0.8em; margin-top: 0.75rem; margin-bottom: 0.5rem;">
                         The application is authorized for the connected services.
                      </p>
-                     <a href="{{ url_for('google_authorize') }}" class="button button-secondary" style="font-size: 0.8rem; padding: 0.3rem 0.7rem;">Re-authorize / Change Account</a>
+                     <a href="{{ url_for('management.google_authorize') }}" class="button button-secondary" style="font-size: 0.8rem; padding: 0.3rem 0.7rem;">Re-authorize / Change Account</a>
                  {% else %}
                      <p style="font-size: 0.9em; margin-top: 0.75rem; margin-bottom: 0.75rem;">Connect your Google Account to enable these features.</p>
-                     <a href="{{ url_for('google_authorize') }}" class="button button-primary" style="font-size: 0.9rem;">Connect Google Account</a>
+                     <a href="{{ url_for('management.google_authorize') }}" class="button button-primary" style="font-size: 0.9rem;">Connect Google Account</a>
                  {% endif %}
             </div>
         </div>
     </div>
 
      <div style="margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
-         <a href="{{ url_for('index') }}" class="button button-secondary">Back to Dashboard</a>
+         <a href="{{ url_for('dashboard') }}" class="button button-secondary">Back to Dashboard</a>
     </div>
 </div>
 {% endblock %}
