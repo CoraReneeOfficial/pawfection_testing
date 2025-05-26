@@ -72,12 +72,12 @@
     <p>Select an option below or use the navigation bar to get started.</p>
 
     <div class="quick-links-grid">
-        <a href="{{ url_for('calendar_view') }}" class="quick-link-card blue"><h3>📅 View Calendar</h3><p>Check and manage upcoming appointments.</p></a>
-        <a href="{{ url_for('directory') }}" class="quick-link-card green"><h3>📂 Directory</h3><p>Manage client and pet profiles.</p></a>
-        <a href="{{ url_for('checkout') }}" class="quick-link-card yellow"><h3>🛒 Checkout</h3><p>Process appointments and payments.</p></a>
-        <a href="{{ url_for('view_logs') }}" class="quick-link-card gray"><h3>📜 Activity Log</h3><p>Review recent actions in the app.</p></a>
+        <a href="{{ url_for('appointments.calendar_view') }}" class="quick-link-card blue"><h3>📅 View Calendar</h3><p>Check and manage upcoming appointments.</p></a>
+        <a href="{{ url_for('owners.directory') }}" class="quick-link-card green"><h3>📂 Directory</h3><p>Manage client and pet profiles.</p></a>
+        <a href="{{ url_for('appointments.checkout') }}" class="quick-link-card yellow"><h3>🛒 Checkout</h3><p>Process appointments and payments.</p></a>
+        <a href="{{ url_for('management.view_logs') }}" class="quick-link-card gray"><h3>📜 Activity Log</h3><p>Review recent actions in the app.</p></a>
         {% if g.user.is_admin %}
-        <a href="{{ url_for('management') }}" class="quick-link-card red"><h3>⚙️ Management</h3><p>Manage users, services, and reports.</p></a>
+        <a href="{{ url_for('management.management') }}" class="quick-link-card red"><h3>⚙️ Management</h3><p>Manage users, services, and reports.</p></a>
         {% endif %}
     </div>
 
@@ -110,7 +110,7 @@
                 </li>
                 {% endfor %}
             </ul>
-            <p><a href="{{ url_for('calendar_view') }}">View Full Calendar &raquo;</a></p>
+            <p><a href="{{ url_for('appointments.calendar_view') }}">View Full Calendar &raquo;</a></p>
         {% else %}
             <p class="no-upcoming-appointments">No upcoming appointments scheduled in the app.</p>
             <p><a href="{{ url_for('add_appointment') }}" class="button button-primary" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">Schedule an Appointment</a></p>
