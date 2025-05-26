@@ -544,8 +544,8 @@
                 </a>
             </div>
             <nav class="home-nav">
-                <a href="{{ url_for('auth.login') }}" class="button button-secondary-outline">Login</a>
-                <a href="{{ url_for('store.add_store') }}" class="button button-primary-filled">Sign Up</a>
+                <a href="{{ url_for('login') }}" class="button button-secondary-outline">Login</a>
+                <a href="{{ url_for('store_register') }}" class="button button-primary-filled">Sign Up</a>
             </nav>
         </header>
 
@@ -555,8 +555,8 @@
                     <h1 class="hero-title">Transform Your Pet Grooming Business</h1>
                     <p class="hero-subtitle">Pawfection is an all-in-one solution that streamlines appointment scheduling, client management, and business operations. Say goodbye to paperwork and hello to more time with your furry clients.</p>
                     <div class="hero-cta-group">
-                        <a href="{{ url_for('appointments.calendar_view') }}" class="button button-primary-cta hero-cta">View Live Demo</a>
-                        <a href="{{ url_for('store.add_store') }}" class="button button-secondary-cta">Start Free Trial</a>
+                        <a href="{{ url_for('store_register') }}" class="button button-primary-cta hero-cta">View Live Demo</a>
+                        <a href="{{ url_for('store_register') }}" class="button button-secondary-cta">Start Free Trial</a>
                     </div>
                 </div>
             </section>
@@ -710,8 +710,8 @@
                             </div>
                         </div>
                         <div class="cta-buttons">
-                            <a href="{{ url_for('store.add_store') }}" class="button button-primary-cta">Start Free Trial</a>
-                            <a href="{{ url_for('auth.login') }}" class="button button-secondary-outline">Schedule Demo</a>
+                            <a href="{{ url_for('store_register') }}" class="button button-primary-cta">Start Free Trial</a>
+                            <a href="{{ url_for('store_register') }}" class="button button-secondary-outline">Schedule Demo</a>
                         </div>
                     </div>
                 </div>
