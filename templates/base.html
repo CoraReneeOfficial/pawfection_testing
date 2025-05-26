@@ -81,6 +81,12 @@
         </div>
 
         <main class="main-content container">
+            {% if session.impersonating %}
+            <div style="background: #ffe066; color: #333; padding: 1rem; text-align: center; font-weight: bold;">
+                Superadmin: Impersonating Store
+                <a href="{{ url_for('superadmin_stop_impersonation') }}" class="button button-small button-danger" style="margin-left: 2rem;">Stop Impersonation</a>
+            </div>
+            {% endif %}
             {% block content %}{% endblock %}
         </main>
 

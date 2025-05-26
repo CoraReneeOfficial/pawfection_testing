@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, g, current_app
-from models import User, ActivityLog
+from models import User, ActivityLog, Store
 from extensions import db
 from functools import wraps
 import datetime
@@ -19,16 +19,25 @@ def login():
         return redirect(url_for('auth.initial_setup'))
     if getattr(g, 'user', None):
         return redirect(url_for('dashboard'))
+    store_id = session.get('store_id')
+    store_name = None
+    if not store_id:
+        flash("Please select your store first.", "warning")
+        return redirect(url_for('store_login'))
+    store = Store.query.get(store_id)
+    if store:
+        store_name = store.name
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
         if not username or not password:
             flash("Username and password required.", "danger")
-            return render_template('login.html', show_initial_setup=check_initial_setup()), 400
-        user = User.query.filter_by(username=username).first()
+            return render_template('login.html', show_initial_setup=check_initial_setup(), store_name=store_name), 400
+        user = User.query.filter_by(username=username, store_id=store_id).first()
         if user and user.check_password(password):
             session.clear()
             session['user_id'] = user.id
+            session['store_id'] = store_id  # keep store context
             session.permanent = True
             g.user = user
             log_activity("Logged in")
@@ -40,8 +49,8 @@ def login():
             return redirect(next_page or url_for('dashboard'))
         else:
             flash("Invalid username or password.", "danger")
-            return render_template('login.html', show_initial_setup=check_initial_setup()), 401
-    return render_template('login.html', show_initial_setup=check_initial_setup())
+            return render_template('login.html', show_initial_setup=check_initial_setup(), store_name=store_name), 401
+    return render_template('login.html', show_initial_setup=check_initial_setup(), store_name=store_name)
 
 @auth_bp.route('/logout')
 def logout():

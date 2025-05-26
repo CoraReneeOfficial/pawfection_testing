@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Superadmin Dashboard - Pawfection Grooming Solutions{% endblock %}
+
+{% block content %}
+<div class="logo-image-login">
+    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pawfection Grooming Solutions Logo" style="max-width: 350px; margin-bottom: 1rem; align-items:center;">
+</div>
+<div class="form-wrapper">
+    <div class="form-container">
+        <h1 class="form-title" style="text-align:center;">Superadmin Dashboard</h1>
+        <div style="text-align:right; margin-bottom:1rem;">
+            <a href="{{ url_for('superadmin_tools') }}" class="button button-secondary">Superadmin Tools</a>
+        </div>
+        <table class="table" style="width:100%; margin-bottom:2rem;">
+            <thead>
+                <tr>
+                    <th>Store Name</th>
+                    <th>Store Username</th>
+                    <th>Subscription Status</th>
+                    <th>Subscription Ends</th>
+                    <th>Admin Users</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for store in stores %}
+                <tr>
+                    <td>{{ store.name }}</td>
+                    <td>{{ store.username }}</td>
+                    <td>{{ store.subscription_status|capitalize }}</td>
+                    <td>{% if store.subscription_ends_at %}{{ store.subscription_ends_at.strftime('%Y-%m-%d') }}{% else %}-{% endif %}</td>
+                    <td>
+                        {% for admin in store_admins[store.id] %}
+                            {{ admin.username }}<br>
+                        {% else %}
+                            <span class="text-muted">None</span>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('superadmin_impersonate', store_id=store.id) }}" class="button button-small button-primary">Impersonate</a>
+                        <a href="#" class="button button-small button-secondary" disabled>Manage</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %} 

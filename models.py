@@ -2,10 +2,34 @@ from extensions import db
 import datetime
 from datetime import timezone
 
+class Store(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128), nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.datetime.now(timezone.utc))
+    subscription_status = db.Column(db.String(20), default='active', nullable=False)  # e.g., active, trial, unpaid, cancelled
+    subscription_ends_at = db.Column(db.DateTime, nullable=True)
+    users = db.relationship('User', backref='store', lazy=True)
+    owners = db.relationship('Owner', backref='store', lazy=True)
+    dogs = db.relationship('Dog', backref='store', lazy=True)
+    services = db.relationship('Service', backref='store', lazy=True)
+    appointments = db.relationship('Appointment', backref='store', lazy=True)
+    def set_password(self, password):
+        import bcrypt
+        self.password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    def check_password(self, password):
+        import bcrypt
+        return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
+    def __repr__(self):
+        return f"<Store {self.name} (ID: {self.id})>"
+
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
+    role = db.Column(db.String(20), default='groomer', nullable=False)  # 'admin', 'groomer', 'superadmin'
+    store_id = db.Column(db.Integer, db.ForeignKey('store.id'), nullable=True)  # nullable for superadmin
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
     is_groomer = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.datetime.now(timezone.utc))
@@ -23,7 +47,7 @@ class User(db.Model):
         import bcrypt
         return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
     def __repr__(self):
-        return f"<User {self.username} (ID: {self.id}, Admin: {self.is_admin}, Groomer: {self.is_groomer})>"
+        return f"<User {self.username} (ID: {self.id}, Role: {self.role}, Store: {self.store_id})>"
 
 class Owner(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -33,6 +57,7 @@ class Owner(db.Model):
     address = db.Column(db.String(200), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.datetime.now(timezone.utc))
     created_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    store_id = db.Column(db.Integer, db.ForeignKey('store.id'), nullable=False)
     dogs = db.relationship('Dog', backref='owner', lazy='joined', cascade="all, delete-orphan")
     def __repr__(self):
         return f"<Owner {self.name} (ID: {self.id})>"
@@ -51,6 +76,7 @@ class Dog(db.Model):
     owner_id = db.Column(db.Integer, db.ForeignKey('owner.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.datetime.now(timezone.utc))
     created_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    store_id = db.Column(db.Integer, db.ForeignKey('store.id'), nullable=False)
     appointments = db.relationship('Appointment', backref='dog', lazy='dynamic', cascade="all, delete-orphan", order_by="desc(Appointment.appointment_datetime)")
     def __repr__(self):
         return f"<Dog {self.name} (ID: {self.id}), Owner ID: {self.owner_id}>"
@@ -63,6 +89,7 @@ class Service(db.Model):
     item_type = db.Column(db.String(50), nullable=False, default='service')
     created_at = db.Column(db.DateTime, default=lambda: datetime.datetime.now(timezone.utc))
     created_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    store_id = db.Column(db.Integer, db.ForeignKey('store.id'), nullable=False)
     def __repr__(self):
         return f"<Service {self.name} (ID: {self.id}), Price: {self.base_price}, Type: {self.item_type}>"
 
@@ -81,6 +108,7 @@ class Appointment(db.Model):
     confirmation_email_sent_at = db.Column(db.DateTime, nullable=True)
     reminder_1_sent_at = db.Column(db.DateTime, nullable=True)
     reminder_2_sent_at = db.Column(db.DateTime, nullable=True)
+    store_id = db.Column(db.Integer, db.ForeignKey('store.id'), nullable=False)
     def __repr__(self):
         return f"<Appointment ID: {self.id}, Dog ID: {self.dog_id}, DateTime: {self.appointment_datetime}, Status: {self.status}>"
 

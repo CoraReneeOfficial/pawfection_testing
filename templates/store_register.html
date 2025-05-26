@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}Register Store - Pawfection Grooming Solutions{% endblock %}
+
+{% block head %}
+<style>
+    .legal-links-footer {
+        text-align: center;
+        margin-top: 2rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-color-light);
+        font-size: 0.9rem;
+    }
+    .legal-links-footer a {
+        color: var(--text-muted);
+        text-decoration: none;
+        margin: 0 0.75rem;
+    }
+    .legal-links-footer a:hover {
+        color: var(--primary-color);
+        text-decoration: underline;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <div class="logo-image-login">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pawfection Grooming Solutions Logo" style="max-width: 350px; margin-bottom: 1rem; align-items:center;">
+    </div>
+    <div class="form-wrapper">
+        <div class="form-container form-container-sm">
+            <div style="text-align: center; margin-bottom: 1.5rem;">
+                <h1 class="form-title">Pawfection Grooming Solutions</h1>
+                <h2 class="form-title">Register New Store</h2>
+            </div>
+            <form method="POST" action="{{ url_for('store_register') }}" novalidate>
+                <div class="form-group">
+                    <label for="store_name">Store Name</label>
+                    <input type="text" id="store_name" name="store_name" required class="form-input" value="{{ request.form.store_name or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="store_username">Store Username</label>
+                    <input type="text" id="store_username" name="store_username" required class="form-input" value="{{ request.form.store_username or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="store_password">Store Password</label>
+                    <input type="password" id="store_password" name="store_password" required class="form-input">
+                </div>
+                <hr style="margin: 2rem 0;">
+                <div class="form-group">
+                    <label for="admin_username">Admin Username</label>
+                    <input type="text" id="admin_username" name="admin_username" required class="form-input" value="{{ request.form.admin_username or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="admin_password">Admin Password</label>
+                    <input type="password" id="admin_password" name="admin_password" required class="form-input">
+                </div>
+                <div class="form-button-wrapper">
+                    <button type="submit" class="button button-primary" style="width: 100%;">
+                        Register Store
+                    </button>
+                </div>
+            </form>
+            <div class="legal-links-footer">
+                <a href="{{ url_for('view_user_agreement') }}">User Agreement</a> |
+                <a href="{{ url_for('view_privacy_policy') }}">Privacy Policy</a>
+            </div>
+        </div>
+    </div>
+{% endblock %} 

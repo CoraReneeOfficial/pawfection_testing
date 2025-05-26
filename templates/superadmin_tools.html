@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block title %}Superadmin Tools - Pawfection Grooming Solutions{% endblock %}
+
+{% block content %}
+<div class="logo-image-login">
+    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pawfection Grooming Solutions Logo" style="max-width: 350px; margin-bottom: 1rem; align-items:center;">
+</div>
+<div class="form-wrapper">
+    <div class="form-container">
+        <h1 class="form-title" style="text-align:center;">Superadmin Tools</h1>
+        <div style="margin:2rem 0;">
+            <h2>Feature Testing</h2>
+            <button class="button button-primary" disabled>Test New Feature (Coming Soon)</button>
+        </div>
+        <div style="margin:2rem 0;">
+            <h2>Admin Scripts</h2>
+            <button class="button button-secondary" disabled>Run Admin Script (Coming Soon)</button>
+        </div>
+    </div>
+</div>
+{% endblock %} 

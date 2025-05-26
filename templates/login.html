@@ -20,6 +20,13 @@
         color: var(--primary-color);
         text-decoration: underline;
     }
+    .store-name-banner {
+        text-align: center;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--primary-color);
+        margin-bottom: 1rem;
+    }
 </style>
 {% endblock %}
 
@@ -34,7 +41,11 @@
             <h1 class="form-title">Pawfection Grooming Solutions</h1>
             <h2 class="form-title">Login</h2>
         </div>
-        
+        {% if store_name %}
+        <div class="store-name-banner">
+            Store: {{ store_name }}
+        </div>
+        {% endif %}
         <form method="POST" action="{{ url_for('auth.login') }}" novalidate>
             <div class="form-group">
                 <label for="username">Username</label>
