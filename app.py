@@ -36,6 +36,12 @@ def create_app():
     app.register_blueprint(appointments_bp)
     app.register_blueprint(management_bp)
 
+    # Add root route for home page
+    @app.route('/')
+    def home():
+        from flask import render_template
+        return render_template('home_page.html')
+
     return app
 
 if __name__ == '__main__':
