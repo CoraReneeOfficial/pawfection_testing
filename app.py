@@ -29,6 +29,10 @@ def create_app():
 
     db.init_app(app)
 
+    # Ensure all tables are created on startup
+    with app.app_context():
+        db.create_all()
+
     # Register blueprints
     app.register_blueprint(auth_bp)
     app.register_blueprint(owners_bp)

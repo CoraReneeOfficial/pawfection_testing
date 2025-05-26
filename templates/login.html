@@ -37,7 +37,7 @@
             <h2 class="form-title">Login</h2>
         </div>
         
-        <form method="POST" action="{{ url_for('auth_login') }}" novalidate>
+        <form method="POST" action="{{ url_for('auth.login') }}" novalidate>
             <div class="form-group">
                 <label for="username">Username</label>
                 <input type="text" id="username" name="username" required class="form-input" autofocus value="{{ request.form.username or '' }}">
