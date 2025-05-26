@@ -46,6 +46,17 @@ def create_app():
         from flask import render_template
         return render_template('home_page.html')
 
+    # Add legal pages routes
+    @app.route('/user-agreement')
+    def view_user_agreement():
+        from flask import render_template
+        return render_template('user_agreement.html')
+
+    @app.route('/privacy-policy')
+    def view_privacy_policy():
+        from flask import render_template
+        return render_template('privacy_policy.html')
+
     return app
 
 if __name__ == '__main__':
