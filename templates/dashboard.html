@@ -113,7 +113,7 @@
             <p><a href="{{ url_for('appointments.calendar_view') }}">View Full Calendar &raquo;</a></p>
         {% else %}
             <p class="no-upcoming-appointments">No upcoming appointments scheduled in the app.</p>
-            <p><a href="{{ url_for('add_appointment') }}" class="button button-primary" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">Schedule an Appointment</a></p>
+            <p><a href="{{ url_for('appointments.add_appointment') }}" class="button button-primary" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">Schedule an Appointment</a></p>
         {% endif %}
     </div>
 
