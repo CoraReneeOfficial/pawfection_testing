@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Pawfection Grooming Solutions{% endblock %}
+
+{% block head %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <header style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 2rem;">
+            <div style="display: flex; gap: 1rem;">
+                <button onclick="window.location.href='/login'" class="button button-primary">Login</button>
+                <button onclick="window.location.href='/signup'" class="button button-primary" style="background-color: var(--danger-color); border-color: var(--danger-color);">Sign Up</button>
+            </div>
+        </header>
+        <header style="text-align: center; margin-bottom: 3rem;">
+            <h1 style="color: var(--primary-color);">Welcome to Pawfection Grooming Solutions</h1>
+            <p style="color: var(--text-muted); font-size: 1.125rem;">Your one-stop solution for all your pet grooming needs.</p>
+        </header>
+
+        <section class="content-card" style="margin-bottom: 2.5rem;">
+            <h2 style="color: var(--primary-color); text-align: center;">Our Key Features</h2>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-top: 2rem; margin-bottom: 1rem;" class="features-grid">
+                <div class="content-card" style="background-color: var(--primary-lighter);">
+                    <h3 style="color: var(--primary-color);">Online Appointment Scheduling</h3>
+                    <p>Easily book appointments for your furry friends at your convenience.</p>
+                </div>
+                <div class="content-card" style="background-color: var(--primary-lighter);">
+                    <h3 style="color: var(--primary-color);">Customer Management</h3>
+                    <p>Manage your pet's profiles, appointments, and preferences all in one place.</p>
+                </div>
+                <div class="content-card" style="background-color: var(--primary-lighter);">
+                    <h3 style="color: var(--primary-color);">Grooming Services</h3>
+                    <p>We offer a wide range of grooming services, tailored to meet your pet's specific needs.</p>
+                </div>
+                <div class="content-card" style="background-color: var(--primary-lighter);">
+                    <h3 style="color: var(--primary-color);">Groomer Management</h3>
+                    <p>Our groomers are certified and experienced to handle all kinds of pets.</p>
+                </div>
+                <div class="content-card" style="background-color: var(--primary-lighter);">
+                    <h3 style="color: var(--primary-color);">Service and Fee Management</h3>
+                    <p>Clear overview of service offerings and transparent pricing.</p>
+                </div>
+                <div class="content-card" style="background-color: var(--primary-lighter);">
+                    <h3 style="color: var(--primary-color);">Sales Reports</h3>
+                    <p>Generate detailed sales reports.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="content-card" style="background-color: var(--primary-light); margin-bottom: 2.5rem;">
+            <h2 style="color: var(--primary-color); text-align: center;">What Our Customers Say</h2>
+            <div class="content-card" style="background-color: #fff; text-align: center;">
+                <p style="font-style: italic; color: var(--text-muted); margin-bottom: 1rem;">"I've been using Pawfection for my golden retriever for over a year now, and I couldn't be happier. The online scheduling is so convenient, and my dog always comes home looking and smelling amazing!"</p>
+                <p style="color: var(--primary-color); font-weight: 600;">- Sarah M.</p>
+            </div>
+        </section>
+
+        <section class="content-card" style="background-color: var(--primary-lighter); text-align: center;">
+            <h2 style="color: var(--primary-color);">Ready to Get Started?</h2>
+            <p style="font-size: 1.125rem; color: var(--text-dark); margin-bottom: 1.5rem;">Book an appointment today and experience the best in pet grooming!</p>
+            <button onclick="window.location.href='/calendar'" class="button button-primary" style="font-size: 1.1rem; padding: 1rem 2.5rem;">Book Appointment</button>
+        </section>
+    </div>
+{% endblock %}
