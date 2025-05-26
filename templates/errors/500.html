@@ -1,0 +1,38 @@
+    {% extends "base.html" %}
+
+    {% block title %}Server Error (500){% endblock %}
+
+    {% block head %}
+    <style>
+        .error-container {
+            text-align: center;
+            padding: 40px 20px;
+            margin-top: 2rem;
+        }
+        .error-container h1 {
+            font-size: 3em;
+            color: var(--danger-color, #dc3545);
+            margin-bottom: 0.5rem;
+        }
+        .error-container p {
+            font-size: 1.2em;
+            color: var(--text-muted, #6c757d);
+            margin-bottom: 1.5rem;
+        }
+    </style>
+    {% endblock %}
+
+    {% block content %}
+    <div class="error-container content-card">
+        <h1>Oops! Something Went Wrong (500)</h1>
+        <p>We're sorry, but our server encountered an internal error and was unable to complete your request.</p>
+        <p>We've been notified and are working to fix it. Please try again later.</p>
+        <a href="{{ url_for('index') }}" class="button button-primary">Go to Dashboard</a>
+        {% if g.user and g.user.is_admin %}
+            <p style="margin-top: 2rem; font-size: 0.9em;">
+                Admin info: A server error occurred. Details have been logged.
+            </p>
+        {% endif %}
+    </div>
+    {% endblock %}
+    

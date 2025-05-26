@@ -23,7 +23,7 @@
                 <div class="nav-user-menu-area">
                     <div class="nav-user-pic">
                         {% if g.user.picture_filename %}
-                            {# MODIFIED: Use the new route for uploaded files #}
+                            {# Assuming 'uploaded_persistent_file' is your route for serving files from the volume #}
                             <img src="{{ url_for('uploaded_persistent_file', filename=g.user.picture_filename) }}" alt="User profile picture">
                         {% else %}
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="default-user-pic-svg">
@@ -51,8 +51,9 @@
                             <a href="{{ url_for('directory') }}" class="nav-dropdown-item {% if request.endpoint == 'directory' %}active{% endif %}">Directory</a>
                             <a href="{{ url_for('checkout') }}" class="nav-dropdown-item {% if request.endpoint == 'checkout' %}active{% endif %}">Checkout</a>
                             <a href="{{ url_for('view_logs') }}" class="nav-dropdown-item {% if request.endpoint == 'view_logs' %}active{% endif %}">Activity Log</a>
+                            {# MODIFIED: Added check for request.endpoint before using startswith or other comparisons #}
                             {% if g.user.is_admin %}
-                            <a href="{{ url_for('management') }}" class="nav-dropdown-item {% if request.endpoint == 'management' or request.endpoint.startswith('manage_') or request.endpoint == 'view_sales_reports' %}active{% endif %}">Management</a>
+                            <a href="{{ url_for('management') }}" class="nav-dropdown-item {% if request.endpoint and (request.endpoint == 'management' or request.endpoint.startswith('manage_') or request.endpoint == 'view_sales_reports' or request.endpoint == 'view_user_agreement' or request.endpoint == 'view_privacy_policy') %}active{% endif %}">Management</a>
                             {% endif %}
                             <div class="nav-dropdown-divider"></div>
                             <div class="nav-dropdown-user-info">

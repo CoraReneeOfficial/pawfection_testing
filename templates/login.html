@@ -23,14 +23,16 @@
 </style>
 {% endblock %}
 
+{
+
 {% block content %}
+{# image logo for the app #}
+            <div class="logo-image-login">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pawfection Grooming Solutions Logo" style="max-width: 350px; margin-bottom: 1rem; align-items:center;">
+            </div>
 <div class="form-wrapper"> {# Centers the form #}
     <div class="form-container form-container-sm"> {# Smaller form box #}
         <div style="text-align: center; margin-bottom: 1.5rem;">
-            {# You can add your logo here if you have one #}
-            <div class="logo-image-login">
-                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pawfection Grooming Solutions Logo" style="max-width: 350px; margin-bottom: 1rem; align-items: center;">
-            </div>
             <h1 class="form-title">Pawfection Grooming Solutions</h1>
             <h2 class="form-title">Login</h2>
         </div>
