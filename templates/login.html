@@ -62,6 +62,10 @@
             </div>
         </form>
         
+        <div class="form-link" style="text-align: center; margin-top: 1.5rem;">
+            <a href="{{ url_for('store_register') }}" class="button button-secondary">Create a Store</a>
+        </div>
+        
         {% if show_initial_setup %}
         <p class="form-link" style="text-align: center; margin-top: 1.5rem;">
             No accounts found. <a href="{{ url_for('auth.initial_setup') }}">Perform initial setup?</a>
