@@ -24,7 +24,7 @@ def login():
         password = request.form.get('password', '')
         if not username or not password:
             flash("Username and password required.", "danger")
-            return render_template('login.html'), 400
+            return render_template('login.html', show_initial_setup=check_initial_setup()), 400
         user = User.query.filter_by(username=username).first()
         if user and user.check_password(password):
             session.clear()
@@ -40,8 +40,8 @@ def login():
             return redirect(next_page or url_for('dashboard'))
         else:
             flash("Invalid username or password.", "danger")
-            return render_template('login.html'), 401
-    return render_template('login.html')
+            return render_template('login.html', show_initial_setup=check_initial_setup()), 401
+    return render_template('login.html', show_initial_setup=check_initial_setup())
 
 @auth_bp.route('/logout')
 def logout():

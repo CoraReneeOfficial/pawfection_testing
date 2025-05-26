@@ -53,9 +53,9 @@
             </div>
         </form>
         
-        {% if check_initial_setup() %}
+        {% if show_initial_setup %}
         <p class="form-link" style="text-align: center; margin-top: 1.5rem;">
-            No accounts found. <a href="{{ url_for('initial_setup') }}">Perform initial setup?</a>
+            No accounts found. <a href="{{ url_for('auth.initial_setup') }}">Perform initial setup?</a>
         </p>
         {% endif %}
 
