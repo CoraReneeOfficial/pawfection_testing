@@ -32,8 +32,8 @@
 
 {% block content %}
 {# image logo for the app #}
-            <div class="logo-image-login">
-                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pawfection Grooming Solutions Logo" style="max-width: 350px; margin-bottom: 1rem; align-items:center;">
+            <div class="logo-image-login" style="display: flex; justify-content: center; align-items: center; width: 100%;">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pawfection Grooming Solutions Logo" style="max-width: 350px; margin-bottom: 1rem; display: block;">
             </div>
 <div class="form-wrapper"> {# Centers the form #}
     <div class="form-container form-container-sm"> {# Smaller form box #}
