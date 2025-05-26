@@ -1,7 +1,8 @@
 # app.py
 import os
 import bcrypt
-from flask import Flask
+from flask import Flask, g, session, redirect, url_for, flash
+from flask.wrappers import Request
 from extensions import db
 from models import *
 from auth import auth_bp
@@ -9,6 +10,7 @@ from owners import owners_bp
 from dogs import dogs_bp
 from appointments import appointments_bp
 from management import management_bp
+from functools import wraps
 
 def create_app():
     app = Flask(__name__)
@@ -40,6 +42,25 @@ def create_app():
     app.register_blueprint(appointments_bp)
     app.register_blueprint(management_bp)
 
+    # Set g.user before each request
+    @app.before_request
+    def load_logged_in_user():
+        user_id = session.get('user_id')
+        if user_id is None:
+            g.user = None
+        else:
+            g.user = User.query.get(user_id)
+
+    # Decorator to require login
+    def login_required(view):
+        @wraps(view)
+        def wrapped_view(**kwargs):
+            if g.user is None:
+                flash("Please log in to access this page.", "warning")
+                return redirect(url_for('auth.login'))
+            return view(**kwargs)
+        return wrapped_view
+
     # Add root route for home page
     @app.route('/')
     def home():
@@ -59,6 +80,7 @@ def create_app():
 
     # Add dashboard route
     @app.route('/dashboard')
+    @login_required
     def dashboard():
         from flask import render_template
         return render_template('dashboard.html')
