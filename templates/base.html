@@ -46,7 +46,7 @@
                              x-transition:leave="transition ease-in duration-75 transform"
                              x-transition:leave-start="opacity-100 scale-100"
                              x-transition:leave-end="opacity-0 scale-95">
-                            <a href="{{ url_for('home') }}" class="nav-dropdown-item {% if request.endpoint == 'home' %}active{% endif %}">Dashboard</a>
+                            <a href="{{ url_for('dashboard') }}" class="nav-dropdown-item {% if request.endpoint == 'dashboard' %}active{% endif %}">Dashboard</a>
                             <a href="{{ url_for('appointments.calendar_view') }}" class="nav-dropdown-item {% if request.endpoint == 'appointments.calendar_view' %}active{% endif %}">Calendar</a>
                             <a href="{{ url_for('owners.directory') }}" class="nav-dropdown-item {% if request.endpoint == 'owners.directory' %}active{% endif %}">Directory</a>
                             <a href="{{ url_for('appointments.checkout') }}" class="nav-dropdown-item {% if request.endpoint == 'appointments.checkout' %}active{% endif %}">Checkout</a>
