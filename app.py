@@ -57,6 +57,12 @@ def create_app():
         from flask import render_template
         return render_template('privacy_policy.html')
 
+    # Add dashboard route
+    @app.route('/dashboard')
+    def dashboard():
+        from flask import render_template
+        return render_template('dashboard.html')
+
     return app
 
 if __name__ == '__main__':
