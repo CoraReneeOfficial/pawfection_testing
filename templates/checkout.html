@@ -121,7 +121,7 @@
     <h1>Checkout Appointment</h1>
     <p>Select a scheduled appointment, confirm the services performed and add any fees, then complete the checkout.</p>
 
-    <form method="POST" action="{{ url_for('checkout') }}">
+    <form method="POST" action="{{ url_for('appointments.checkout') }}">
 
         {# Section 1: Select Appointment #}
         <div class="checkout-form-section">
@@ -138,7 +138,7 @@
                     {% endfor %}
                 </select>
                 {% if not scheduled_appointments %}
-                 <small class="text-muted" style="color: var(--danger-color);">No 'Scheduled' appointments found. Please <a href="{{ url_for('add_appointment')}}">schedule an appointment</a> first.</small>
+                 <small class="text-muted" style="color: var(--danger-color);">No 'Scheduled' appointments found. Please <a href="{{ url_for('appointments.add_appointment') }}">schedule an appointment</a> first.</small>
                  {% endif %}
             </div>
         </div>
@@ -160,7 +160,7 @@
                         {% endfor %}
                     </ul>
                 {% else %}
-                    <p class="text-muted">No services found. Please add services in the <a href="{{ url_for('manage_services') }}">Management</a> section.</p>
+                    <p class="text-muted">No services found. Please add services in the <a href="{{ url_for('management.manage_services') }}">Management</a> section.</p>
                 {% endif %}
             </div>
              <h3>Additional Fees</h3>
@@ -178,7 +178,7 @@
                         {% endfor %}
                     </ul>
                 {% else %}
-                    <p class="text-muted">No additional fees found. You can add fees in the <a href="{{ url_for('manage_services') }}">Management</a> section.</p>
+                    <p class="text-muted">No additional fees found. You can add fees in the <a href="{{ url_for('management.manage_services') }}">Management</a> section.</p>
                 {% endif %}
             </div>
              <small class="text-muted">Select all services and fees that apply to this visit.</small>
