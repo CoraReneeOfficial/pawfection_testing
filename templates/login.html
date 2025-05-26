@@ -31,54 +31,55 @@
 {% endblock %}
 
 {% block content %}
-{# image logo for the app #}
-            <div class="logo-image-login" style="display: flex; justify-content: center; align-items: center; width: 100%;">
-                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pawfection Grooming Solutions Logo" style="max-width: 350px; margin-bottom: 1rem; display: block;">
+<div style="min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+    <div class="logo-image-login" style="display: flex; justify-content: center; align-items: center; width: 100%;">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pawfection Grooming Solutions Logo" style="max-width: 350px; margin-bottom: 1rem; display: block;">
+    </div>
+    <div class="form-wrapper"> {# Centers the form #}
+        <div class="form-container form-container-sm"> {# Smaller form box #}
+            <div style="text-align: center; margin-bottom: 1.5rem;">
+                <h1 class="form-title">Pawfection Grooming Solutions</h1>
+                <h2 class="form-title">Login</h2>
             </div>
-<div class="form-wrapper"> {# Centers the form #}
-    <div class="form-container form-container-sm"> {# Smaller form box #}
-        <div style="text-align: center; margin-bottom: 1.5rem;">
-            <h1 class="form-title">Pawfection Grooming Solutions</h1>
-            <h2 class="form-title">Login</h2>
-        </div>
-        {% if store_name %}
-        <div class="store-name-banner">
-            Store: {{ store_name }}
-        </div>
-        {% endif %}
-        <form method="POST" action="{{ url_for('auth.login') }}" novalidate>
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required class="form-input" autofocus value="{{ request.form.username or '' }}">
+            {% if store_name %}
+            <div class="store-name-banner">
+                Store: {{ store_name }}
             </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required class="form-input">
+            {% endif %}
+            <form method="POST" action="{{ url_for('auth.login') }}" novalidate>
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" required class="form-input" autofocus value="{{ request.form.username or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required class="form-input">
+                </div>
+                <div class="form-button-wrapper">
+                    <button type="submit" class="button button-primary" style="width: 100%;">
+                        Sign In
+                    </button>
+                </div>
+            </form>
+            
+            <div class="form-link" style="text-align: center; margin-top: 1.5rem;">
+                <a href="{{ url_for('store_register') }}" class="button button-secondary">Create a Store</a>
             </div>
-            <div class="form-button-wrapper">
-                <button type="submit" class="button button-primary" style="width: 100%;">
-                    Sign In
-                </button>
+            <div class="form-link" style="text-align: center; margin-top: 1.5rem;">
+                <a href="{{ url_for('store_login') }}" class="button button-secondary">Change Store</a>
             </div>
-        </form>
-        
-        <div class="form-link" style="text-align: center; margin-top: 1.5rem;">
-            <a href="{{ url_for('store_register') }}" class="button button-secondary">Create a Store</a>
-        </div>
-        <div class="form-link" style="text-align: center; margin-top: 1.5rem;">
-            <a href="{{ url_for('store_login') }}" class="button button-secondary">Change Store</a>
-        </div>
-        
-        {% if show_initial_setup %}
-        <p class="form-link" style="text-align: center; margin-top: 1.5rem;">
-            No accounts found. <a href="{{ url_for('auth.initial_setup') }}">Perform initial setup?</a>
-        </p>
-        {% endif %}
+            
+            {% if show_initial_setup %}
+            <p class="form-link" style="text-align: center; margin-top: 1.5rem;">
+                No accounts found. <a href="{{ url_for('auth.initial_setup') }}">Perform initial setup?</a>
+            </p>
+            {% endif %}
 
-        {# NEW: Links to User Agreement and Privacy Policy #}
-        <div class="legal-links-footer">
-            <a href="{{ url_for('view_user_agreement') }}">User Agreement</a> | 
-            <a href="{{ url_for('view_privacy_policy') }}">Privacy Policy</a>
+            {# NEW: Links to User Agreement and Privacy Policy #}
+            <div class="legal-links-footer">
+                <a href="{{ url_for('view_user_agreement') }}">User Agreement</a> | 
+                <a href="{{ url_for('view_privacy_policy') }}">Privacy Policy</a>
+            </div>
         </div>
     </div>
 </div>

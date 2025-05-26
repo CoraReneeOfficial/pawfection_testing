@@ -24,6 +24,7 @@
 {% endblock %}
 
 {% block content %}
+<div style="min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">
     <div class="logo-image-login" style="display: flex; justify-content: center; align-items: center; width: 100%;">
         <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pawfection Grooming Solutions Logo" style="max-width: 350px; margin-bottom: 1rem; display: block;">
     </div>
@@ -54,4 +55,5 @@
             </div>
         </div>
     </div>
+</div>
 {% endblock %} 
