@@ -176,4 +176,8 @@ def delete_appointment(appointment_id):
     except Exception as e:
         db.session.rollback(); current_app.logger.error(f"Error deleting appt {appointment_id}: {e}", exc_info=True)
         flash("Error deleting appointment.", "danger")
-    return redirect(url_for('appointments.calendar_view')) 
+    return redirect(url_for('appointments.calendar_view'))
+
+@appointments_bp.route('/checkout', methods=['GET', 'POST'])
+def checkout():
+    return render_template('checkout.html') 

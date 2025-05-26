@@ -49,7 +49,7 @@
                             <a href="{{ url_for('home') }}" class="nav-dropdown-item {% if request.endpoint == 'home' %}active{% endif %}">Dashboard</a>
                             <a href="{{ url_for('appointments.calendar_view') }}" class="nav-dropdown-item {% if request.endpoint == 'appointments.calendar_view' %}active{% endif %}">Calendar</a>
                             <a href="{{ url_for('owners.directory') }}" class="nav-dropdown-item {% if request.endpoint == 'owners.directory' %}active{% endif %}">Directory</a>
-                            <a href="{{ url_for('checkout') }}" class="nav-dropdown-item {% if request.endpoint == 'checkout' %}active{% endif %}">Checkout</a>
+                            <a href="{{ url_for('appointments.checkout') }}" class="nav-dropdown-item {% if request.endpoint == 'appointments.checkout' %}active{% endif %}">Checkout</a>
                             <a href="{{ url_for('management.view_logs') }}" class="nav-dropdown-item {% if request.endpoint == 'management.view_logs' %}active{% endif %}">Activity Log</a>
                             {# MODIFIED: Added check for request.endpoint before using startswith or other comparisons #}
                             {% if g.user.is_admin %}
