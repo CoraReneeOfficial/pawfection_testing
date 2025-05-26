@@ -10,6 +10,9 @@ import calendar
 import os
 import uuid
 from utils import allowed_file, log_activity
+from google_auth_oauthlib.flow import Flow
+from googleapiclient.discovery import build
+import json
 
 management_bp = Blueprint('management', __name__)
 
@@ -445,4 +448,110 @@ def view_logs():
     log_activity("Viewed Activity Log page")
     page = request.args.get('page', 1, type=int); per_page = 50
     logs_pagination = ActivityLog.query.options(db.joinedload(ActivityLog.user)).order_by(ActivityLog.timestamp.desc()).paginate(page=page, per_page=per_page, error_out=False)
-    return render_template('logs.html', logs_pagination=logs_pagination) 
+    return render_template('logs.html', logs_pagination=logs_pagination)
+
+@management_bp.route('/google/authorize')
+@admin_required
+def google_authorize():
+    # Only allow admin users
+    if not g.user or not g.user.is_admin:
+        flash("Only administrators can connect Google services.", "danger")
+        return redirect(url_for('management.management'))
+
+    client_id = os.environ.get('GOOGLE_CLIENT_ID')
+    client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
+    redirect_uri = os.environ.get('GOOGLE_REDIRECT_URI')
+    if not client_id or not client_secret or not redirect_uri:
+        flash("Google OAuth environment variables are not set.", "danger")
+        return redirect(url_for('management.management'))
+
+    flow = Flow.from_client_config(
+        {
+            "web": {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "redirect_uris": [redirect_uri],
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token"
+            }
+        },
+        scopes=[
+            "https://www.googleapis.com/auth/calendar",
+            "https://www.googleapis.com/auth/gmail.send",
+            "openid",
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/userinfo.profile"
+        ]
+    )
+    flow.redirect_uri = redirect_uri
+    authorization_url, state = flow.authorization_url(
+        access_type='offline',
+        include_granted_scopes='true',
+        prompt='consent'
+    )
+    session['google_oauth_state'] = state
+    return redirect(authorization_url)
+
+@management_bp.route('/google/oauth2callback')
+@admin_required
+def google_oauth2callback():
+    client_id = os.environ.get('GOOGLE_CLIENT_ID')
+    client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
+    redirect_uri = os.environ.get('GOOGLE_REDIRECT_URI')
+    if not client_id or not client_secret or not redirect_uri:
+        flash("Google OAuth environment variables are not set.", "danger")
+        return redirect(url_for('management.management'))
+
+    state = session.get('google_oauth_state')
+    if not state:
+        flash("OAuth state missing. Please try again.", "danger")
+        return redirect(url_for('management.management'))
+
+    flow = Flow.from_client_config(
+        {
+            "web": {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "redirect_uris": [redirect_uri],
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token"
+            }
+        },
+        scopes=[
+            "https://www.googleapis.com/auth/calendar",
+            "https://www.googleapis.com/auth/gmail.send",
+            "openid",
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/userinfo.profile"
+        ],
+        state=state
+    )
+    flow.redirect_uri = redirect_uri
+    authorization_response = request.url
+    try:
+        flow.fetch_token(authorization_response=authorization_response)
+    except Exception as e:
+        current_app.logger.error(f"Google OAuth error: {e}", exc_info=True)
+        flash("Failed to authorize with Google. Please try again.", "danger")
+        return redirect(url_for('management.management'))
+
+    credentials = flow.credentials
+    token_data = {
+        'token': credentials.token,
+        'refresh_token': credentials.refresh_token,
+        'token_uri': credentials.token_uri,
+        'client_id': credentials.client_id,
+        'client_secret': credentials.client_secret,
+        'scopes': credentials.scopes
+    }
+    # Save token to shared file
+    token_path = current_app.config.get('SHARED_TOKEN_FILE', 'shared_google_token.json')
+    try:
+        with open(token_path, 'w') as f:
+            json.dump(token_data, f)
+        log_activity("Connected Google Account for Calendar/Gmail")
+        flash("Google account connected successfully!", "success")
+    except Exception as e:
+        current_app.logger.error(f"Failed to save Google token: {e}", exc_info=True)
+        flash("Failed to save Google token.", "danger")
+    return redirect(url_for('management.management')) 
