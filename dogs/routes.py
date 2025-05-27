@@ -46,7 +46,8 @@ def add_dog(owner_id):
             aggression_issues=(request.form.get('aggression_issues', '').strip() or None),
             anxiety_issues=(request.form.get('anxiety_issues', '').strip() or None),
             other_notes=(request.form.get('other_notes', '').strip() or None),
-            owner_id=owner.id, created_by_user_id=g.user.id
+            owner_id=owner.id, created_by_user_id=g.user.id,
+            store_id=owner.store_id
         )
         try:
             db.session.add(new_dog); db.session.flush()
