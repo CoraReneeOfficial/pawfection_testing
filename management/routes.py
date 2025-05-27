@@ -572,6 +572,7 @@ def google_oauth2callback():
         'client_secret': credentials.client_secret,
         'scopes': credentials.scopes
     }
+    current_app.logger.info(f"[Google OAuth] Saving token data: {token_data}")
     # Save token to the current store
     if hasattr(g, 'user') and g.user and g.user.store_id:
         store = Store.query.get(g.user.store_id)
@@ -579,6 +580,7 @@ def google_oauth2callback():
             store.google_token_json = json.dumps(token_data)
             try:
                 db.session.commit()
+                current_app.logger.info(f"[Google OAuth] Token saved for store {store.id}. Scopes: {token_data.get('scopes')}")
                 # --- Test the token by making a Calendar API call ---
                 test_credentials = GoogleCredentials(
                     token=credentials.token,
@@ -591,16 +593,17 @@ def google_oauth2callback():
                 service = build('calendar', 'v3', credentials=test_credentials)
                 try:
                     service.calendarList().list(maxResults=1).execute()
+                    current_app.logger.info(f"[Google OAuth] Calendar API test succeeded for store {store.id}.")
                     log_activity("Connected Google Account for Calendar/Gmail")
                     flash("Google account connected successfully!", "success")
                 except Exception as e:
                     store.google_token_json = None
                     db.session.commit()
-                    current_app.logger.error(f"Google token test failed: {e}", exc_info=True)
+                    current_app.logger.error(f"[Google OAuth] Google token test failed: {e}", exc_info=True)
                     flash("Failed to verify Google account connection. Please try again.", "danger")
             except Exception as e:
                 db.session.rollback()
-                current_app.logger.error(f"Failed to save Google token to store: {e}", exc_info=True)
+                current_app.logger.error(f"[Google OAuth] Failed to save Google token to store: {e}", exc_info=True)
                 flash("Failed to save Google token.", "danger")
         else:
             flash("Store not found. Cannot save Google token.", "danger")
