@@ -120,7 +120,8 @@ def management():
         if store and store.google_token_json:
             try:
                 token_data = json.loads(store.google_token_json)
-                scopes = token_data.get('scopes', [])
+                # Normalize scopes: strip whitespace and trailing semicolons
+                scopes = [s.strip().rstrip(';') for s in token_data.get('scopes', [])]
                 is_google_calendar_connected = 'https://www.googleapis.com/auth/calendar' in scopes
                 is_gmail_for_sending_connected = 'https://www.googleapis.com/auth/gmail.send' in scopes
             except Exception:
