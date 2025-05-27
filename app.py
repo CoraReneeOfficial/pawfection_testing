@@ -12,6 +12,9 @@ from appointments import appointments_bp
 from management import management_bp
 from functools import wraps
 from werkzeug.middleware.proxy_fix import ProxyFix
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 def create_app():
     app = Flask(__name__)
