@@ -25,7 +25,7 @@ def admin_required(f):
     def decorated_function(*args, **kwargs):
         if not hasattr(g, 'user') or g.user is None or not g.user.is_admin:
             flash("You do not have permission to access this page.", "danger")
-            return redirect(url_for('index'))
+            return redirect(url_for('home'))
         return f(*args, **kwargs)
     return decorated_function
 
