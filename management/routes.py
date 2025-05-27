@@ -563,6 +563,7 @@ def google_oauth2callback():
         flash("Failed to authorize with Google. Please try again.", "danger")
         return redirect(url_for('management.management'))
 
+    current_app.logger.info(f"[Google OAuth] Starting oauth2callback for user: {getattr(g.user, 'id', None)} store: {getattr(g.user, 'store_id', None)}")
     credentials = flow.credentials
     token_data = {
         'token': credentials.token,
@@ -572,16 +573,19 @@ def google_oauth2callback():
         'client_secret': credentials.client_secret,
         'scopes': credentials.scopes
     }
-    current_app.logger.info(f"[Google OAuth] Saving token data: {token_data}")
+    current_app.logger.info(f"[Google OAuth] Token data to save: {token_data}")
     # Save token to the current store
     if hasattr(g, 'user') and g.user and g.user.store_id:
         store = Store.query.get(g.user.store_id)
+        current_app.logger.info(f"[Google OAuth] Store loaded: {store}")
         if store:
             store.google_token_json = json.dumps(token_data)
             try:
                 db.session.commit()
-                current_app.logger.info(f"[Google OAuth] Token saved for store {store.id}. Scopes: {token_data.get('scopes')}")
+                current_app.logger.info(f"[Google OAuth] Token committed to DB for store {store.id}")
                 # --- Test the token by making a Calendar API call ---
+                from google.oauth2.credentials import Credentials as GoogleCredentials
+                from googleapiclient.discovery import build as google_build
                 test_credentials = GoogleCredentials(
                     token=credentials.token,
                     refresh_token=credentials.refresh_token,
@@ -590,23 +594,31 @@ def google_oauth2callback():
                     client_secret=credentials.client_secret,
                     scopes=credentials.scopes
                 )
-                service = build('calendar', 'v3', credentials=test_credentials)
+                current_app.logger.info(f"[Google OAuth] Built test credentials. About to call Calendar API...")
+                service = google_build('calendar', 'v3', credentials=test_credentials)
                 try:
-                    service.calendarList().list(maxResults=1).execute()
-                    current_app.logger.info(f"[Google OAuth] Calendar API test succeeded for store {store.id}.")
+                    result = service.calendarList().list(maxResults=1).execute()
+                    current_app.logger.info(f"[Google OAuth] Calendar API test succeeded for store {store.id}. Result: {result}")
                     log_activity("Connected Google Account for Calendar/Gmail")
                     flash("Google account connected successfully!", "success")
                 except Exception as e:
                     store.google_token_json = None
                     db.session.commit()
-                    current_app.logger.error(f"[Google OAuth] Google token test failed: {e}", exc_info=True)
+                    import traceback
+                    tb = traceback.format_exc()
+                    current_app.logger.error(f"[Google OAuth] Google token test failed: {e}\nTraceback:\n{tb}")
                     flash("Failed to verify Google account connection. Please try again.", "danger")
             except Exception as e:
                 db.session.rollback()
-                current_app.logger.error(f"[Google OAuth] Failed to save Google token to store: {e}", exc_info=True)
+                import traceback
+                tb = traceback.format_exc()
+                current_app.logger.error(f"[Google OAuth] Failed to save Google token to store: {e}\nTraceback:\n{tb}")
                 flash("Failed to save Google token.", "danger")
         else:
+            current_app.logger.error(f"[Google OAuth] Store not found for user {getattr(g.user, 'id', None)}")
             flash("Store not found. Cannot save Google token.", "danger")
     else:
+        current_app.logger.error(f"[Google OAuth] No store context for user {getattr(g.user, 'id', None)}")
         flash("No store context. Cannot save Google token.", "danger")
+    current_app.logger.info(f"[Google OAuth] oauth2callback complete for user: {getattr(g.user, 'id', None)} store: {getattr(g.user, 'store_id', None)}")
     return redirect(url_for('management.management')) 
