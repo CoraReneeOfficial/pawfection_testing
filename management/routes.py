@@ -122,10 +122,12 @@ def management():
                 token_data = json.loads(store.google_token_json)
                 # Normalize scopes: strip whitespace and trailing semicolons
                 scopes = [s.strip().rstrip(';') for s in token_data.get('scopes', [])]
+                current_app.logger.info(f"[DEBUG] store.google_token_json: {store.google_token_json}")
+                current_app.logger.info(f"[DEBUG] parsed scopes: {scopes}")
                 is_google_calendar_connected = 'https://www.googleapis.com/auth/calendar' in scopes
                 is_gmail_for_sending_connected = 'https://www.googleapis.com/auth/gmail.send' in scopes
-            except Exception:
-                pass
+            except Exception as e:
+                current_app.logger.error(f"[DEBUG] Error parsing google_token_json: {e}")
     return render_template('management.html',
         is_google_calendar_connected=is_google_calendar_connected,
         is_gmail_for_sending_connected=is_gmail_for_sending_connected)
