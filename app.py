@@ -1,7 +1,7 @@
 # app.py
 import os
 import bcrypt
-from flask import Flask, g, session, redirect, url_for, flash
+from flask import Flask, g, session, redirect, url_for, flash, send_from_directory
 from flask.wrappers import Request
 from extensions import db
 from models import *
@@ -35,6 +35,11 @@ def create_app():
     app.config['NOTIFICATION_SETTINGS_FILE'] = NOTIFICATION_SETTINGS_FILE
 
     db.init_app(app)
+
+    # Route to serve uploaded files
+    @app.route('/uploads/<path:filename>')
+    def uploaded_persistent_file(filename):
+        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
     # Ensure all tables are created on startup
     with app.app_context():
