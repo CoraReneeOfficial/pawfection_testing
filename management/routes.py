@@ -474,6 +474,13 @@ def google_authorize():
         flash("Only administrators can connect Google services.", "danger")
         return redirect(url_for('management.management'))
 
+    # Clear old Google token to avoid scope mismatch errors
+    if hasattr(g, 'user') and g.user and g.user.store_id:
+        store = Store.query.get(g.user.store_id)
+        if store:
+            store.google_token_json = None
+            db.session.commit()
+
     client_id = os.environ.get('GOOGLE_CLIENT_ID')
     client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
     redirect_uri = os.environ.get('GOOGLE_REDIRECT_URI')
