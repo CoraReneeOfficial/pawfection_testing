@@ -15,6 +15,7 @@ class Store(db.Model):
     dogs = db.relationship('Dog', backref='store', lazy=True)
     services = db.relationship('Service', backref='store', lazy=True)
     appointments = db.relationship('Appointment', backref='store', lazy=True)
+    google_token_json = db.Column(db.Text, nullable=True)  # Store Google OAuth token as JSON per store
     def set_password(self, password):
         import bcrypt
         self.password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
