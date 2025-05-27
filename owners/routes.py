@@ -40,7 +40,7 @@ def add_owner():
         if errors:
             for _, msg in errors.items(): flash(msg, "danger")
             return render_template('add_owner.html', owner=request.form.to_dict()), 400
-        new_owner = Owner(name=name, phone_number=phone, email=email or None, address=address or None, created_by_user_id=g.user.id)
+        new_owner = Owner(name=name, phone_number=phone, email=email or None, address=address or None, created_by_user_id=g.user.id, store_id=g.user.store_id)
         try:
             db.session.add(new_owner); db.session.commit()
             log_activity("Added Owner", details=f"Name: {name}, Phone: {phone}")
