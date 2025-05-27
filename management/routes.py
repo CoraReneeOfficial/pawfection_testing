@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g, current_app, session, abort
-from models import User, Service, Appointment, ActivityLog
+from models import User, Service, Appointment, ActivityLog, Store
 from extensions import db
 from sqlalchemy.exc import IntegrityError
 from decimal import Decimal, InvalidOperation
@@ -110,7 +110,23 @@ def get_date_range(range_type, start_date_str=None, end_date_str=None):
 @admin_required
 def management():
     log_activity("Viewed Management page")
-    return render_template('management.html')
+    # Determine Google connection status for the current store
+    store = None
+    is_google_calendar_connected = False
+    is_gmail_for_sending_connected = False
+    if hasattr(g, 'user') and g.user and g.user.store_id:
+        store = Store.query.get(g.user.store_id)
+        if store and store.google_token_json:
+            try:
+                token_data = json.loads(store.google_token_json)
+                scopes = token_data.get('scopes', [])
+                is_google_calendar_connected = 'https://www.googleapis.com/auth/calendar' in scopes
+                is_gmail_for_sending_connected = 'https://www.googleapis.com/auth/gmail.send' in scopes
+            except Exception:
+                pass
+    return render_template('management.html',
+        is_google_calendar_connected=is_google_calendar_connected,
+        is_gmail_for_sending_connected=is_gmail_for_sending_connected)
 
 @management_bp.route('/manage/users')
 @admin_required
@@ -544,14 +560,21 @@ def google_oauth2callback():
         'client_secret': credentials.client_secret,
         'scopes': credentials.scopes
     }
-    # Save token to shared file
-    token_path = current_app.config.get('SHARED_TOKEN_FILE', 'shared_google_token.json')
-    try:
-        with open(token_path, 'w') as f:
-            json.dump(token_data, f)
-        log_activity("Connected Google Account for Calendar/Gmail")
-        flash("Google account connected successfully!", "success")
-    except Exception as e:
-        current_app.logger.error(f"Failed to save Google token: {e}", exc_info=True)
-        flash("Failed to save Google token.", "danger")
+    # Save token to the current store
+    if hasattr(g, 'user') and g.user and g.user.store_id:
+        store = Store.query.get(g.user.store_id)
+        if store:
+            store.google_token_json = json.dumps(token_data)
+            try:
+                db.session.commit()
+                log_activity("Connected Google Account for Calendar/Gmail")
+                flash("Google account connected successfully!", "success")
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.error(f"Failed to save Google token to store: {e}", exc_info=True)
+                flash("Failed to save Google token.", "danger")
+        else:
+            flash("Store not found. Cannot save Google token.", "danger")
+    else:
+        flash("No store context. Cannot save Google token.", "danger")
     return redirect(url_for('management.management')) 

@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g, jsonify, current_app
-from models import Appointment, Dog, Owner, User, ActivityLog
+from models import Appointment, Dog, Owner, User, ActivityLog, Store
 from extensions import db
 from sqlalchemy import or_
 from functools import wraps
@@ -7,6 +7,9 @@ import datetime
 from datetime import timezone
 from dateutil import tz, parser as dateutil_parser
 from utils import allowed_file
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+import json
 
 appointments_bp = Blueprint('appointments', __name__)
 
@@ -110,8 +113,35 @@ def add_appointment():
         try:
             db.session.add(new_appt); db.session.commit()
             log_activity("Added Local Appt", details=f"Dog: {selected_dog.name}, Time: {local_dt_for_log.strftime('%Y-%m-%d %I:%M %p %Z') if local_dt_for_log else 'N/A'}")
-            flash(f"Appt for {selected_dog.name} scheduled!", "success")
-            # Email and Google Calendar sync omitted for brevity
+            # --- Google Calendar Sync ---
+            store = Store.query.get(g.user.store_id)
+            if store and store.google_token_json:
+                try:
+                    token_data = json.loads(store.google_token_json)
+                    credentials = Credentials(
+                        token=token_data['token'],
+                        refresh_token=token_data.get('refresh_token'),
+                        token_uri=token_data['token_uri'],
+                        client_id=token_data['client_id'],
+                        client_secret=token_data['client_secret'],
+                        scopes=token_data['scopes']
+                    )
+                    service = build('calendar', 'v3', credentials=credentials)
+                    event = {
+                        'summary': f"{selected_dog.name} ({selected_dog.owner.name}) Appointment",
+                        'description': notes or '',
+                        'start': {'dateTime': utc_dt.isoformat(), 'timeZone': 'UTC'},
+                        'end': {'dateTime': (utc_dt + datetime.timedelta(hours=1)).isoformat(), 'timeZone': 'UTC'},
+                    }
+                    created_event = service.events().insert(calendarId='primary', body=event).execute()
+                    new_appt.google_event_id = created_event.get('id')
+                    db.session.commit()
+                    flash("Appointment synced to Google Calendar.", "success")
+                except Exception as e:
+                    current_app.logger.error(f"Google Calendar sync failed: {e}", exc_info=True)
+                    flash("Appointment saved, but failed to sync with Google Calendar.", "warning")
+            else:
+                flash("Appointment saved, but Google Calendar is not connected for this store.", "info")
             return redirect(url_for('appointments.calendar_view'))
         except Exception as e:
             db.session.rollback(); current_app.logger.error(f"Error adding appt: {e}", exc_info=True)
@@ -151,7 +181,40 @@ def edit_appointment(appointment_id):
         try:
             db.session.commit()
             log_activity("Edited Local Appt", details=f"Appt ID: {appointment_id}, Status: {status}, Time: {local_dt_for_log.strftime('%Y-%m-%d %I:%M %p %Z') if local_dt_for_log else 'N/A'}")
-            flash(f"Appt for {selected_dog.name if selected_dog else appt.dog.name} updated!", "success")
+            # --- Google Calendar Sync ---
+            store = Store.query.get(g.user.store_id)
+            if store and store.google_token_json:
+                try:
+                    token_data = json.loads(store.google_token_json)
+                    credentials = Credentials(
+                        token=token_data['token'],
+                        refresh_token=token_data.get('refresh_token'),
+                        token_uri=token_data['token_uri'],
+                        client_id=token_data['client_id'],
+                        client_secret=token_data['client_secret'],
+                        scopes=token_data['scopes']
+                    )
+                    service = build('calendar', 'v3', credentials=credentials)
+                    event = {
+                        'summary': f"{selected_dog.name} ({selected_dog.owner.name}) Appointment",
+                        'description': notes or '',
+                        'start': {'dateTime': utc_dt.isoformat(), 'timeZone': 'UTC'},
+                        'end': {'dateTime': (utc_dt + datetime.timedelta(hours=1)).isoformat(), 'timeZone': 'UTC'},
+                    }
+                    if appt.google_event_id:
+                        # Update existing event
+                        service.events().update(calendarId='primary', eventId=appt.google_event_id, body=event).execute()
+                    else:
+                        # Create new event if missing
+                        created_event = service.events().insert(calendarId='primary', body=event).execute()
+                        appt.google_event_id = created_event.get('id')
+                    db.session.commit()
+                    flash("Appointment synced to Google Calendar.", "success")
+                except Exception as e:
+                    current_app.logger.error(f"Google Calendar sync failed: {e}", exc_info=True)
+                    flash("Appointment updated, but failed to sync with Google Calendar.", "warning")
+            else:
+                flash("Appointment updated, but Google Calendar is not connected for this store.", "info")
             return redirect(url_for('appointments.calendar_view'))
         except Exception as e:
             db.session.rollback(); current_app.logger.error(f"Error editing appt {appointment_id}: {e}", exc_info=True)
