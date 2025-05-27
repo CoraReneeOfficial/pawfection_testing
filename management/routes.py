@@ -500,6 +500,8 @@ def google_authorize():
         },
         scopes=[
             "https://www.googleapis.com/auth/calendar",
+            "https://www.googleapis.com/auth/calendar.events",
+            "https://www.googleapis.com/auth/calendar.readonly",
             "https://www.googleapis.com/auth/gmail.send",
             "openid",
             "https://www.googleapis.com/auth/userinfo.email",
@@ -542,6 +544,8 @@ def google_oauth2callback():
         },
         scopes=[
             "https://www.googleapis.com/auth/calendar",
+            "https://www.googleapis.com/auth/calendar.events",
+            "https://www.googleapis.com/auth/calendar.readonly",
             "https://www.googleapis.com/auth/gmail.send",
             "openid",
             "https://www.googleapis.com/auth/userinfo.email",

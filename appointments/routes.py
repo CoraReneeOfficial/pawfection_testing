@@ -16,6 +16,16 @@ appointments_bp = Blueprint('appointments', __name__)
 BUSINESS_TIMEZONE_NAME = 'America/New_York'
 BUSINESS_TIMEZONE = tz.gettz(BUSINESS_TIMEZONE_NAME)
 
+SCOPES = [
+    "https://www.googleapis.com/auth/calendar",
+    "https://www.googleapis.com/auth/calendar.events",
+    "https://www.googleapis.com/auth/calendar.readonly",
+    "https://www.googleapis.com/auth/gmail.send",
+    "openid",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/userinfo.profile"
+]
+
 def log_activity(action, details=None):
     if hasattr(g, 'user') and g.user:
         try:
@@ -124,7 +134,7 @@ def add_appointment():
                         token_uri=token_data['token_uri'],
                         client_id=token_data['client_id'],
                         client_secret=token_data['client_secret'],
-                        scopes=token_data['scopes']
+                        scopes=SCOPES
                     )
                     service = build('calendar', 'v3', credentials=credentials)
                     event = {
@@ -192,7 +202,7 @@ def edit_appointment(appointment_id):
                         token_uri=token_data['token_uri'],
                         client_id=token_data['client_id'],
                         client_secret=token_data['client_secret'],
-                        scopes=token_data['scopes']
+                        scopes=SCOPES
                     )
                     service = build('calendar', 'v3', credentials=credentials)
                     event = {
