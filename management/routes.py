@@ -13,6 +13,7 @@ from utils import allowed_file, log_activity
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 import json
+from google.oauth2.credentials import Credentials as GoogleCredentials
 
 management_bp = Blueprint('management', __name__)
 
@@ -578,8 +579,25 @@ def google_oauth2callback():
             store.google_token_json = json.dumps(token_data)
             try:
                 db.session.commit()
-                log_activity("Connected Google Account for Calendar/Gmail")
-                flash("Google account connected successfully!", "success")
+                # --- Test the token by making a Calendar API call ---
+                test_credentials = GoogleCredentials(
+                    token=credentials.token,
+                    refresh_token=credentials.refresh_token,
+                    token_uri=credentials.token_uri,
+                    client_id=credentials.client_id,
+                    client_secret=credentials.client_secret,
+                    scopes=credentials.scopes
+                )
+                service = build('calendar', 'v3', credentials=test_credentials)
+                try:
+                    service.calendarList().list(maxResults=1).execute()
+                    log_activity("Connected Google Account for Calendar/Gmail")
+                    flash("Google account connected successfully!", "success")
+                except Exception as e:
+                    store.google_token_json = None
+                    db.session.commit()
+                    current_app.logger.error(f"Google token test failed: {e}", exc_info=True)
+                    flash("Failed to verify Google account connection. Please try again.", "danger")
             except Exception as e:
                 db.session.rollback()
                 current_app.logger.error(f"Failed to save Google token to store: {e}", exc_info=True)
