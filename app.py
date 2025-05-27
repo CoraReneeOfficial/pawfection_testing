@@ -11,6 +11,7 @@ from dogs import dogs_bp
 from appointments import appointments_bp
 from management import management_bp
 from functools import wraps
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 def create_app():
     app = Flask(__name__)
@@ -209,6 +210,8 @@ def create_app():
         session.pop('impersonating', None)
         flash('Stopped impersonating store.', 'info')
         return redirect(url_for('superadmin_dashboard'))
+
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
     return app
 
