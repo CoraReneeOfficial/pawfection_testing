@@ -3,7 +3,8 @@ from models import Owner, Dog, Appointment, ActivityLog
 from extensions import db
 from sqlalchemy import or_
 from functools import wraps
-from utils import allowed_file, log_activity
+from utils import allowed_file # Keep allowed_file from utils
+from app import log_activity   # IMPORT log_activity from app.py
 
 owners_bp = Blueprint('owners', __name__)
 
@@ -19,13 +20,13 @@ def directory():
     per_page = 10
     
     # Base query for owners, filtered by store_id
-    owners_query = Owner.query.options(db.joinedload(Owner.dogs)).filter_by(store_id=store_id) # ADDED STORE FILTER
+    owners_query = Owner.query.options(db.joinedload(Owner.dogs)).filter_by(store_id=store_id)
 
     if search_query:
         log_activity("Searched Directory", details=f"Query: '{search_query}', Store ID: {store_id}")
         search_term = f"%{search_query}%"
         # Join with Dog for dog name search, ensuring Dog also belongs to the same store
-        owners_query = owners_query.join(Dog, Owner.id == Dog.owner_id, isouter=True).filter(
+        owners_query = owners_query.join(Dog, Owner.id == Dog.owner.id, isouter=True).filter( # Corrected join condition
             or_(
                 Owner.name.ilike(search_term), 
                 Owner.phone_number.ilike(search_term),
@@ -61,11 +62,11 @@ def add_owner():
         if not phone: errors['phone'] = "Phone Number required."
         
         # Check for phone number conflict only within the current store
-        if Owner.query.filter_by(phone_number=phone, store_id=store_id).first(): # ADDED STORE FILTER
+        if Owner.query.filter_by(phone_number=phone, store_id=store_id).first():
             errors['phone_conflict'] = f"Phone '{phone}' already exists in this store."
         
         # Check for email conflict only within the current store
-        if email and Owner.query.filter_by(email=email, store_id=store_id).first(): # ADDED STORE FILTER
+        if email and Owner.query.filter_by(email=email, store_id=store_id).first():
             errors['email_conflict'] = f"Email '{email}' already exists in this store."
         
         if errors:
@@ -106,7 +107,7 @@ def view_owner(owner_id):
     # Fetch owner, ensuring they belong to the current store
     owner = Owner.query.options(
         db.joinedload(Owner.dogs) 
-    ).filter_by(id=owner_id, store_id=store_id).first_or_404() # ADDED STORE FILTER and changed to first_or_404
+    ).filter_by(id=owner_id, store_id=store_id).first_or_404()
 
     log_activity("Viewed Owner Profile", details=f"Owner: {owner.name} (ID: {owner_id}), Store ID: {store_id}")
     return render_template('owner_profile.html', owner=owner)
@@ -121,7 +122,7 @@ def edit_owner(owner_id):
     store_id = session.get('store_id') # Get store_id from session
 
     # Fetch owner to edit, ensuring they belong to the current store
-    owner_to_edit = Owner.query.filter_by(id=owner_id, store_id=store_id).first_or_404() # ADDED STORE FILTER and changed to first_or_404
+    owner_to_edit = Owner.query.filter_by(id=owner_id, store_id=store_id).first_or_404()
 
     if request.method == 'POST':
         original_phone = owner_to_edit.phone_number
@@ -136,11 +137,11 @@ def edit_owner(owner_id):
         if not phone: errors['phone'] = "Phone Number required."
         
         # Check for phone number conflict only within the current store, excluding the current owner
-        if phone != original_phone and Owner.query.filter(Owner.id != owner_id, Owner.phone_number == phone, Owner.store_id==store_id).first(): # ADDED STORE FILTER
+        if phone != original_phone and Owner.query.filter(Owner.id != owner_id, Owner.phone_number == phone, Owner.store_id==store_id).first():
             errors['phone_conflict'] = f"Phone '{phone}' already exists in this store."
         
         # Check for email conflict only within the current store, excluding the current owner
-        if email and email != original_email and Owner.query.filter(Owner.id != owner_id, Owner.email == email, Owner.store_id==store_id).first(): # ADDED STORE FILTER
+        if email and email != original_email and Owner.query.filter(Owner.id != owner_id, Owner.email == email, Owner.store_id==store_id).first():
             errors['email_conflict'] = f"Email '{email}' already exists in this store."
         
         if errors:

@@ -5,7 +5,8 @@ from werkzeug.utils import secure_filename
 import os
 import uuid
 from functools import wraps
-from utils import allowed_file, log_activity # Assuming log_activity is in utils.py and accessible
+from utils import allowed_file # Keep allowed_file from utils
+from app import log_activity   # IMPORT log_activity from app.py
 
 dogs_bp = Blueprint('dogs', __name__)
 

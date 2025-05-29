@@ -9,7 +9,8 @@ from datetime import timezone, timedelta
 import calendar
 import os
 import uuid
-from utils import allowed_file, log_activity
+from utils import allowed_file # Keep allowed_file from utils
+from app import log_activity   # IMPORT log_activity from app.py
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 import json
@@ -120,11 +121,11 @@ def get_date_range(range_type, start_date_str=None, end_date_str=None):
             end_local = datetime.datetime.combine(end_local_date, datetime.time.max, tzinfo=BUSINESS_TIMEZONE)
             period_display = f"Custom: {start_local.strftime('%b %d, %Y')} - {end_local.strftime('%b %d, %Y')}"
         except ValueError:
-            flash("Invalid custom date format. Please use YYYY-MM-DD.", "danger") 
+            flash("Invalid custom date format. Please useYYYY-MM-DD.", "danger") 
             return None, None, "Error: Invalid Date Format"
     else:
         flash("Unknown date range type selected.", "danger")
-        return None, None, "Error: Unknown Date Range"
+        return None, None, "Error: Unknown Date Range
     
     if start_local and end_local:
         start_utc = start_local.astimezone(timezone.utc)
@@ -352,7 +353,7 @@ def delete_user(user_id):
                     os.remove(path)
                     current_app.logger.info(f"Deleted user pic: {path}")
                 except OSError as e_rem:
-                    current_app.logger.error(f"Error deleting user pic file {path}: {e_rem}")
+                    current_app.logger.error(f"Could not delete user pic file {path}: {e_rem}")
         
         log_activity("Deleted User", details=f"Username: {username_deleted}, Store ID: {store_id}")
         flash(f"User '{username_deleted}' deleted.", "success")
@@ -631,7 +632,6 @@ def view_sales_reports():
         return render_template('report_display.html', report_data=report_data_processed,
                                report_period_display=report_period_display,
                                selected_groomer_name=selected_groomer_name_display, all_groomers=all_groomers_for_dropdown)
-
     log_activity("Viewed Sales Report Form")
     return render_template('reports_form.html', all_groomers=all_groomers_for_dropdown, report_period_display=report_period_display)
 

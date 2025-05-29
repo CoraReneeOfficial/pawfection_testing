@@ -6,7 +6,8 @@ from functools import wraps
 import datetime
 from datetime import timezone
 from dateutil import tz, parser as dateutil_parser
-from utils import allowed_file
+from utils import allowed_file # Keep allowed_file from utils
+from app import log_activity   # IMPORT log_activity from app.py
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 import json
@@ -26,21 +27,22 @@ SCOPES = [
     "https://www.googleapis.com/auth/userinfo.profile"
 ]
 
-def log_activity(action, details=None):
-    """
-    Logs user activity to the database.
-    Ensures that activity is logged only if a user is available in the global context.
-    """
-    if hasattr(g, 'user') and g.user:
-        try:
-            log_entry = ActivityLog(user_id=g.user.id, action=action, details=details)
-            db.session.add(log_entry)
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            current_app.logger.error(f"Error logging activity: {e}", exc_info=True)
-    else:
-        current_app.logger.warning(f"Attempted to log activity '{action}' but no user in g.")
+# The log_activity function definition has been removed from here as it's now in app.py
+# def log_activity(action, details=None):
+#     """
+#     Logs user activity to the database.
+#     Ensures that activity is logged only if a user is available in the global context.
+#     """
+#     if hasattr(g, 'user') and g.user:
+#         try:
+#             log_entry = ActivityLog(user_id=g.user.id, action=action, details=details)
+#             db.session.add(log_entry)
+#             db.session.commit()
+#         except Exception as e:
+#             db.session.rollback()
+#             current_app.logger.error(f"Error logging activity: {e}", exc_info=True)
+#     else:
+#         current_app.logger.warning(f"Attempted to log activity '{action}' but no user in g.")
 
 @appointments_bp.route('/calendar')
 def calendar_view():

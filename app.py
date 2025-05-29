@@ -1,7 +1,7 @@
 # app.py
 import os
 import bcrypt
-from flask import Flask, g, session, redirect, url_for, flash, send_from_directory
+from flask import Flask, g, session, redirect, url_for, flash, send_from_directory, current_app
 from flask.wrappers import Request
 from extensions import db
 from models import * # Import all models to ensure db.create_all() works correctly
@@ -14,6 +14,7 @@ from functools import wraps
 from werkzeug.middleware.proxy_fix import ProxyFix
 import logging
 from sqlalchemy.exc import IntegrityError # Import IntegrityError for database constraint errors
+import datetime # Import datetime for timestamp handling in log_activity
 
 # Configure basic logging for the application.
 # This will output messages to the console (or wherever your environment directs stdout/stderr).
@@ -70,6 +71,40 @@ def create_app():
     with app.app_context():
         db.create_all()
 
+    # Define log_activity here to avoid circular import issues.
+    # This function will be imported by other blueprints.
+    def log_activity(action, details=None):
+        """
+        Logs user activity to the database, including the store context.
+        This function is defined directly in app.py to avoid circular imports.
+        It attempts to retrieve the store_id from the session and includes it in the ActivityLog entry.
+        """
+        if hasattr(g, 'user') and g.user:
+            try:
+                # Retrieve store_id from the session. It's crucial that session['store_id']
+                # is set correctly during store and user login.
+                store_id = session.get('store_id') 
+                
+                log_entry = ActivityLog(
+                    user_id=g.user.id,
+                    action=action,
+                    timestamp=datetime.datetime.now(datetime.timezone.utc), # Use explicit UTC timestamp
+                    details=details,
+                    store_id=store_id  # Assign the store_id to the log entry
+                )
+                db.session.add(log_entry)
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                current_app.logger.error(f"Error logging activity: {e}", exc_info=True)
+        else:
+            current_app.logger.warning(f"Attempted to log activity '{action}' but no user in g.")
+
+    # Make log_activity available globally within the app context for blueprints to import
+    # This is a common pattern for utility functions that depend on the app context.
+    app.log_activity = log_activity
+
+
     # Register Flask Blueprints.
     # Blueprints modularize the application into smaller, reusable components.
     app.register_blueprint(auth_bp)
@@ -118,7 +153,7 @@ def create_app():
             return view(**kwargs)
         return wrapped_view
 
-    # Root route for the application's home page.
+    # Add root route for the application's home page.
     @app.route('/')
     def home():
         from flask import render_template # Import render_template locally for this function
@@ -228,7 +263,7 @@ def create_app():
             
             # Check for existing store username
             if Store.query.filter_by(username=store_username).first():
-                errors.append('Store username already exists. Please choose a different one.')
+                errors.append('Store username already exists.')
             
             # Check if admin username exists globally (usernames are unique across all users)
             if User.query.filter_by(username=admin_username).first():
@@ -304,8 +339,7 @@ def create_app():
         app.logger.info("Superadmin viewed tools page.")
         return render_template('superadmin_tools.html')
 
-    # Superadmin impersonation route.
-    # Allows a superadmin to temporarily assume the context of a specific store.
+    # Superadmin impersonate store
     @app.route('/superadmin/impersonate/<int:store_id>')
     def superadmin_impersonate(store_id):
         """
@@ -329,8 +363,7 @@ def create_app():
         flash(f"Now impersonating store '{store_to_impersonate.name}'.", "info")
         return redirect(url_for('dashboard')) # Redirect to the main dashboard of the impersonated store
 
-    # Superadmin stop impersonation route.
-    # Allows a superadmin to revert to their global superadmin context.
+    # Superadmin stop impersonation
     @app.route('/superadmin/stop_impersonation')
     def superadmin_stop_impersonation():
         """
