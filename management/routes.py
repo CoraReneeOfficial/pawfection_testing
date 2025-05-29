@@ -22,6 +22,10 @@ NOTIFICATION_SETTINGS_FILE = os.path.join(os.path.abspath(os.path.dirname(__file
 
 # Decorator for admin routes
 def admin_required(f):
+    """
+    Decorator to ensure that only admin users can access a route.
+    Redirects non-admin users to the home page with a flash message.
+    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not hasattr(g, 'user') or g.user is None or not g.user.is_admin:
@@ -32,38 +36,59 @@ def admin_required(f):
 
 def load_notification_preferences():
     # This should be adapted to use current_app context if needed
+    # For a multi-store setup, notification preferences should ideally be stored per store in the DB
     pass  # Placeholder for actual implementation
 
 def save_notification_preferences():
     # This should be adapted to use current_app context if needed
+    # For a multi-store setup, notification preferences should ideally be stored per store in the DB
     pass  # Placeholder for actual implementation
 
 def _handle_user_picture_upload(user_instance, request_files):
+    """
+    Handles the upload of a user's profile picture.
+    Generates a unique filename and deletes the old picture if a new one is uploaded.
+    """
     if 'user_picture' not in request_files: return None
     file = request_files['user_picture']
     if file and file.filename != '' and '.' in file.filename:
         ext = file.filename.rsplit('.', 1)[1].lower()
         new_filename = f"user_{user_instance.id or 'temp'}_{uuid.uuid4().hex[:8]}.{ext}"
         file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], new_filename)
-        os.makedirs(current_app.config['UPLOAD_FOLDER'], exist_ok=True)
+        os.makedirs(current_app.config['UPLOAD_FOLDER'], exist_ok=True) # Ensure upload directory exists
+
+        # If there's an old picture, delete it to avoid orphaned files
         if user_instance.picture_filename and user_instance.picture_filename != new_filename:
             old_path = os.path.join(current_app.config['UPLOAD_FOLDER'], user_instance.picture_filename)
             if os.path.exists(old_path):
-                try: os.remove(old_path); current_app.logger.info(f"Deleted old user pic: {old_path}")
-                except OSError as e_rem: current_app.logger.error(f"Could not delete old user pic {old_path}: {e_rem}")
+                try:
+                    os.remove(old_path)
+                    current_app.logger.info(f"Deleted old user pic: {old_path}")
+                except OSError as e_rem:
+                    current_app.logger.error(f"Could not delete old user pic {old_path}: {e_rem}")
         try:
-            file.save(file_path); current_app.logger.info(f"Saved new user pic: {file_path}"); return new_filename
+            file.save(file_path)
+            current_app.logger.info(f"Saved new user pic: {file_path}")
+            return new_filename
         except Exception as e_save:
             flash(f"Failed to save user picture: {e_save}", "warning")
             current_app.logger.error(f"Failed to save user pic {file_path}: {e_save}", exc_info=True)
-    elif file and file.filename != '': flash("Invalid file type for user picture.", "warning")
+    elif file and file.filename != '':
+        flash("Invalid file type for user picture.", "warning")
     return None
 
 def get_date_range(range_type, start_date_str=None, end_date_str=None):
-    BUSINESS_TIMEZONE = timezone.utc  # Replace with actual timezone logic if needed
+    """
+    Calculates the start and end UTC datetimes for various report date ranges.
+    """
+    # NOTE: BUSINESS_TIMEZONE is currently set to timezone.utc.
+    # If your application uses a specific business timezone, ensure it's properly configured
+    # and used here for accurate date range calculations.
+    BUSINESS_TIMEZONE = timezone.utc
     today_local = datetime.datetime.now(BUSINESS_TIMEZONE).date()
     start_local, end_local = None, None
     period_display = "Invalid Range"
+
     if range_type == 'today':
         start_local = datetime.datetime.combine(today_local, datetime.time.min, tzinfo=BUSINESS_TIMEZONE)
         end_local = datetime.datetime.combine(today_local, datetime.time.max, tzinfo=BUSINESS_TIMEZONE)
@@ -100,6 +125,7 @@ def get_date_range(range_type, start_date_str=None, end_date_str=None):
     else:
         flash("Unknown date range type selected.", "danger")
         return None, None, "Error: Unknown Date Range"
+    
     if start_local and end_local:
         start_utc = start_local.astimezone(timezone.utc)
         end_utc = end_local.astimezone(timezone.utc)
@@ -110,13 +136,18 @@ def get_date_range(range_type, start_date_str=None, end_date_str=None):
 @management_bp.route('/management')
 @admin_required
 def management():
+    """
+    Displays the main management dashboard.
+    Checks Google Calendar/Gmail connection status for the current store.
+    """
     log_activity("Viewed Management page")
-    # Determine Google connection status for the current store
     store = None
     is_google_calendar_connected = False
     is_gmail_for_sending_connected = False
+    
     if hasattr(g, 'user') and g.user and g.user.store_id:
-        store = Store.query.get(g.user.store_id)
+        # Filter store by the current user's store_id
+        store = Store.query.filter_by(id=g.user.store_id).first()
         if store and store.google_token_json:
             try:
                 token_data = json.loads(store.google_token_json)
@@ -128,6 +159,7 @@ def management():
                 is_gmail_for_sending_connected = 'https://www.googleapis.com/auth/gmail.send' in scopes
             except Exception as e:
                 current_app.logger.error(f"[DEBUG] Error parsing google_token_json: {e}")
+                
     return render_template('management.html',
         is_google_calendar_connected=is_google_calendar_connected,
         is_gmail_for_sending_connected=is_gmail_for_sending_connected)
@@ -135,52 +167,86 @@ def management():
 @management_bp.route('/manage/users')
 @admin_required
 def manage_users():
+    """
+    Displays a list of users for the current store.
+    """
     log_activity("Viewed User Management page")
-    users = User.query.order_by(User.username).all()
+    # Filter users by the current store's ID
+    users = User.query.filter_by(store_id=session.get('store_id')).order_by(User.username).all()
     return render_template('manage_users.html', users=users)
 
 @management_bp.route('/manage/users/add', methods=['GET', 'POST'])
 @admin_required
 def add_user():
+    """
+    Handles adding a new user to the current store.
+    Ensures the new user is associated with the current store's ID.
+    """
+    store_id = session.get('store_id')  # Get store_id from session
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
         is_admin = 'is_admin' in request.form
         is_groomer = 'is_groomer' in request.form 
+        
         errors = {}
         if not username: errors['username'] = "Username required."
         if not password: errors['password'] = "Password required."
         if password != confirm_password: errors['password_confirm'] = "Passwords do not match."
         if len(password) < 8 and password: errors['password_length'] = "Password too short."
-        if User.query.filter_by(username=username).first(): errors['username_conflict'] = "Username exists."
+        
+        # Check for username conflict only within the current store
+        if User.query.filter_by(username=username, store_id=store_id).first():
+            errors['username_conflict'] = "Username already exists in this store."
+        
         if errors:
             for _, msg in errors.items(): flash(msg, "danger")
             form_data = request.form.to_dict()
-            form_data['is_admin'] = is_admin; form_data['is_groomer'] = is_groomer
+            form_data['is_admin'] = is_admin
+            form_data['is_groomer'] = is_groomer
             return render_template('user_form.html', mode='add', user_data=form_data), 400
-        new_user = User(username=username, is_admin=is_admin, is_groomer=is_groomer)
+        
+        new_user = User(username=username, is_admin=is_admin, is_groomer=is_groomer, store_id=store_id)  # Assign store_id
         new_user.set_password(password)
+        
         try:
-            db.session.add(new_user); db.session.flush()
+            db.session.add(new_user)
+            db.session.flush() # Flush to get new_user.id for picture upload filename
+            
             uploaded_filename = _handle_user_picture_upload(new_user, request.files)
-            if uploaded_filename: new_user.picture_filename = uploaded_filename
+            if uploaded_filename:
+                new_user.picture_filename = uploaded_filename
+            
             db.session.commit()
-            log_activity("Added User", details=f"Username: {username}, Admin: {is_admin}, Groomer: {is_groomer}")
-            flash(f"User '{username}' added.", "success"); return redirect(url_for('management.manage_users'))
+            log_activity("Added User", details=f"Username: {username}, Admin: {is_admin}, Groomer: {is_groomer}, Store ID: {store_id}")
+            flash(f"User '{username}' added.", "success")
+            return redirect(url_for('management.manage_users'))
         except Exception as e:
-            db.session.rollback(); current_app.logger.error(f"Error adding user: {e}", exc_info=True)
+            db.session.rollback()
+            current_app.logger.error(f"Error adding user: {e}", exc_info=True)
             flash("Error adding user.", "danger")
             form_data = request.form.to_dict()
-            form_data['is_admin'] = is_admin; form_data['is_groomer'] = is_groomer
+            form_data['is_admin'] = is_admin
+            form_data['is_groomer'] = is_groomer
             return render_template('user_form.html', mode='add', user_data=form_data), 500
+    
     log_activity("Viewed Add User page")
     return render_template('user_form.html', mode='add', user_data={'is_groomer': True}) 
 
 @management_bp.route('/manage/users/<int:user_id>/edit', methods=['GET', 'POST'])
 @admin_required
 def edit_user(user_id):
-    user_to_edit = User.query.get_or_404(user_id)
+    """
+    Handles editing an existing user's profile.
+    Ensures that only users from the current store can be edited.
+    Prevents removing admin status from the last admin in the store.
+    """
+    store_id = session.get('store_id')  # Get store_id from session
+    
+    # Fetch user to edit, ensuring they belong to the current store
+    user_to_edit = User.query.filter_by(id=user_id, store_id=store_id).first_or_404()
+    
     if request.method == 'POST':
         original_username = user_to_edit.username
         new_username = request.form.get('username', '').strip()
@@ -188,78 +254,129 @@ def edit_user(user_id):
         confirm_password = request.form.get('confirm_password', '')
         is_admin = 'is_admin' in request.form
         is_groomer = 'is_groomer' in request.form
+        
         errors = {}
         if not new_username: errors['username'] = "Username required."
-        if new_username != original_username and User.query.filter(User.id != user_id, User.username == new_username).first():
-            errors['username_conflict'] = "Username taken."
+        
+        # Check for username conflict only within the current store, excluding the user being edited
+        if new_username != original_username and User.query.filter(User.id != user_id, User.username == new_username, User.store_id==store_id).first():
+            errors['username_conflict'] = "Username already taken in this store."
+        
         password_changed = False
         if password:
             if password != confirm_password: errors['password_confirm'] = "Passwords do not match."
-            if len(password) < 8: errors['password_length'] = "Password too short."
+            if len(password) < 8: errors['password_length'] = "Password too short (min 8 chars)."
             else: password_changed = True
+        
+        # Prevent removing admin status from the last admin in the current store
         if user_to_edit.is_admin and not is_admin: 
-            admin_count = User.query.filter_by(is_admin=True).count()
+            admin_count = User.query.filter_by(is_admin=True, store_id=store_id).count()
             if admin_count <= 1: 
-                errors['last_admin'] = "Cannot remove admin status from the last administrator."
-                is_admin = True 
+                errors['last_admin'] = "Cannot remove admin status from the last administrator in this store."
+                is_admin = True # Force is_admin back to True if it's the last admin
+        
         if errors:
             for _, msg in errors.items(): flash(msg, "danger")
-            form_data = request.form.to_dict(); 
-            form_data['id'] = user_id; form_data['picture_filename'] = user_to_edit.picture_filename
-            form_data['is_admin'] = is_admin; form_data['is_groomer'] = is_groomer
+            form_data = request.form.to_dict()
+            form_data['id'] = user_id
+            form_data['picture_filename'] = user_to_edit.picture_filename # Keep existing picture filename
+            form_data['is_admin'] = is_admin
+            form_data['is_groomer'] = is_groomer
             return render_template('user_form.html', mode='edit', user_data=form_data), 400
+        
         user_to_edit.username = new_username
         if password_changed: user_to_edit.set_password(password)
         user_to_edit.is_admin = is_admin
         user_to_edit.is_groomer = is_groomer
+        
         try:
             uploaded_filename = _handle_user_picture_upload(user_to_edit, request.files)
-            if uploaded_filename: user_to_edit.picture_filename = uploaded_filename
+            if uploaded_filename:
+                user_to_edit.picture_filename = uploaded_filename
+            
             db.session.commit()
-            log_activity("Edited User", details=f"User ID: {user_id}, Username: {new_username}, Admin: {is_admin}, Groomer: {is_groomer}")
-            flash(f"User '{new_username}' updated.", "success"); return redirect(url_for('management.manage_users'))
+            log_activity("Edited User", details=f"User ID: {user_id}, Username: {new_username}, Admin: {is_admin}, Groomer: {is_groomer}, Store ID: {store_id}")
+            flash(f"User '{new_username}' updated.", "success")
+            return redirect(url_for('management.manage_users'))
         except Exception as e:
-            db.session.rollback(); current_app.logger.error(f"Error updating user {user_id}: {e}", exc_info=True)
+            db.session.rollback()
+            current_app.logger.error(f"Error updating user {user_id}: {e}", exc_info=True)
             flash("Error updating user.", "danger")
-            form_data = request.form.to_dict(); form_data['id'] = user_id; form_data['picture_filename'] = user_to_edit.picture_filename
-            form_data['is_admin'] = is_admin; form_data['is_groomer'] = is_groomer
+            form_data = request.form.to_dict()
+            form_data['id'] = user_id
+            form_data['picture_filename'] = user_to_edit.picture_filename
+            form_data['is_admin'] = is_admin
+            form_data['is_groomer'] = is_groomer
             return render_template('user_form.html', mode='edit', user_data=form_data), 500
+    
     log_activity("Viewed Edit User page", details=f"User ID: {user_id}")
     return render_template('user_form.html', mode='edit', user_data=user_to_edit) 
 
 @management_bp.route('/manage/users/<int:user_id>/delete', methods=['POST'])
 @admin_required
 def delete_user(user_id):
-    user_to_delete = User.query.get_or_404(user_id)
+    """
+    Handles deleting a user.
+    Ensures that only users from the current store can be deleted.
+    Prevents deleting own account or the last admin in the store.
+    """
+    store_id = session.get('store_id')  # Get store_id from session
+    
+    # Fetch user to delete, ensuring they belong to the current store
+    user_to_delete = User.query.filter_by(id=user_id, store_id=store_id).first_or_404()
+    
     if user_to_delete.id == g.user.id:
-        flash("Cannot delete own account.", "danger"); return redirect(url_for('management.manage_users'))
-    if user_to_delete.is_admin and User.query.filter_by(is_admin=True).count() <= 1:
-        flash("Cannot delete last admin.", "danger"); return redirect(url_for('management.manage_users'))
+        flash("Cannot delete your own account.", "danger")
+        return redirect(url_for('management.manage_users'))
+    
+    # Prevent deleting the last admin in the current store
+    if user_to_delete.is_admin and User.query.filter_by(is_admin=True, store_id=store_id).count() <= 1:
+        flash("Cannot delete the last administrator in this store.", "danger")
+        return redirect(url_for('management.manage_users'))
+    
     username_deleted = user_to_delete.username
     pic_to_delete = user_to_delete.picture_filename
+    
     try:
-        Appointment.query.filter_by(groomer_id=user_id).update({'groomer_id': None})
-        db.session.delete(user_to_delete); db.session.commit()
+        # Set groomer_id to None for appointments associated with this user in the current store
+        Appointment.query.filter_by(groomer_id=user_id, store_id=store_id).update({'groomer_id': None})
+        
+        db.session.delete(user_to_delete)
+        db.session.commit()
+        
+        # Delete associated picture file if it exists
         if pic_to_delete:
             path = os.path.join(current_app.config['UPLOAD_FOLDER'], pic_to_delete)
             if os.path.exists(path):
-                try: os.remove(path); current_app.logger.info(f"Deleted user pic: {path}")
-                except OSError as e_rem: current_app.logger.error(f"Error deleting user pic file {path}: {e_rem}")
-        log_activity("Deleted User", details=f"Username: {username_deleted}")
+                try:
+                    os.remove(path)
+                    current_app.logger.info(f"Deleted user pic: {path}")
+                except OSError as e_rem:
+                    current_app.logger.error(f"Error deleting user pic file {path}: {e_rem}")
+        
+        log_activity("Deleted User", details=f"Username: {username_deleted}, Store ID: {store_id}")
         flash(f"User '{username_deleted}' deleted.", "success")
     except IntegrityError as ie:
-        db.session.rollback(); current_app.logger.error(f"IntegrityError deleting user '{username_deleted}': {ie}", exc_info=True)
+        db.session.rollback()
+        current_app.logger.error(f"IntegrityError deleting user '{username_deleted}': {ie}", exc_info=True)
         flash(f"Could not delete '{username_deleted}'. Associated records might exist.", "danger")
     except Exception as e:
-        db.session.rollback(); current_app.logger.error(f"Error deleting user '{username_deleted}': {e}", exc_info=True)
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting user '{username_deleted}': {e}", exc_info=True)
         flash(f"Error deleting '{username_deleted}'.", "danger")
+    
     return redirect(url_for('management.manage_users'))
 
 @management_bp.route('/manage/services')
 @admin_required
 def manage_services():
+    """
+    Displays a list of services and fees for the current store.
+    """
+    store_id = session.get('store_id')  # Get store_id from session
     log_activity("Viewed Service/Fee Management page")
-    all_items = Service.query.order_by(Service.item_type, Service.name).all()
+    # Filter services by the current store's ID
+    all_items = Service.query.filter_by(store_id=store_id).order_by(Service.item_type, Service.name).all()
     services = [item for item in all_items if item.item_type == 'service']
     fees = [item for item in all_items if item.item_type == 'fee']
     return render_template('manage_services.html', services=services, fees=fees)
@@ -267,91 +384,153 @@ def manage_services():
 @management_bp.route('/manage/services/add', methods=['GET', 'POST'])
 @admin_required
 def add_service():
+    """
+    Handles adding a new service or fee to the current store.
+    Ensures the new item is associated with the current store's ID.
+    """
+    store_id = session.get('store_id')  # Get store_id from session
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
         description = request.form.get('description', '').strip()
         price_str = request.form.get('base_price', '').strip()
         item_type = request.form.get('item_type', 'service').strip()
+        
         errors = {}
         if not name: errors['name'] = "Item Name required."
         if not price_str: errors['base_price'] = "Base Price required."
         if item_type not in ['service', 'fee']: errors['item_type_invalid'] = "Invalid item type."
+        
         price = None
         try:
             price = Decimal(price_str)
             if price < Decimal('0.00'): errors['base_price_negative'] = "Price cannot be negative."
         except InvalidOperation:
             if 'base_price' not in errors: errors['base_price_invalid'] = "Invalid price format."
-        if Service.query.filter_by(name=name).first(): errors['name_conflict'] = f"Item '{name}' already exists."
+        
+        # Check for duplicate service name only within the current store
+        if Service.query.filter_by(name=name, store_id=store_id).first():
+            errors['name_conflict'] = f"An item named '{name}' already exists in this store."
+        
         if errors:
             for _, msg in errors.items(): flash(msg, "danger")
             return render_template('service_form.html', mode='add', item_data=request.form.to_dict()), 400
-        new_item = Service(name=name, description=description or None, base_price=float(price), item_type=item_type, created_by_user_id=g.user.id)
+        
+        new_item = Service(name=name, description=description or None, base_price=float(price), item_type=item_type, created_by_user_id=g.user.id, store_id=store_id)  # Assign store_id
+        
         try:
-            db.session.add(new_item); db.session.commit()
-            log_activity(f"Added {item_type.capitalize()}", details=f"Name: {name}, Price: {price:.2f}")
-            flash(f"{item_type.capitalize()} '{name}' added.", "success"); return redirect(url_for('management.manage_services'))
+            db.session.add(new_item)
+            db.session.commit()
+            log_activity(f"Added {item_type.capitalize()}", details=f"Name: {name}, Price: {price:.2f}, Store ID: {store_id}")
+            flash(f"{item_type.capitalize()} '{name}' added.", "success")
+            return redirect(url_for('management.manage_services'))
         except Exception as e:
-            db.session.rollback(); current_app.logger.error(f"Error adding {item_type}: {e}", exc_info=True)
-            flash(f"Error adding {item_type}.", "danger"); return render_template('service_form.html', mode='add', item_data=request.form.to_dict()), 500
+            db.session.rollback()
+            current_app.logger.error(f"Error adding {item_type}: {e}", exc_info=True)
+            flash(f"Error adding {item_type}.", "danger")
+            return render_template('service_form.html', mode='add', item_data=request.form.to_dict()), 500
+    
     log_activity("Viewed Add Service/Fee page")
     return render_template('service_form.html', mode='add', item_data={})
 
 @management_bp.route('/manage/services/<int:service_id>/edit', methods=['GET', 'POST'])
 @admin_required
 def edit_service(service_id):
-    item_to_edit = Service.query.get_or_404(service_id)
+    """
+    Handles editing an existing service or fee.
+    Ensures that only items from the current store can be edited.
+    """
+    store_id = session.get('store_id')  # Get store_id from session
+    
+    # Fetch item to edit, ensuring it belongs to the current store
+    item_to_edit = Service.query.filter_by(id=service_id, store_id=store_id).first_or_404()
+    
     if request.method == 'POST':
         original_name = item_to_edit.name
         name = request.form.get('name', '').strip()
         description = request.form.get('description', '').strip()
         price_str = request.form.get('base_price', '').strip()
         item_type = request.form.get('item_type', 'service').strip()
+        
         errors = {}
         if not name: errors['name'] = "Item Name required."
+        
         price = None
         try:
             price = Decimal(price_str)
             if price < Decimal('0.00'): errors['base_price_negative'] = "Price cannot be negative."
-        except InvalidOperation: errors['base_price_invalid'] = "Invalid price format."
-        if name != original_name and Service.query.filter(Service.id != service_id, Service.name == name).first():
-            errors['name_conflict'] = f"Another item named '{name}' already exists."
+        except InvalidOperation:
+            errors['base_price_invalid'] = "Invalid price format."
+        
+        # Check for duplicate name only within the current store, excluding the item being edited
+        if name != original_name and Service.query.filter(Service.id != service_id, Service.name == name, Service.store_id==store_id).first():
+            errors['name_conflict'] = f"Another item named '{name}' already exists in this store."
+        
         if errors:
             for _, msg in errors.items(): flash(msg, "danger")
-            form_data = request.form.to_dict(); form_data['id'] = service_id
+            form_data = request.form.to_dict()
+            form_data['id'] = service_id
             return render_template('service_form.html', mode='edit', item_data=form_data), 400
-        item_to_edit.name = name; item_to_edit.description = description or None
-        item_to_edit.base_price = float(price); item_to_edit.item_type = item_type
+        
+        item_to_edit.name = name
+        item_to_edit.description = description or None
+        item_to_edit.base_price = float(price)
+        item_to_edit.item_type = item_type
+        
         try:
             db.session.commit()
-            log_activity(f"Edited {item_type.capitalize()}", details=f"ID: {service_id}, Name: {name}")
-            flash(f"{item_type.capitalize()} '{name}' updated.", "success"); return redirect(url_for('management.manage_services'))
+            log_activity(f"Edited {item_type.capitalize()}", details=f"ID: {service_id}, Name: {name}, Store ID: {store_id}")
+            flash(f"{item_type.capitalize()} '{name}' updated.", "success")
+            return redirect(url_for('management.manage_services'))
         except Exception as e:
-            db.session.rollback(); current_app.logger.error(f"Error editing item {service_id}: {e}", exc_info=True)
+            db.session.rollback()
+            current_app.logger.error(f"Error editing item {service_id}: {e}", exc_info=True)
             flash(f"Error updating {item_type}.", "danger")
-            form_data = request.form.to_dict(); form_data['id'] = service_id
+            form_data = request.form.to_dict()
+            form_data['id'] = service_id
             return render_template('service_form.html', mode='edit', item_data=form_data), 500
+    
     log_activity(f"Viewed Edit {item_to_edit.item_type.capitalize()} page", details=f"ID: {service_id}")
     return render_template('service_form.html', mode='edit', item_data=item_to_edit)
 
 @management_bp.route('/manage/services/<int:service_id>/delete', methods=['POST'])
 @admin_required
 def delete_service(service_id):
-    item_to_delete = Service.query.get_or_404(service_id)
-    item_name = item_to_delete.name; item_type = item_to_delete.item_type
+    """
+    Handles deleting a service or fee.
+    Ensures that only items from the current store can be deleted.
+    """
+    store_id = session.get('store_id')  # Get store_id from session
+    
+    # Fetch item to delete, ensuring it belongs to the current store
+    item_to_delete = Service.query.filter_by(id=service_id, store_id=store_id).first_or_404()
+    
+    item_name = item_to_delete.name
+    item_type = item_to_delete.item_type
+    
     try:
-        db.session.delete(item_to_delete); db.session.commit()
-        log_activity(f"Deleted {item_type.capitalize()}", details=f"ID: {service_id}, Name: {item_name}")
+        db.session.delete(item_to_delete)
+        db.session.commit()
+        log_activity(f"Deleted {item_type.capitalize()}", details=f"ID: {service_id}, Name: {item_name}, Store ID: {store_id}")
         flash(f"{item_type.capitalize()} '{item_name}' deleted.", "success")
     except Exception as e:
-        db.session.rollback(); current_app.logger.error(f"Error deleting {item_type} '{item_name}': {e}", exc_info=True)
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting {item_type} '{item_name}': {e}", exc_info=True)
         flash(f"Error deleting '{item_name}'. It might be in use.", "danger")
+    
     return redirect(url_for('management.manage_services'))
 
 @management_bp.route('/manage/reports', methods=['GET', 'POST'])
 @admin_required
 def view_sales_reports():
-    all_groomers_for_dropdown = User.query.filter_by(is_groomer=True).order_by(User.username).all()
+    """
+    Generates and displays sales reports based on selected criteria.
+    Filters all data by the current store's ID.
+    """
+    store_id = session.get('store_id')  # Get store_id from session
+    
+    # Filter groomers for the dropdown by the current store's ID
+    all_groomers_for_dropdown = User.query.filter_by(store_id=store_id, is_groomer=True).order_by(User.username).all()
+    
     report_data_processed = None
     report_period_display = "Report Not Yet Generated"
     selected_groomer_name_display = "All Groomers"
@@ -368,7 +547,9 @@ def view_sales_reports():
         if not start_utc or not end_utc:
             return render_template('reports_form.html', all_groomers=all_groomers_for_dropdown, report_period_display=report_period_display)
 
+        # Filter appointments by store_id, status, and date range
         query = Appointment.query.filter(
+            Appointment.store_id == store_id,  # ADDED STORE FILTER
             Appointment.status == 'Completed',
             Appointment.appointment_datetime >= start_utc,
             Appointment.appointment_datetime <= end_utc
@@ -377,24 +558,37 @@ def view_sales_reports():
         if groomer_id_str:
             try:
                 selected_groomer_id = int(groomer_id_str)
-                query = query.filter(Appointment.groomer_id == selected_groomer_id)
-                selected_groomer_user = User.query.get(selected_groomer_id)
-                selected_groomer_name_display = selected_groomer_user.username if selected_groomer_user else "Unknown Groomer"
+                # Ensure the selected groomer belongs to the current store
+                selected_groomer_user = User.query.filter_by(id=selected_groomer_id, store_id=store_id).first()
+                if selected_groomer_user:
+                    query = query.filter(Appointment.groomer_id == selected_groomer_id)
+                    selected_groomer_name_display = selected_groomer_user.username
+                else:
+                    flash("Invalid Groomer selected for this store.", "warning")
+                    selected_groomer_name_display = "Unknown Groomer (Invalid Selection)"
+                    # Optionally, you might want to return early or adjust the query to not filter by groomer_id
+                    # if an invalid groomer_id for the store was provided. For now, it will just not find them.
             except ValueError:
-                flash("Invalid Groomer ID.", "warning")
+                flash("Invalid Groomer ID format.", "warning")
 
         completed_appointments_in_range = query.all()
+        
         groomer_specific_reports = {}
         store_wide_summary = {'items_sold': {}, 'grand_total': Decimal('0.0')}
-        all_services_from_db = Service.query.all()
+        
+        # Filter services by the current store's ID
+        all_services_from_db = Service.query.filter_by(store_id=store_id).all()
         service_prices_map = {s.name: Decimal(str(s.base_price)) for s in all_services_from_db}
 
         for appt in completed_appointments_in_range:
             appointment_actual_total = Decimal('0.0')
             if appt.checkout_total_amount is not None:
-                try: appointment_actual_total = Decimal(str(appt.checkout_total_amount))
-                except InvalidOperation: current_app.logger.warning(f"Invalid checkout_total_amount for Appt {appt.id}")
+                try:
+                    appointment_actual_total = Decimal(str(appt.checkout_total_amount))
+                except InvalidOperation:
+                    current_app.logger.warning(f"Invalid checkout_total_amount for Appt {appt.id}")
             
+            # If checkout_total_amount is null or zero, recalculate based on services
             if appt.checkout_total_amount is None or appointment_actual_total == Decimal('0.0'):
                 recalculated_total = Decimal('0.0')
                 if appt.requested_services_text:
@@ -409,7 +603,9 @@ def view_sales_reports():
 
             if current_groomer_id not in groomer_specific_reports:
                 groomer_specific_reports[current_groomer_id] = {
-                    'groomer_name': current_groomer_name, 'items_sold': {}, 'total_groomer_sales': Decimal('0.0')
+                    'groomer_name': current_groomer_name, 
+                    'items_sold': {}, 
+                    'total_groomer_sales': Decimal('0.0')
                 }
             
             groomer_specific_reports[current_groomer_id]['total_groomer_sales'] += appointment_actual_total
@@ -419,17 +615,19 @@ def view_sales_reports():
                 item_names_billed = [s.strip() for s in appt.requested_services_text.split(',') if s.strip()]
                 for item_name in item_names_billed:
                     item_price = service_prices_map.get(item_name, Decimal('0.0'))
+                    
                     gs_items = groomer_specific_reports[current_groomer_id]['items_sold']
                     if item_name not in gs_items: gs_items[item_name] = {'quantity': 0, 'total_sales': Decimal('0.0')}
                     gs_items[item_name]['quantity'] += 1
                     gs_items[item_name]['total_sales'] += item_price
+                    
                     sw_items = store_wide_summary['items_sold']
                     if item_name not in sw_items: sw_items[item_name] = {'quantity': 0, 'total_sales': Decimal('0.0')}
                     sw_items[item_name]['quantity'] += 1
                     sw_items[item_name]['total_sales'] += item_price
         
         report_data_processed = {'groomer_reports': groomer_specific_reports, 'store_summary': store_wide_summary}
-        log_activity("Sales Report Generated", details=f"Period: {report_period_display}, Groomer: {selected_groomer_name_display}")
+        log_activity("Sales Report Generated", details=f"Period: {report_period_display}, Groomer: {selected_groomer_name_display}, Store ID: {store_id}")
         return render_template('report_display.html', report_data=report_data_processed,
                                report_period_display=report_period_display,
                                selected_groomer_name=selected_groomer_name_display, all_groomers=all_groomers_for_dropdown)
@@ -440,8 +638,23 @@ def view_sales_reports():
 @management_bp.route('/manage/notifications', methods=['GET', 'POST'])
 @admin_required
 def manage_notifications():
+    """
+    Manages notification settings.
+    NOTE: Current implementation uses a global NOTIFICATION_PREFERENCES.
+    For multi-store separation, these preferences should be stored per store in the database.
+    """
     # You may need to adapt NOTIFICATION_PREFERENCES and helpers to work in blueprint context
+    # For true multi-store separation, these settings should be loaded/saved from the Store model
+    # or a dedicated StoreSettings model, filtered by session.get('store_id').
     NOTIFICATION_PREFERENCES = current_app.config.get('NOTIFICATION_PREFERENCES', {})
+    
+    # Placeholder for loading store-specific preferences
+    # Example:
+    # store_id = session.get('store_id')
+    # store = Store.query.filter_by(id=store_id).first()
+    # if store and store.notification_settings_json:
+    #     NOTIFICATION_PREFERENCES = json.loads(store.notification_settings_json)
+
     if request.method == 'POST':
         NOTIFICATION_PREFERENCES['send_confirmation_email'] = 'send_confirmation_email' in request.form
         NOTIFICATION_PREFERENCES['send_reminder_email'] = 'send_reminder_email' in request.form
@@ -453,34 +666,46 @@ def manage_notifications():
         NOTIFICATION_PREFERENCES['default_reminder_time'] = request.form.get('default_reminder_time', '09:00')
         NOTIFICATION_PREFERENCES['sender_name'] = request.form.get('sender_name', 'Pawfection Grooming').strip()
         
-        save_notification_preferences() 
+        save_notification_preferences() # This needs to save to the current store's settings
         log_activity("Updated Notification Settings", details=str(NOTIFICATION_PREFERENCES))
         flash("Notification settings updated successfully!", "success")
         return redirect(url_for('management.manage_notifications'))
             
-    load_notification_preferences() 
+    load_notification_preferences() # This needs to load from the current store's settings
     log_activity("Viewed Manage Customer Notifications page")
     return render_template('manage_notifications.html', current_settings=NOTIFICATION_PREFERENCES)
 
 @management_bp.route('/logs')
 @admin_required
 def view_logs():
+    """
+    Displays activity logs, filtered by the current store's ID.
+    """
+    store_id = session.get('store_id')  # Get store_id from session
     log_activity("Viewed Activity Log page")
-    page = request.args.get('page', 1, type=int); per_page = 50
-    logs_pagination = ActivityLog.query.options(db.joinedload(ActivityLog.user)).order_by(ActivityLog.timestamp.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+    # Filter activity logs by the current store's ID, joining with User to get store_id
+    logs_pagination = ActivityLog.query.options(db.joinedload(ActivityLog.user)).join(User).filter(
+        User.store_id == store_id
+    ).order_by(ActivityLog.timestamp.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    
     return render_template('logs.html', logs_pagination=logs_pagination)
 
 @management_bp.route('/google/authorize')
 @admin_required
 def google_authorize():
-    # Only allow admin users
+    """
+    Initiates the Google OAuth authorization flow for the current store.
+    """
+    # Only allow admin users (already handled by @admin_required)
     if not g.user or not g.user.is_admin:
         flash("Only administrators can connect Google services.", "danger")
         return redirect(url_for('management.management'))
 
-    # Clear old Google token to avoid scope mismatch errors
+    # Clear old Google token to avoid scope mismatch errors for the current store
     if hasattr(g, 'user') and g.user and g.user.store_id:
-        store = Store.query.get(g.user.store_id)
+        store = Store.query.filter_by(id=g.user.store_id).first() # Ensure we get the store for the current user
         if store:
             store.google_token_json = None
             db.session.commit()
@@ -489,7 +714,7 @@ def google_authorize():
     client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
     redirect_uri = os.environ.get('GOOGLE_REDIRECT_URI')
     if not client_id or not client_secret or not redirect_uri:
-        flash("Google OAuth environment variables are not set.", "danger")
+        flash("Google OAuth environment variables (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI) are not set.", "danger")
         return redirect(url_for('management.management'))
 
     flow = Flow.from_client_config(
@@ -516,7 +741,7 @@ def google_authorize():
     authorization_url, state = flow.authorization_url(
         access_type='offline',
         include_granted_scopes='true',
-        prompt='consent'
+        prompt='consent' # Ensure refresh token is granted
     )
     session['google_oauth_state'] = state
     return redirect(authorization_url)
@@ -524,6 +749,10 @@ def google_authorize():
 @management_bp.route('/google/oauth2callback')
 @admin_required
 def google_oauth2callback():
+    """
+    Handles the callback from Google OAuth after authorization.
+    Saves the Google token to the current store's record in the database.
+    """
     client_id = os.environ.get('GOOGLE_CLIENT_ID')
     client_secret = os.environ.get('GOOGLE_CLIENT_SECRET')
     redirect_uri = os.environ.get('GOOGLE_REDIRECT_URI')
@@ -532,8 +761,8 @@ def google_oauth2callback():
         return redirect(url_for('management.management'))
 
     state = session.get('google_oauth_state')
-    if not state:
-        flash("OAuth state missing. Please try again.", "danger")
+    if not state or state != request.args.get('state'): # Validate state to prevent CSRF
+        flash("OAuth state mismatch. Please try again.", "danger")
         return redirect(url_for('management.management'))
 
     flow = Flow.from_client_config(
@@ -570,25 +799,26 @@ def google_oauth2callback():
     credentials = flow.credentials
     token_data = {
         'token': credentials.token,
-        'refresh_token': credentials.refresh_token,
+        'refresh_token': credentials.refresh_token, # Important for long-lived access
         'token_uri': credentials.token_uri,
         'client_id': credentials.client_id,
         'client_secret': credentials.client_secret,
         'scopes': credentials.scopes
     }
     current_app.logger.info(f"[Google OAuth] Token data to save: {token_data}")
+    
     # Save token to the current store
     if hasattr(g, 'user') and g.user and g.user.store_id:
-        store = Store.query.get(g.user.store_id)
+        store = Store.query.filter_by(id=g.user.store_id).first() # Ensure we get the store for the current user
         current_app.logger.info(f"[Google OAuth] Store loaded: {store}")
         if store:
             store.google_token_json = json.dumps(token_data)
             try:
                 db.session.commit()
                 current_app.logger.info(f"[Google OAuth] Token committed to DB for store {store.id}")
+                
                 # --- Test the token by making a Calendar API call ---
-                from google.oauth2.credentials import Credentials as GoogleCredentials
-                from googleapiclient.discovery import build as google_build
+                # This ensures the token is valid and has the necessary permissions
                 test_credentials = GoogleCredentials(
                     token=credentials.token,
                     refresh_token=credentials.refresh_token,
@@ -598,24 +828,25 @@ def google_oauth2callback():
                     scopes=credentials.scopes
                 )
                 current_app.logger.info(f"[Google OAuth] Built test credentials. About to call Calendar API...")
-                service = google_build('calendar', 'v3', credentials=test_credentials)
+                service = build('calendar', 'v3', credentials=test_credentials)
                 try:
                     result = service.calendarList().list(maxResults=1).execute()
                     current_app.logger.info(f"[Google OAuth] Calendar API test succeeded for store {store.id}. Result: {result}")
                     log_activity("Connected Google Account for Calendar/Gmail")
                     flash("Google account connected successfully!", "success")
                 except Exception as e:
+                    # If test fails, clear the token to prevent partial connections
                     store.google_token_json = None
                     db.session.commit()
                     import traceback
                     tb = traceback.format_exc()
-                    current_app.logger.error(f"[Google OAuth] Google token test failed: {e}\nTraceback:\n{tb}")
+                    current_app.logger.error(f"[Google OAuth] Google token test failed: {e}\nTraceback:\\n{tb}")
                     flash("Failed to verify Google account connection. Please try again.", "danger")
             except Exception as e:
                 db.session.rollback()
                 import traceback
                 tb = traceback.format_exc()
-                current_app.logger.error(f"[Google OAuth] Failed to save Google token to store: {e}\nTraceback:\n{tb}")
+                current_app.logger.error(f"[Google OAuth] Failed to save Google token to store: {e}\nTraceback:\\n{tb}")
                 flash("Failed to save Google token.", "danger")
         else:
             current_app.logger.error(f"[Google OAuth] Store not found for user {getattr(g.user, 'id', None)}")
@@ -624,4 +855,4 @@ def google_oauth2callback():
         current_app.logger.error(f"[Google OAuth] No store context for user {getattr(g.user, 'id', None)}")
         flash("No store context. Cannot save Google token.", "danger")
     current_app.logger.info(f"[Google OAuth] oauth2callback complete for user: {getattr(g.user, 'id', None)} store: {getattr(g.user, 'store_id', None)}")
-    return redirect(url_for('management.management')) 
+    return redirect(url_for('management.management'))
