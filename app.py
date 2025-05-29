@@ -4,7 +4,7 @@ import bcrypt
 from flask import Flask, g, session, redirect, url_for, flash, send_from_directory, current_app
 from flask.wrappers import Request
 from extensions import db
-from models import ActivityLog, User, Store # Explicitly import models needed by top-level functions
+from models import User, Store # Only import models directly needed in app.py's top level
 from auth import auth_bp
 from owners import owners_bp
 from dogs import dogs_bp
@@ -14,41 +14,11 @@ from functools import wraps
 from werkzeug.middleware.proxy_fix import ProxyFix
 import logging
 from sqlalchemy.exc import IntegrityError
-import datetime
+# Removed import for datetime as it's not directly used at top level of app.py anymore
+# Removed log_activity definition as it's now in utils.py
 
 # Configure basic logging for the application.
 logging.basicConfig(level=logging.INFO)
-
-# Define log_activity as a top-level function to avoid circular import issues.
-# It needs access to db, session, g, and current_app, which become available
-# once the app context is pushed.
-def log_activity(action, details=None):
-    """
-    Logs user activity to the database, including the store context.
-    This function is defined at the top-level in app.py to resolve circular imports.
-    It attempts to retrieve the store_id from the session and includes it in the ActivityLog entry.
-    """
-    if hasattr(g, 'user') and g.user:
-        try:
-            # Retrieve store_id from the session. It's crucial that session['store_id']
-            # is set correctly during store and user login.
-            store_id = session.get('store_id') 
-            
-            log_entry = ActivityLog(
-                user_id=g.user.id,
-                action=action,
-                timestamp=datetime.datetime.now(datetime.timezone.utc), # Use explicit UTC timestamp
-                details=details,
-                store_id=store_id  # Assign the store_id to the log entry
-            )
-            db.session.add(log_entry)
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            current_app.logger.error(f"Error logging activity: {e}", exc_info=True)
-    else:
-        current_app.logger.warning(f"Attempted to log activity '{action}' but no user in g.")
-
 
 def create_app():
     """
@@ -147,6 +117,7 @@ def create_app():
         from flask import render_template
         return render_template('user_agreement.html')
 
+    # Privacy policy route
     @app.route('/privacy-policy')
     def view_privacy_policy():
         from flask import render_template

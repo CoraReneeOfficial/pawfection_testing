@@ -1,9 +1,11 @@
 import os
-from flask import g, current_app, flash, session # These imports are kept for consistency with how utils.py often starts, though only 'os' is strictly needed for allowed_file.
-from extensions import db # Kept for consistency, though not directly used by allowed_file.
-# Removed 'from models import ActivityLog' as ActivityLog is no longer directly used here.
-# Removed 'from auth import auth_bp' as it caused circular import and is not needed here.
-import datetime # Kept for consistency, though not directly used by allowed_file.
+import datetime
+from flask import g, session, current_app # Import current_app, g, session directly from flask
+from extensions import db # Import db from extensions
+
+# IMPORTANT: ActivityLog model is imported *inside* log_activity function
+# to prevent potential circular imports if ActivityLog itself has dependencies that lead back to utils.
+# This is a common pattern for breaking very complex circular dependencies.
 
 def allowed_file(filename, allowed_extensions=None):
     """
@@ -14,6 +16,33 @@ def allowed_file(filename, allowed_extensions=None):
         allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
-# IMPORTANT: The log_activity function has been moved to app.py to resolve circular import issues.
-# It is no longer defined in utils.py.
-# If you are looking for log_activity, please refer to your updated app.py file.
+def log_activity(action, details=None):
+    """
+    Logs user activity to the database, including the store context.
+    This function uses Flask's application context (current_app, g, session)
+    and imports the ActivityLog model locally to prevent circular imports.
+    """
+    # Import ActivityLog here, inside the function, to avoid top-level circular imports
+    # if ActivityLog itself has dependencies that lead back here (e.g., if models.py imported utils).
+    from models import ActivityLog 
+
+    if hasattr(g, 'user') and g.user:
+        try:
+            # Retrieve store_id from the session.
+            store_id = session.get('store_id') 
+            
+            log_entry = ActivityLog(
+                user_id=g.user.id,
+                action=action,
+                timestamp=datetime.datetime.now(datetime.timezone.utc),
+                details=details,
+                store_id=store_id
+            )
+            db.session.add(log_entry)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error logging activity: {e}", exc_info=True)
+    else:
+        current_app.logger.warning(f"Attempted to log activity '{action}' but no user in g.")
+
