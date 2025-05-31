@@ -94,6 +94,14 @@ def calendar_view():
                         'timeZone': BUSINESS_TIMEZONE_NAME
                     }
                     pawfection_calendar = service.calendars().insert(body=calendar_body).execute()
+                    # Make the calendar public
+                    service.acl().insert(
+                        calendarId=pawfection_calendar['id'],
+                        body={
+                            'role': 'reader',
+                            'scope': {'type': 'default'}
+                        }
+                    ).execute()
                 # Store the calendar ID
                 store.google_calendar_id = pawfection_calendar['id']
                 db.session.commit()
