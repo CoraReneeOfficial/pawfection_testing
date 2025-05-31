@@ -162,9 +162,14 @@ def calendar_view():
                                     db.func.lower(Owner.name) == owner_first
                                 ).first()
                     if not owner:
-                        owner = Owner(name=owner_name, phone_number='N/A', store_id=store.id)
-                        db.session.add(owner)
-                        db.session.flush()
+                        # Check for existing owner with same phone number and store
+                        existing_owner = Owner.query.filter_by(phone_number='N/A', store_id=store.id).first()
+                        if existing_owner:
+                            owner = existing_owner
+                        else:
+                            owner = Owner(name=owner_name, phone_number='N/A', store_id=store.id)
+                            db.session.add(owner)
+                            db.session.flush()
                     # Try to find dog (first try full name, then fallback to first name only)
                     dog = Dog.query.filter_by(name=dog_name, owner_id=owner.id, store_id=store.id).first()
                     if not dog:
