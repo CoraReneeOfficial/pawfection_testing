@@ -169,56 +169,58 @@ def calendar_view():
                         if existing_owner:
                             owner = existing_owner
                         else:
-                            owner = Owner(name=owner_name, phone_number='N/A', store_id=store.id)
-                            db.session.add(owner)
-                            db.session.flush()
+                            # Check for existing owner with same email and store
+                            if owner_name != 'Unknown Owner':
+                                existing_owner_email = Owner.query.filter_by(email=description, store_id=store.id).first() if description else None
+                                if existing_owner_email:
+                                    owner = existing_owner_email
+                                else:
+                                    owner = Owner(name=owner_name, phone_number='N/A', email=description or None, store_id=store.id)
+                                    db.session.add(owner)
+                                    db.session.flush()
+                            else:
+                                owner = Owner(name=owner_name, phone_number='N/A', store_id=store.id)
+                                db.session.add(owner)
+                                db.session.flush()
                     # Try to find dog (first try full name, then fallback to first name only)
                     dog = Dog.query.filter_by(name=dog_name, owner_id=owner.id, store_id=store.id).first()
                     if not dog:
-                        # Try to match by first name (case-insensitive), handle single names
-                        dog_first = dog_name.split()[0].strip().lower() if dog_name.strip() else None
-                        if dog_first:
-                            if ' ' in dog_name:
-                                # Get all dogs for the owner and store, compare first names in Python
-                                possible_dogs = Dog.query.filter(Dog.owner_id == owner.id, Dog.store_id == store.id).all()
-                                for possible_dog in possible_dogs:
-                                    db_first = possible_dog.name.split()[0].strip().lower()
-                                    if db_first == dog_first:
-                                        dog = possible_dog
-                                        break
-                            else:
-                                dog = Dog.query.filter(
-                                    Dog.owner_id == owner.id,
-                                    Dog.store_id == store.id,
-                                    db.func.lower(Dog.name) == dog_first
-                                ).first()
-                    if not dog:
-                        dog = Dog(name=dog_name, owner_id=owner.id, store_id=store.id)
-                        db.session.add(dog)
-                        db.session.flush()
+                        # Check for existing dog with same name, owner, and store
+                        existing_dog = Dog.query.filter_by(name=dog_name, owner_id=owner.id, store_id=store.id).first()
+                        if existing_dog:
+                            dog = existing_dog
+                        else:
+                            dog = Dog(name=dog_name, owner_id=owner.id, store_id=store.id)
+                            db.session.add(dog)
+                            db.session.flush()
                     # Try to find groomer
                     groomer = None
                     if groomer_name != 'Unknown Groomer':
                         groomer = User.query.filter_by(username=groomer_name, store_id=store.id, is_groomer=True).first()
                     groomer_id = groomer.id if groomer else None
-                    # Check if this event is already in your DB
+                    # Check for double booking before creating a new appointment
                     appt = Appointment.query.filter_by(google_event_id=google_event_id, store_id=store.id).first()
                     if not appt:
-                        try:
-                            new_appt = Appointment(
-                                appointment_datetime=start,
-                                status=status,
-                                created_by_user_id=g.user.id if hasattr(g, 'user') and g.user else None,
-                                store_id=store.id,
-                                google_event_id=google_event_id,
-                                notes=notes or summary,
-                                requested_services_text=services_text,
-                                dog_id=dog.id,
-                                groomer_id=groomer_id
-                            )
-                            db.session.add(new_appt)
-                        except Exception as e:
-                            current_app.logger.error(f"Failed to create Appointment from Google event: {e}", exc_info=True)
+                        # Double booking safeguard: check for same dog, datetime, and store
+                        double_booked = Appointment.query.filter_by(dog_id=dog.id, appointment_datetime=start, store_id=store.id).first()
+                        if double_booked:
+                            appt = double_booked
+                        else:
+                            try:
+                                new_appt = Appointment(
+                                    appointment_datetime=start,
+                                    status=status,
+                                    created_by_user_id=g.user.id if hasattr(g, 'user') and g.user else None,
+                                    store_id=store.id,
+                                    google_event_id=google_event_id,
+                                    notes=notes or summary,
+                                    requested_services_text=services_text,
+                                    dog_id=dog.id,
+                                    groomer_id=groomer_id
+                                )
+                                db.session.add(new_appt)
+                            except Exception as e:
+                                current_app.logger.error(f"Failed to create Appointment from Google event: {e}", exc_info=True)
                     else:
                         # Update existing Appointment if details have changed
                         updated = False
