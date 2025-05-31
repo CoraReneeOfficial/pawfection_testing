@@ -18,7 +18,8 @@ Modular codebase using Flask blueprints
 
 Activity logging and error handling
 
-Project Structure
+Project Structure:
+
 pawfection_testing/
 ├── .gitignore
 ├── app.py
