@@ -147,12 +147,20 @@ def calendar_view():
                     # Try to find owner (first try full name, then fallback to first name only)
                     owner = Owner.query.filter_by(name=owner_name, store_id=store.id).first()
                     if not owner:
-                        # Try to match by first name (case-insensitive)
-                        owner_first = owner_name.split()[0].strip().lower()
-                        owner = Owner.query.filter(
-                            Owner.store_id == store.id,
-                            db.func.lower(db.func.substr(Owner.name, 1, db.func.instr(Owner.name, ' ') - 1)) == owner_first
-                        ).first()
+                        # Try to match by first name (case-insensitive), handle single names
+                        owner_first = owner_name.split()[0].strip().lower() if owner_name.strip() else None
+                        if owner_first:
+                            # If the name has a space, extract first name; else use the whole name
+                            if ' ' in Owner.name:
+                                owner = Owner.query.filter(
+                                    Owner.store_id == store.id,
+                                    db.func.lower(db.func.substr(Owner.name, 1, db.func.instr(Owner.name, ' ') - 1)) == owner_first
+                                ).first()
+                            else:
+                                owner = Owner.query.filter(
+                                    Owner.store_id == store.id,
+                                    db.func.lower(Owner.name) == owner_first
+                                ).first()
                     if not owner:
                         owner = Owner(name=owner_name, phone_number='N/A', store_id=store.id)
                         db.session.add(owner)
@@ -160,13 +168,21 @@ def calendar_view():
                     # Try to find dog (first try full name, then fallback to first name only)
                     dog = Dog.query.filter_by(name=dog_name, owner_id=owner.id, store_id=store.id).first()
                     if not dog:
-                        # Try to match by first name (case-insensitive)
-                        dog_first = dog_name.split()[0].strip().lower()
-                        dog = Dog.query.filter(
-                            Dog.owner_id == owner.id,
-                            Dog.store_id == store.id,
-                            db.func.lower(db.func.substr(Dog.name, 1, db.func.instr(Dog.name, ' ') - 1)) == dog_first
-                        ).first()
+                        # Try to match by first name (case-insensitive), handle single names
+                        dog_first = dog_name.split()[0].strip().lower() if dog_name.strip() else None
+                        if dog_first:
+                            if ' ' in Dog.name:
+                                dog = Dog.query.filter(
+                                    Dog.owner_id == owner.id,
+                                    Dog.store_id == store.id,
+                                    db.func.lower(db.func.substr(Dog.name, 1, db.func.instr(Dog.name, ' ') - 1)) == dog_first
+                                ).first()
+                            else:
+                                dog = Dog.query.filter(
+                                    Dog.owner_id == owner.id,
+                                    Dog.store_id == store.id,
+                                    db.func.lower(Dog.name) == dog_first
+                                ).first()
                     if not dog:
                         dog = Dog(name=dog_name, owner_id=owner.id, store_id=store.id)
                         db.session.add(dog)
