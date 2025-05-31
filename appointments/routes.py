@@ -144,14 +144,29 @@ def calendar_view():
                             notes = line.split(':', 1)[1].strip()
                         elif line.strip().lower().startswith('status:'):
                             status = line.split(':', 1)[1].strip().capitalize()
-                    # Try to find owner
+                    # Try to find owner (first try full name, then fallback to first name only)
                     owner = Owner.query.filter_by(name=owner_name, store_id=store.id).first()
+                    if not owner:
+                        # Try to match by first name (case-insensitive)
+                        owner_first = owner_name.split()[0].strip().lower()
+                        owner = Owner.query.filter(
+                            Owner.store_id == store.id,
+                            db.func.lower(db.func.substr(Owner.name, 1, db.func.instr(Owner.name, ' ') - 1)) == owner_first
+                        ).first()
                     if not owner:
                         owner = Owner(name=owner_name, phone_number='N/A', store_id=store.id)
                         db.session.add(owner)
                         db.session.flush()
-                    # Try to find dog
+                    # Try to find dog (first try full name, then fallback to first name only)
                     dog = Dog.query.filter_by(name=dog_name, owner_id=owner.id, store_id=store.id).first()
+                    if not dog:
+                        # Try to match by first name (case-insensitive)
+                        dog_first = dog_name.split()[0].strip().lower()
+                        dog = Dog.query.filter(
+                            Dog.owner_id == owner.id,
+                            Dog.store_id == store.id,
+                            db.func.lower(db.func.substr(Dog.name, 1, db.func.instr(Dog.name, ' ') - 1)) == dog_first
+                        ).first()
                     if not dog:
                         dog = Dog(name=dog_name, owner_id=owner.id, store_id=store.id)
                         db.session.add(dog)
