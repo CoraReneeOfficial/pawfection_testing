@@ -4,7 +4,7 @@ from extensions import db
 from sqlalchemy import or_
 from functools import wraps
 from utils import allowed_file # Keep allowed_file from utils
-from app import log_activity   # IMPORT log_activity from app.py
+from utils import log_activity   # IMPORT log_activity from utils.py
 
 owners_bp = Blueprint('owners', __name__)
 

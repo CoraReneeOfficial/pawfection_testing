@@ -6,7 +6,7 @@ import os
 import uuid
 from functools import wraps
 from utils import allowed_file # Keep allowed_file from utils
-from app import log_activity   # IMPORT log_activity from app.py
+from utils import log_activity   # IMPORT log_activity from utils.py
 
 dogs_bp = Blueprint('dogs', __name__)
 

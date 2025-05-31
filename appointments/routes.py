@@ -7,7 +7,7 @@ import datetime
 from datetime import timezone
 from dateutil import tz, parser as dateutil_parser
 from utils import allowed_file # Keep allowed_file from utils
-from app import log_activity   # IMPORT log_activity from app.py
+from utils import log_activity   # IMPORT log_activity from utils.py
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 import json

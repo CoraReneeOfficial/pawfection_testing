@@ -14,6 +14,7 @@ from functools import wraps
 from werkzeug.middleware.proxy_fix import ProxyFix
 import logging
 from sqlalchemy.exc import IntegrityError
+from utils import log_activity
 # Removed import for datetime as it's not directly used at top level of app.py anymore
 # Removed log_activity definition as it's now in utils.py
 

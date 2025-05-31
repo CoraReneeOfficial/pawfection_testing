@@ -10,7 +10,7 @@ import calendar
 import os
 import uuid
 from utils import allowed_file # Keep allowed_file from utils
-from app import log_activity   # IMPORT log_activity from app.py
+from utils import log_activity   # IMPORT log_activity from utils.py
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 import json
@@ -125,7 +125,7 @@ def get_date_range(range_type, start_date_str=None, end_date_str=None):
             return None, None, "Error: Invalid Date Format"
     else:
         flash("Unknown date range type selected.", "danger")
-        return None, None, "Error: Unknown Date Range
+        return None, None, "Error: Unknown Date Range"
     
     if start_local and end_local:
         start_utc = start_local.astimezone(timezone.utc)
