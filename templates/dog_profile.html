@@ -185,6 +185,7 @@
     <div class="profile-actions">
          <a href="{{ url_for('owners.view_owner', owner_id=dog.owner_id) }}" class="button button-secondary">Back to Owner Profile</a>
          <a href="{{ url_for('dogs.edit_dog', dog_id=dog.id) }}" class="button button-primary">Edit Dog Profile</a>
+         <a href="{{ url_for('appointments.add_appointment') }}?dog_id={{ dog.id }}" class="button button-success">Book Appointment</a>
          <form method="POST" action="{{ url_for('dogs.delete_dog', dog_id=dog.id) }}" class="delete-form"
                onsubmit="return confirm('Are you absolutely sure you want to delete the profile for {{ dog.name }}? This action cannot be undone and will also delete any associated appointments.');">
             <button type="submit" class="button button-danger">Delete Dog</button>
