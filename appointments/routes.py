@@ -523,13 +523,15 @@ def delete_appointment(appointment_id):
 
     # Fetch the appointment, ensuring it belongs to the current store
     appt = Appointment.query.options(db.joinedload(Appointment.dog)).filter_by(
-        store_id=store_id  # Filter appointment by the current store
-    ).get_or_404(appointment_id)
-    
+        id=appointment_id,
+        store_id=store_id
+    ).first()
+    if not appt:
+        from flask import abort
+        abort(404)
     dog_name = appt.dog.name
     local_time = appt.appointment_datetime.replace(tzinfo=timezone.utc).astimezone(BUSINESS_TIMEZONE)
     time_str = local_time.strftime('%Y-%m-%d %I:%M %p %Z')
-    
     try:
         db.session.delete(appt)
         db.session.commit()
@@ -539,7 +541,6 @@ def delete_appointment(appointment_id):
         db.session.rollback()
         current_app.logger.error(f"Error deleting appt {appointment_id}: {e}", exc_info=True)
         flash("Error deleting appointment.", "danger")
-    
     return redirect(url_for('appointments.calendar_view'))
 
 @appointments_bp.route('/checkout', methods=['GET', 'POST'])
