@@ -11,6 +11,7 @@ from utils import log_activity   # IMPORT log_activity from utils.py
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 import json
+import re
 
 appointments_bp = Blueprint('appointments', __name__)
 
@@ -110,19 +111,44 @@ def calendar_view():
             # Build the embed URL for this calendar
             pawfection_calendar_embed_url = f"https://calendar.google.com/calendar/embed?height=800&wkst=1&ctz={BUSINESS_TIMEZONE_NAME.replace('/', '%2F')}&mode=AGENDA&title=Pawfection%20Appointments&src={pawfection_calendar_id}"
 
-            # --- Google Calendar → Appointments Sync (basic) ---
+            # --- Google Calendar → Appointments Sync (enhanced) ---
             if store.google_calendar_id:
                 events = service.events().list(calendarId=store.google_calendar_id).execute().get('items', [])
+                google_event_ids = set()
                 for event in events:
                     google_event_id = event['id']
+                    google_event_ids.add(google_event_id)
                     start = event['start'].get('dateTime') or event['start'].get('date')
                     # Only sync events with a start datetime
                     if not start:
                         continue
+                    summary = event.get('summary', '')
+                    # Try to parse dog and owner from summary
+                    match = re.match(r"(.+?) \((.+?)\) Appointment", summary)
+                    if match:
+                        dog_name = match.group(1).strip()
+                        owner_name = match.group(2).strip()
+                    else:
+                        dog_name = 'Unknown Dog'
+                        owner_name = 'Unknown Owner'
+                    # Try to find owner
+                    owner = Owner.query.filter_by(name=owner_name, store_id=store.id).first()
+                    if not owner:
+                        # Create placeholder owner if not found
+                        owner = Owner(name=owner_name, phone_number='N/A', store_id=store.id)
+                        db.session.add(owner)
+                        db.session.flush()  # Get owner.id
+                    # Try to find dog
+                    dog = Dog.query.filter_by(name=dog_name, owner_id=owner.id, store_id=store.id).first()
+                    if not dog:
+                        # Create placeholder dog if not found
+                        dog = Dog(name=dog_name, owner_id=owner.id, store_id=store.id)
+                        db.session.add(dog)
+                        db.session.flush()  # Get dog.id
                     # Check if this event is already in your DB
                     appt = Appointment.query.filter_by(google_event_id=google_event_id, store_id=store.id).first()
                     if not appt:
-                        # Create new Appointment (basic mapping)
+                        # Create new Appointment (with mapping)
                         try:
                             new_appt = Appointment(
                                 appointment_datetime=start,
@@ -130,11 +156,41 @@ def calendar_view():
                                 created_by_user_id=g.user.id if hasattr(g, 'user') and g.user else None,
                                 store_id=store.id,
                                 google_event_id=google_event_id,
-                                notes=event.get('summary', '')
+                                notes=summary,
+                                dog_id=dog.id
                             )
                             db.session.add(new_appt)
                         except Exception as e:
                             current_app.logger.error(f"Failed to create Appointment from Google event: {e}", exc_info=True)
+                    else:
+                        # Update existing Appointment if details have changed
+                        updated = False
+                        if str(appt.appointment_datetime) != str(start):
+                            appt.appointment_datetime = start
+                            updated = True
+                        if appt.notes != summary:
+                            appt.notes = summary
+                            updated = True
+                        if appt.dog_id != dog.id:
+                            appt.dog_id = dog.id
+                            updated = True
+                        if appt.status == 'Cancelled':
+                            appt.status = 'Scheduled'
+                            updated = True
+                        if updated:
+                            try:
+                                db.session.add(appt)
+                            except Exception as e:
+                                current_app.logger.error(f"Failed to update Appointment from Google event: {e}", exc_info=True)
+                # Mark appointments as Cancelled if their event was deleted from Google Calendar
+                db_appts = Appointment.query.filter_by(store_id=store.id).filter(Appointment.google_event_id.isnot(None)).all()
+                for db_appt in db_appts:
+                    if db_appt.google_event_id not in google_event_ids and db_appt.status != 'Cancelled':
+                        db_appt.status = 'Cancelled'
+                        try:
+                            db.session.add(db_appt)
+                        except Exception as e:
+                            current_app.logger.error(f"Failed to mark Appointment as Cancelled: {e}", exc_info=True)
                 try:
                     db.session.commit()
                 except Exception as e:
