@@ -55,6 +55,10 @@ def create_app():
     # Initialize Flask-SQLAlchemy with the app.
     db.init_app(app)
 
+    # Initialize Flask-Migrate for database migrations
+    from flask_migrate import Migrate
+    migrate = Migrate(app, db)
+
     # Route to serve uploaded files
     @app.route('/uploads/<path:filename>')
     def uploaded_persistent_file(filename):
