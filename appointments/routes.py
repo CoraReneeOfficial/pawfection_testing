@@ -50,6 +50,7 @@ def calendar_view():
     Displays the calendar view of appointments.
     Filters appointments by the current store's ID.
     Also ensures a Google Calendar named 'Pawfection Appointments' exists and stores its ID.
+    Syncs Google Calendar events to the Appointment table (basic mapping).
     """
     log_activity("Viewed Calendar page")
     store_id = session.get('store_id')
@@ -108,6 +109,37 @@ def calendar_view():
             pawfection_calendar_id = store.google_calendar_id
             # Build the embed URL for this calendar
             pawfection_calendar_embed_url = f"https://calendar.google.com/calendar/embed?height=800&wkst=1&ctz={BUSINESS_TIMEZONE_NAME.replace('/', '%2F')}&mode=AGENDA&title=Pawfection%20Appointments&src={pawfection_calendar_id}"
+
+            # --- Google Calendar → Appointments Sync (basic) ---
+            if store.google_calendar_id:
+                events = service.events().list(calendarId=store.google_calendar_id).execute().get('items', [])
+                for event in events:
+                    google_event_id = event['id']
+                    start = event['start'].get('dateTime') or event['start'].get('date')
+                    # Only sync events with a start datetime
+                    if not start:
+                        continue
+                    # Check if this event is already in your DB
+                    appt = Appointment.query.filter_by(google_event_id=google_event_id, store_id=store.id).first()
+                    if not appt:
+                        # Create new Appointment (basic mapping)
+                        try:
+                            new_appt = Appointment(
+                                appointment_datetime=start,
+                                status='Scheduled',
+                                created_by_user_id=g.user.id if hasattr(g, 'user') and g.user else None,
+                                store_id=store.id,
+                                google_event_id=google_event_id,
+                                notes=event.get('summary', '')
+                            )
+                            db.session.add(new_appt)
+                        except Exception as e:
+                            current_app.logger.error(f"Failed to create Appointment from Google event: {e}", exc_info=True)
+                try:
+                    db.session.commit()
+                except Exception as e:
+                    db.session.rollback()
+                    current_app.logger.error(f"Failed to commit Google Calendar sync: {e}", exc_info=True)
         except Exception as e:
             current_app.logger.error(f"Google Calendar check/create failed: {e}", exc_info=True)
             is_google_calendar_connected = False
@@ -269,7 +301,9 @@ def add_appointment():
                         'start': {'dateTime': utc_dt.isoformat(), 'timeZone': 'UTC'},
                         'end': {'dateTime': (utc_dt + datetime.timedelta(hours=1)).isoformat(), 'timeZone': 'UTC'},
                     }
-                    created_event = service.events().insert(calendarId='primary', body=event).execute()
+                    # Use the correct calendar ID
+                    calendar_id = store.google_calendar_id if store.google_calendar_id else 'primary'
+                    created_event = service.events().insert(calendarId=calendar_id, body=event).execute()
                     new_appt.google_event_id = created_event.get('id')
                     db.session.commit()
                     flash("Appointment synced to Google Calendar.", "success")
@@ -381,12 +415,14 @@ def edit_appointment(appointment_id):
                         'start': {'dateTime': utc_dt.isoformat(), 'timeZone': 'UTC'},
                         'end': {'dateTime': (utc_dt + datetime.timedelta(hours=1)).isoformat(), 'timeZone': 'UTC'},
                     }
+                    # Use the correct calendar ID
+                    calendar_id = store.google_calendar_id if store.google_calendar_id else 'primary'
                     if appt.google_event_id:
                         # Update existing event
-                        service.events().update(calendarId='primary', eventId=appt.google_event_id, body=event).execute()
+                        service.events().update(calendarId=calendar_id, eventId=appt.google_event_id, body=event).execute()
                     else:
                         # Create new event if missing
-                        created_event = service.events().insert(calendarId='primary', body=event).execute()
+                        created_event = service.events().insert(calendarId=calendar_id, body=event).execute()
                         appt.google_event_id = created_event.get('id')
                     db.session.commit()
                     flash("Appointment synced to Google Calendar.", "success")
