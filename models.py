@@ -15,6 +15,7 @@ class Store(db.Model):
     subscription_status = db.Column(db.String(20), default='active', nullable=False)  # e.g., active, trial, unpaid, cancelled
     subscription_ends_at = db.Column(db.DateTime, nullable=True)
     google_token_json = db.Column(db.Text, nullable=True)  # Store Google OAuth token as JSON per store
+    google_calendar_id = db.Column(db.String(255), nullable=True)  # Store Google Calendar ID for the store
 
     # Relationships to other models, ensuring data is linked to the store
     users = db.relationship('User', backref='store', lazy=True)

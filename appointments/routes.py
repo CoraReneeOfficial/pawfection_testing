@@ -49,20 +49,65 @@ def calendar_view():
     """
     Displays the calendar view of appointments.
     Filters appointments by the current store's ID.
+    Also ensures a Google Calendar named 'Pawfection Appointments' exists and stores its ID.
     """
     log_activity("Viewed Calendar page")
-    # Retrieve the current store_id from the session
     store_id = session.get('store_id')
-    
+    store = Store.query.get(store_id)
     local_appointments = Appointment.query.options(
         db.joinedload(Appointment.dog).joinedload(Dog.owner),
         db.joinedload(Appointment.groomer)
     ).filter(
         Appointment.status == 'Scheduled',
-        Appointment.store_id == store_id  # Filter appointments by the current store
+        Appointment.store_id == store_id
     ).order_by(Appointment.appointment_datetime.asc()).all()
-    
-    return render_template('calendar.html', local_appointments=local_appointments)
+
+    is_google_calendar_connected = False
+    pawfection_calendar_id = None
+    pawfection_calendar_embed_url = None
+    if store and store.google_token_json:
+        try:
+            token_data = json.loads(store.google_token_json)
+            credentials = Credentials(
+                token=token_data['token'],
+                refresh_token=token_data.get('refresh_token'),
+                token_uri=token_data['token_uri'],
+                client_id=token_data['client_id'],
+                client_secret=token_data['client_secret'],
+                scopes=SCOPES
+            )
+            service = build('calendar', 'v3', credentials=credentials)
+            is_google_calendar_connected = True
+            # Check if we already have a calendar ID stored
+            if not store.google_calendar_id:
+                # Search for a calendar named 'Pawfection Appointments'
+                calendar_list = service.calendarList().list().execute()
+                pawfection_calendar = None
+                for cal in calendar_list.get('items', []):
+                    if cal.get('summary') == 'Pawfection Appointments':
+                        pawfection_calendar = cal
+                        break
+                if not pawfection_calendar:
+                    # Create the calendar
+                    calendar_body = {
+                        'summary': 'Pawfection Appointments',
+                        'timeZone': BUSINESS_TIMEZONE_NAME
+                    }
+                    pawfection_calendar = service.calendars().insert(body=calendar_body).execute()
+                # Store the calendar ID
+                store.google_calendar_id = pawfection_calendar['id']
+                db.session.commit()
+            pawfection_calendar_id = store.google_calendar_id
+            # Build the embed URL for this calendar
+            pawfection_calendar_embed_url = f"https://calendar.google.com/calendar/embed?height=800&wkst=1&ctz={BUSINESS_TIMEZONE_NAME.replace('/', '%2F')}&mode=AGENDA&title=Pawfection%20Appointments&src={pawfection_calendar_id}"
+        except Exception as e:
+            current_app.logger.error(f"Google Calendar check/create failed: {e}", exc_info=True)
+            is_google_calendar_connected = False
+    return render_template('calendar.html',
+        local_appointments=local_appointments,
+        is_google_calendar_connected=is_google_calendar_connected,
+        pawfection_calendar_embed_url=pawfection_calendar_embed_url
+    )
 
 @appointments_bp.route('/api/appointments')
 def api_appointments():

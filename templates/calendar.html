@@ -153,7 +153,13 @@
         <h2>Shared Google Calendar View</h2>
     </div>
     <div class="google-calendar-embed">
-        <iframe src="https://calendar.google.com/calendar/embed?height=800&wkst=1&ctz=America%2FNew_York&mode=AGENDA&title=Dog%20Schedule&src=cGF3ZmVjdGlvbi5ncm9vbWluZy5zb2x1dGlvbnNAZ21haWwuY29t&src=ZW4udXNhI2hvbGlkYXlAZ3JvdXAudi5jYWxlbmRhci5nb29nbGUuY29t&color=%23039BE5&color=%230B8043" style="border:solid 1px #777" width="1000" height="800" frameborder="0" scrolling="no"></iframe>
+        {% if pawfection_calendar_embed_url %}
+            <iframe src="{{ pawfection_calendar_embed_url }}" style="border:solid 1px #777" width="1000" height="800" frameborder="0" scrolling="no"></iframe>
+        {% elif is_google_calendar_connected %}
+            <div class="no-appointments">Google Calendar is connected, but the calendar could not be loaded.</div>
+        {% else %}
+            <iframe src="https://calendar.google.com/calendar/embed?height=800&wkst=1&ctz=America%2FNew_York&mode=AGENDA&title=Dog%20Schedule&src=cGF3ZmVjdGlvbi5ncm9vbWluZy5zb2x1dGlvbnNAZ21haWwuY29t&src=ZW4udXNhI2hvbGlkYXlAZ3JvdXAudi5jYWxlbmRhci5nb29nbGUuY29t&color=%23039BE5&color=%230B8043" style="border:solid 1px #777" width="1000" height="800" frameborder="0" scrolling="no"></iframe>
+        {% endif %}
     </div>
 
     <div class="calendar-actions-header">
