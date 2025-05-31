@@ -150,12 +150,14 @@ def calendar_view():
                         # Try to match by first name (case-insensitive), handle single names
                         owner_first = owner_name.split()[0].strip().lower() if owner_name.strip() else None
                         if owner_first:
-                            # If the input name has a space, extract first name; else use the whole name
                             if ' ' in owner_name:
-                                owner = Owner.query.filter(
-                                    Owner.store_id == store.id,
-                                    db.func.lower(db.func.substr(Owner.name, 1, db.func.instr(Owner.name, ' ') - 1)) == owner_first
-                                ).first()
+                                # Get all owners for the store and compare first names in Python
+                                possible_owners = Owner.query.filter(Owner.store_id == store.id).all()
+                                for possible_owner in possible_owners:
+                                    db_first = possible_owner.name.split()[0].strip().lower()
+                                    if db_first == owner_first:
+                                        owner = possible_owner
+                                        break
                             else:
                                 owner = Owner.query.filter(
                                     Owner.store_id == store.id,
@@ -177,11 +179,13 @@ def calendar_view():
                         dog_first = dog_name.split()[0].strip().lower() if dog_name.strip() else None
                         if dog_first:
                             if ' ' in dog_name:
-                                dog = Dog.query.filter(
-                                    Dog.owner_id == owner.id,
-                                    Dog.store_id == store.id,
-                                    db.func.lower(db.func.substr(Dog.name, 1, db.func.instr(Dog.name, ' ') - 1)) == dog_first
-                                ).first()
+                                # Get all dogs for the owner and store, compare first names in Python
+                                possible_dogs = Dog.query.filter(Dog.owner_id == owner.id, Dog.store_id == store.id).all()
+                                for possible_dog in possible_dogs:
+                                    db_first = possible_dog.name.split()[0].strip().lower()
+                                    if db_first == dog_first:
+                                        dog = possible_dog
+                                        break
                             else:
                                 dog = Dog.query.filter(
                                     Dog.owner_id == owner.id,
