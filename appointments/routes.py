@@ -392,8 +392,12 @@ def edit_appointment(appointment_id):
         db.joinedload(Appointment.dog).joinedload(Dog.owner),
         db.joinedload(Appointment.groomer)
     ).filter_by(
+        id=appointment_id,
         store_id=store_id  # Filter appointment by the current store
-    ).get_or_404(appointment_id)
+    ).first()
+    if not appt:
+        from flask import abort
+        abort(404)
 
     # Filter dogs and groomers by the current store for dropdowns
     dogs = Dog.query.options(db.joinedload(Dog.owner)).filter_by(store_id=store_id).order_by(Dog.name).all()
