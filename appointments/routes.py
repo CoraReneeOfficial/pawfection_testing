@@ -150,8 +150,8 @@ def calendar_view():
                         # Try to match by first name (case-insensitive), handle single names
                         owner_first = owner_name.split()[0].strip().lower() if owner_name.strip() else None
                         if owner_first:
-                            # If the name has a space, extract first name; else use the whole name
-                            if ' ' in Owner.name:
+                            # If the input name has a space, extract first name; else use the whole name
+                            if ' ' in owner_name:
                                 owner = Owner.query.filter(
                                     Owner.store_id == store.id,
                                     db.func.lower(db.func.substr(Owner.name, 1, db.func.instr(Owner.name, ' ') - 1)) == owner_first
@@ -171,7 +171,7 @@ def calendar_view():
                         # Try to match by first name (case-insensitive), handle single names
                         dog_first = dog_name.split()[0].strip().lower() if dog_name.strip() else None
                         if dog_first:
-                            if ' ' in Dog.name:
+                            if ' ' in dog_name:
                                 dog = Dog.query.filter(
                                     Dog.owner_id == owner.id,
                                     Dog.store_id == store.id,
