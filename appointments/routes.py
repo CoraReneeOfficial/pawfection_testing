@@ -111,7 +111,7 @@ def calendar_view():
             # Build the embed URL for this calendar
             pawfection_calendar_embed_url = f"https://calendar.google.com/calendar/embed?height=800&wkst=1&ctz={BUSINESS_TIMEZONE_NAME.replace('/', '%2F')}&mode=AGENDA&title=Pawfection%20Appointments&src={pawfection_calendar_id}"
 
-            # --- Google Calendar → Appointments Sync (enhanced) ---
+            # --- Google Calendar → Appointments Sync (enhanced, full parsing) ---
             if store.google_calendar_id:
                 events = service.events().list(calendarId=store.google_calendar_id).execute().get('items', [])
                 google_event_ids = set()
@@ -119,45 +119,62 @@ def calendar_view():
                     google_event_id = event['id']
                     google_event_ids.add(google_event_id)
                     start = event['start'].get('dateTime') or event['start'].get('date')
-                    # Only sync events with a start datetime
                     if not start:
                         continue
                     summary = event.get('summary', '')
-                    # Try to parse dog and owner from summary
-                    match = re.match(r"(.+?) \((.+?)\) Appointment", summary)
-                    if match:
-                        dog_name = match.group(1).strip()
-                        owner_name = match.group(2).strip()
-                    else:
-                        dog_name = 'Unknown Dog'
-                        owner_name = 'Unknown Owner'
+                    description = event.get('description', '')
+                    # Parse summary: DogName (OwnerName) [Groomer: GroomerName] Appointment
+                    dog_name = 'Unknown Dog'
+                    owner_name = 'Unknown Owner'
+                    groomer_name = 'Unknown Groomer'
+                    summary_match = re.match(r"(.+?) \((.+?)\)(?: \[Groomer: (.+?)\])? Appointment", summary)
+                    if summary_match:
+                        dog_name = summary_match.group(1).strip()
+                        owner_name = summary_match.group(2).strip()
+                        if summary_match.group(3):
+                            groomer_name = summary_match.group(3).strip()
+                    # Parse description for services, notes, status
+                    services_text = None
+                    notes = None
+                    status = 'Scheduled'
+                    for line in description.splitlines():
+                        if line.strip().lower().startswith('services:'):
+                            services_text = line.split(':', 1)[1].strip()
+                        elif line.strip().lower().startswith('notes:'):
+                            notes = line.split(':', 1)[1].strip()
+                        elif line.strip().lower().startswith('status:'):
+                            status = line.split(':', 1)[1].strip().capitalize()
                     # Try to find owner
                     owner = Owner.query.filter_by(name=owner_name, store_id=store.id).first()
                     if not owner:
-                        # Create placeholder owner if not found
                         owner = Owner(name=owner_name, phone_number='N/A', store_id=store.id)
                         db.session.add(owner)
-                        db.session.flush()  # Get owner.id
+                        db.session.flush()
                     # Try to find dog
                     dog = Dog.query.filter_by(name=dog_name, owner_id=owner.id, store_id=store.id).first()
                     if not dog:
-                        # Create placeholder dog if not found
                         dog = Dog(name=dog_name, owner_id=owner.id, store_id=store.id)
                         db.session.add(dog)
-                        db.session.flush()  # Get dog.id
+                        db.session.flush()
+                    # Try to find groomer
+                    groomer = None
+                    if groomer_name != 'Unknown Groomer':
+                        groomer = User.query.filter_by(username=groomer_name, store_id=store.id, is_groomer=True).first()
+                    groomer_id = groomer.id if groomer else None
                     # Check if this event is already in your DB
                     appt = Appointment.query.filter_by(google_event_id=google_event_id, store_id=store.id).first()
                     if not appt:
-                        # Create new Appointment (with mapping)
                         try:
                             new_appt = Appointment(
                                 appointment_datetime=start,
-                                status='Scheduled',
+                                status=status,
                                 created_by_user_id=g.user.id if hasattr(g, 'user') and g.user else None,
                                 store_id=store.id,
                                 google_event_id=google_event_id,
-                                notes=summary,
-                                dog_id=dog.id
+                                notes=notes or summary,
+                                requested_services_text=services_text,
+                                dog_id=dog.id,
+                                groomer_id=groomer_id
                             )
                             db.session.add(new_appt)
                         except Exception as e:
@@ -168,14 +185,20 @@ def calendar_view():
                         if str(appt.appointment_datetime) != str(start):
                             appt.appointment_datetime = start
                             updated = True
-                        if appt.notes != summary:
-                            appt.notes = summary
+                        if appt.notes != (notes or summary):
+                            appt.notes = notes or summary
+                            updated = True
+                        if appt.requested_services_text != services_text:
+                            appt.requested_services_text = services_text
                             updated = True
                         if appt.dog_id != dog.id:
                             appt.dog_id = dog.id
                             updated = True
-                        if appt.status == 'Cancelled':
-                            appt.status = 'Scheduled'
+                        if appt.groomer_id != groomer_id:
+                            appt.groomer_id = groomer_id
+                            updated = True
+                        if appt.status != status:
+                            appt.status = status
                             updated = True
                         if updated:
                             try:
