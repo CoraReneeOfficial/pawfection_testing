@@ -168,14 +168,23 @@ def edit_owner(owner_id):
     log_activity("Viewed Edit Owner page", details=f"Owner ID: {owner_id}, Store ID: {store_id}")
     return render_template('edit_owner.html', owner=owner_to_edit)
 
-# @owners_bp.route('/owner/<int:owner_id>/delete', methods=['POST'])
-# def delete_owner(owner_id):
-#     """
-#     (To be implemented) Handles deleting a specific owner.
-#     Will need to ensure the owner belongs to the current store.
-#     Consider cascading deletes for associated dogs and appointments, or handle orphaned records.
-#     """
-#     store_id = session.get('store_id')
-#     owner_to_delete = Owner.query.filter_by(id=owner_id, store_id=store_id).first_or_404()
-#     # ... deletion logic ...
-#     pass
+@owners_bp.route('/owner/<int:owner_id>/delete', methods=['POST'])
+def delete_owner(owner_id):
+    """
+    Securely deletes an owner and all their dogs and appointments, only if the owner belongs to the current store.
+    """
+    store_id = session.get('store_id')
+    owner = Owner.query.filter_by(id=owner_id, store_id=store_id).first()
+    if not owner:
+        flash('Owner not found or does not belong to this store.', 'danger')
+        return redirect(url_for('owners.directory'))
+    try:
+        owner_name = owner.name
+        db.session.delete(owner)
+        db.session.commit()
+        flash(f'Owner "{owner_name}" and all their dogs/appointments have been deleted.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting owner {owner_id}: {e}", exc_info=True)
+        flash('Error deleting owner.', 'danger')
+    return redirect(url_for('owners.directory'))
