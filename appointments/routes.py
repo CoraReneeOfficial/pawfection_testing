@@ -207,6 +207,10 @@ def calendar_view():
                             appt = double_booked
                         else:
                             try:
+                                # --- Flag for missing details ---
+                                details_needed = False
+                                if (not dog or dog_name == 'Unknown Dog' or not owner or owner_name == 'Unknown Owner' or not groomer or groomer_name == 'Unknown Groomer'):
+                                    details_needed = True
                                 new_appt = Appointment(
                                     appointment_datetime=start,
                                     status=status,
@@ -216,7 +220,8 @@ def calendar_view():
                                     notes=notes or summary,
                                     requested_services_text=services_text,
                                     dog_id=dog.id,
-                                    groomer_id=groomer_id
+                                    groomer_id=groomer_id,
+                                    details_needed=details_needed
                                 )
                                 db.session.add(new_appt)
                             except Exception as e:
@@ -241,6 +246,11 @@ def calendar_view():
                             updated = True
                         if appt.status != status:
                             appt.status = status
+                            updated = True
+                        # Update details_needed flag if info is missing
+                        new_details_needed = (not dog or dog_name == 'Unknown Dog' or not owner or owner_name == 'Unknown Owner' or not groomer or groomer_name == 'Unknown Groomer')
+                        if appt.details_needed != new_details_needed:
+                            appt.details_needed = new_details_needed
                             updated = True
                         if updated:
                             try:

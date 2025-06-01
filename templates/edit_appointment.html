@@ -61,6 +61,12 @@
             Originally scheduled for {{ appointment_data.get('appointment_date') }} @ {{ appointment_data.get('appointment_time') }} ({{ BUSINESS_TIMEZONE_NAME }}).
         </p>
 
+        {% if appointment_data.details_needed %}
+            <div class="flash-message flash-danger" style="margin-bottom: 1rem;">
+                <strong>Warning:</strong> This appointment is missing vital information (dog, owner, or groomer). Please update the details below.
+            </div>
+        {% endif %}
+
         {# Form submits data to the /appointment/<appointment_id>/edit route using POST #}
         {# Use appointment_data.id or the passed appointment_id for the action URL #}
         <form method="POST" action="{{ url_for('appointments.edit_appointment', appointment_id=appointment_data.id) }}" novalidate>

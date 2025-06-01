@@ -167,6 +167,7 @@ class Appointment(db.Model):
     reminder_1_sent_at = db.Column(db.DateTime, nullable=True)
     reminder_2_sent_at = db.Column(db.DateTime, nullable=True)
     store_id = db.Column(db.Integer, db.ForeignKey('store.id'), nullable=False) # Appointment belongs to a store
+    details_needed = db.Column(db.Boolean, default=False, nullable=False)  # Flag for missing vital info
 
     def __repr__(self):
         return f"<Appointment ID: {self.id}, Dog ID: {self.dog_id}, DateTime: {self.appointment_datetime}, Status: {self.status}, Store ID: {self.store_id}>"

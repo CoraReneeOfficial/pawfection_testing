@@ -113,6 +113,9 @@
                         {% set local_appt_time = appointment.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(BUSINESS_TIMEZONE) if BUSINESS_TIMEZONE else appointment.appointment_datetime %}
                         <span class="appointment-datetime">{{ local_appt_time.strftime('%a, %b %d, %Y @ %I:%M %p') }}</span>
                         <span class="status-badge status-{{ appointment.status }}">{{ appointment.status }}</span>
+                        {% if appointment.details_needed %}
+                            <span class="status-badge" style="background-color: #dc3545; margin-left: 0.5em;">Additional Details Needed</span>
+                        {% endif %}
                         <br>
                         <span class="appointment-dog-owner">
                             <strong>Dog:</strong> {{ appointment.dog.name }}

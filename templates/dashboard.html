@@ -105,6 +105,9 @@
                         {% if appt.groomer %}
                             <span class="appointment-groomer-info">Groomer: {{ appt.groomer.username }}</span>
                         {% endif %}
+                        {% if appt.details_needed %}
+                            <span class="status-badge" style="background-color: #dc3545; margin-left: 0.5em;">Additional Details Needed</span>
+                        {% endif %}
                     </div>
                     <span class="status-badge status-{{ appt.status }}">{{ appt.status }}</span>
                 </li>
