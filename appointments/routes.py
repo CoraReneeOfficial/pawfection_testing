@@ -526,12 +526,13 @@ def edit_appointment(appointment_id):
         appt.status = status
         appt.groomer_id = groomer_id
         
-        # Recalculate details_needed flag after edit
+        # Refetch dog and groomer after updating fields
+        updated_dog = Dog.query.get(appt.dog_id)
+        updated_groomer = User.query.get(appt.groomer_id) if appt.groomer_id else None
         appt.details_needed = (
-            not selected_dog or
-            not selected_dog.owner or
-            not groomer_id or
-            not User.query.get(groomer_id)
+            not updated_dog or
+            not updated_dog.owner or
+            (appt.groomer_id and not updated_groomer)
         )
         
         try:
