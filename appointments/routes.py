@@ -526,17 +526,23 @@ def edit_appointment(appointment_id):
         appt.status = status
         appt.groomer_id = groomer_id
         
-        # Refetch dog and groomer after updating fields
-        updated_dog = Dog.query.get(appt.dog_id)
-        updated_groomer = User.query.get(appt.groomer_id) if appt.groomer_id else None
-        appt.details_needed = (
-            not updated_dog or
-            not updated_dog.owner or
-            (appt.groomer_id and not updated_groomer)
-        )
-        
         try:
             db.session.commit()
+            # Refetch the appointment and related objects after commit
+            refreshed_appt = Appointment.query.options(
+                db.joinedload(Appointment.dog).joinedload(Dog.owner),
+                db.joinedload(Appointment.groomer)
+            ).get(appt.id)
+            updated_dog = refreshed_appt.dog
+            updated_groomer = refreshed_appt.groomer
+            details_needed_now = (
+                not updated_dog or
+                not updated_dog.owner or
+                (refreshed_appt.groomer_id and not updated_groomer)
+            )
+            if refreshed_appt.details_needed != details_needed_now:
+                refreshed_appt.details_needed = details_needed_now
+                db.session.commit()
             log_activity("Edited Local Appt", details=f"Appt ID: {appointment_id}, Status: {status}, Time: {local_dt_for_log.strftime('%Y-%m-%d %I:%M %p %Z') if local_dt_for_log else 'N/A'}")
             
             # --- Google Calendar Sync ---
