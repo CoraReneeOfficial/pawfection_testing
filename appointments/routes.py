@@ -616,10 +616,14 @@ def delete_appointment(appointment_id):
 def checkout():
     """
     Handles the checkout process for appointments.
-    (Placeholder - further implementation needed to filter data by store)
     """
-    # TODO: Ensure that any data displayed or processed here is also filtered by store_id
-    # For example, if displaying a list of appointments for checkout, filter them:
-    # appointments_for_checkout = Appointment.query.filter_by(store_id=session.get('store_id'), status='Scheduled').all()
-    # And ensure any updates/creations also respect the store_id
-    return render_template('checkout.html')
+    store_id = session.get('store_id')
+    scheduled_appointments = Appointment.query.options(
+        db.joinedload(Appointment.dog).joinedload(Dog.owner),
+        db.joinedload(Appointment.groomer)
+    ).filter(
+        Appointment.status == 'Scheduled',
+        Appointment.store_id == store_id
+    ).order_by(Appointment.appointment_datetime.asc()).all()
+    # TODO: Add logic for POST/calculate/complete as needed
+    return render_template('checkout.html', scheduled_appointments=scheduled_appointments)
