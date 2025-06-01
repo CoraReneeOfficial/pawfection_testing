@@ -536,9 +536,11 @@ def edit_appointment(appointment_id):
             updated_dog = refreshed_appt.dog
             updated_groomer = refreshed_appt.groomer
             details_needed_now = (
-                not updated_dog or
-                not updated_dog.owner or
-                (refreshed_appt.groomer_id and not updated_groomer)
+                not updated_dog or not updated_dog.name or not updated_dog.name.strip() or
+                not updated_dog.owner or not updated_dog.owner.name or not updated_dog.owner.name.strip() or
+                (refreshed_appt.groomer_id and (
+                    not updated_groomer or not updated_groomer.username or not updated_groomer.username.strip()
+                ))
             )
             if refreshed_appt.details_needed != details_needed_now:
                 refreshed_appt.details_needed = details_needed_now
