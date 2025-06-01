@@ -526,6 +526,14 @@ def edit_appointment(appointment_id):
         appt.status = status
         appt.groomer_id = groomer_id
         
+        # Recalculate details_needed flag after edit
+        appt.details_needed = (
+            not selected_dog or
+            not selected_dog.owner or
+            not groomer_id or
+            not User.query.get(groomer_id)
+        )
+        
         try:
             db.session.commit()
             log_activity("Edited Local Appt", details=f"Appt ID: {appointment_id}, Status: {status}, Time: {local_dt_for_log.strftime('%Y-%m-%d %I:%M %p %Z') if local_dt_for_log else 'N/A'}")
