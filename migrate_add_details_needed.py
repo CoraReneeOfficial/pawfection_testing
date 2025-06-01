@@ -22,13 +22,13 @@ def main():
     cur.execute("""
         SELECT column_name
         FROM information_schema.columns
-        WHERE table_name='Appointment' AND column_name='details_needed';
+        WHERE table_name='appointment' AND column_name='details_needed';
     """)
     if cur.fetchone():
         print("Column 'details_needed' already exists. No changes made.")
     else:
         cur.execute("""
-            ALTER TABLE "Appointment"
+            ALTER TABLE appointment
             ADD COLUMN details_needed BOOLEAN NOT NULL DEFAULT FALSE;
         """)
         print("Column 'details_needed' added successfully.")
