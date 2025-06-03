@@ -154,19 +154,12 @@ def calendar_view():
                         # Try to match by first name (case-insensitive), handle single names
                         owner_first = owner_name.split()[0].strip().lower() if owner_name.strip() else None
                         if owner_first:
-                            if ' ' in owner_name:
-                                # Get all owners for the store and compare first names in Python
-                                possible_owners = Owner.query.filter(Owner.store_id == store.id).all()
-                                for possible_owner in possible_owners:
-                                    db_first = possible_owner.name.split()[0].strip().lower()
-                                    if db_first == owner_first:
-                                        owner = possible_owner
-                                        break
-                            else:
-                                owner = Owner.query.filter(
-                                    Owner.store_id == store.id,
-                                    db.func.lower(Owner.name) == owner_first
-                                ).first()
+                            possible_owners = Owner.query.filter(Owner.store_id == store.id).all()
+                            for possible_owner in possible_owners:
+                                db_first = possible_owner.name.split()[0].strip().lower()
+                                if db_first == owner_first:
+                                    owner = possible_owner
+                                    break
                     if not owner:
                         # Check for existing owner with same phone number and store
                         existing_owner = Owner.query.filter_by(phone_number='N/A', store_id=store.id).first()
@@ -188,6 +181,16 @@ def calendar_view():
                                 db.session.flush()
                     # Try to find dog (first try full name, then fallback to first name only)
                     dog = Dog.query.filter_by(name=dog_name, owner_id=owner.id, store_id=store.id).first()
+                    if not dog:
+                        # Try to match by first name (case-insensitive), handle single names
+                        dog_first = dog_name.split()[0].strip().lower() if dog_name.strip() else None
+                        if dog_first:
+                            possible_dogs = Dog.query.filter(Dog.owner_id == owner.id, Dog.store_id == store.id).all()
+                            for possible_dog in possible_dogs:
+                                db_first = possible_dog.name.split()[0].strip().lower()
+                                if db_first == dog_first:
+                                    dog = possible_dog
+                                    break
                     if not dog:
                         # Check for existing dog with same name, owner, and store
                         existing_dog = Dog.query.filter_by(name=dog_name, owner_id=owner.id, store_id=store.id).first()
