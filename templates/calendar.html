@@ -138,6 +138,10 @@
                          <a href="{{ url_for('appointments.edit_appointment', appointment_id=appointment.id) }}" class="button">Edit</a>
                          <form method="POST" action="{{ url_for('appointments.delete_appointment', appointment_id=appointment.id) }}"
                                onsubmit="return confirm('Are you sure you want to delete this appointment for {{ appointment.dog.name }} on {{ local_appt_time.strftime('%b %d') }}?');">
+                            <select name="delete_action" style="margin-right: 0.5em;">
+                                <option value="cancel" selected>Mark as Cancelled (keep in history)</option>
+                                <option value="delete">Delete from app & Google Calendar</option>
+                            </select>
                             <button type="submit" class="button button-danger">Delete</button>
                         </form>
                      </div>

@@ -605,6 +605,7 @@ def delete_appointment(appointment_id):
     """
     Handles deleting an appointment.
     Ensures that only appointments from the current store can be deleted.
+    Provides a choice: delete from both app and Google Calendar, or just mark as Cancelled (and update Google Calendar event status).
     """
     store_id = session.get('store_id')  # Get store_id from session
     current_app.logger.info(f"[DEBUG] (delete_appointment) session['store_id']: {store_id}")
@@ -619,24 +620,81 @@ def delete_appointment(appointment_id):
     dog_name = appt.dog.name
     local_time = appt.appointment_datetime.replace(tzinfo=timezone.utc).astimezone(BUSINESS_TIMEZONE)
     time_str = local_time.strftime('%Y-%m-%d %I:%M %p %Z')
+
+    # Determine user choice: delete or cancel
+    action = request.form.get('delete_action', 'cancel')  # 'delete' or 'cancel', default to 'cancel'
+    google_event_id = appt.google_event_id
+    store = Store.query.get(store_id)
+    google_calendar_deleted = False
+    google_calendar_cancelled = False
     try:
-        print(f"[DEBUG] Attempting to delete appointment ID {appointment_id}")
-        db.session.delete(appt)
-        db.session.commit()
-        print(f"[DEBUG] Commit successful for delete appointment ID {appointment_id}")
-        # After commit, check if the appointment still exists
-        appt_check = Appointment.query.filter_by(id=appointment_id, store_id=store_id).first()
-        if appt_check:
-            current_app.logger.warning(f"[DEBUG] (delete_appointment) Appointment with ID {appointment_id} and store_id {store_id} STILL EXISTS after delete.")
+        if action == 'delete':
+            # Delete from Google Calendar if possible
+            if store and store.google_token_json and google_event_id:
+                try:
+                    token_data = json.loads(store.google_token_json)
+                    credentials = Credentials(
+                        token=token_data['token'],
+                        refresh_token=token_data.get('refresh_token'),
+                        token_uri=token_data['token_uri'],
+                        client_id=token_data['client_id'],
+                        client_secret=token_data['client_secret'],
+                        scopes=SCOPES
+                    )
+                    service = build('calendar', 'v3', credentials=credentials)
+                    calendar_id = store.google_calendar_id if store.google_calendar_id else 'primary'
+                    service.events().delete(calendarId=calendar_id, eventId=google_event_id).execute()
+                    google_calendar_deleted = True
+                except Exception as e:
+                    current_app.logger.error(f"Failed to delete Google Calendar event: {e}", exc_info=True)
+            print(f"[DEBUG] Attempting to delete appointment ID {appointment_id}")
+            db.session.delete(appt)
+            db.session.commit()
+            print(f"[DEBUG] Commit successful for delete appointment ID {appointment_id}")
+            # After commit, check if the appointment still exists
+            appt_check = Appointment.query.filter_by(id=appointment_id, store_id=store_id).first()
+            if appt_check:
+                current_app.logger.warning(f"[DEBUG] (delete_appointment) Appointment with ID {appointment_id} and store_id {store_id} STILL EXISTS after delete.")
+            else:
+                current_app.logger.info(f"[DEBUG] (delete_appointment) Appointment with ID {appointment_id} and store_id {store_id} successfully deleted.")
+            log_activity("Deleted Local Appt", details=f"Appt ID: {appointment_id}, Dog: {dog_name}")
+            msg = f"Appt for {dog_name} on {time_str} deleted!"
+            if google_calendar_deleted:
+                msg += " (Google Calendar event deleted)"
+            flash(msg, "success")
         else:
-            current_app.logger.info(f"[DEBUG] (delete_appointment) Appointment with ID {appointment_id} and store_id {store_id} successfully deleted.")
-        log_activity("Deleted Local Appt", details=f"Appt ID: {appointment_id}, Dog: {dog_name}")
-        flash(f"Appt for {dog_name} on {time_str} deleted!", "success")
+            # Mark as Cancelled in app and update Google Calendar event if possible
+            appt.status = 'Cancelled'
+            db.session.commit()
+            if store and store.google_token_json and google_event_id:
+                try:
+                    token_data = json.loads(store.google_token_json)
+                    credentials = Credentials(
+                        token=token_data['token'],
+                        refresh_token=token_data.get('refresh_token'),
+                        token_uri=token_data['token_uri'],
+                        client_id=token_data['client_id'],
+                        client_secret=token_data['client_secret'],
+                        scopes=SCOPES
+                    )
+                    service = build('calendar', 'v3', credentials=credentials)
+                    calendar_id = store.google_calendar_id if store.google_calendar_id else 'primary'
+                    event = service.events().get(calendarId=calendar_id, eventId=google_event_id).execute()
+                    event['status'] = 'cancelled'
+                    service.events().update(calendarId=calendar_id, eventId=google_event_id, body=event).execute()
+                    google_calendar_cancelled = True
+                except Exception as e:
+                    current_app.logger.error(f"Failed to cancel Google Calendar event: {e}", exc_info=True)
+            log_activity("Cancelled Local Appt", details=f"Appt ID: {appointment_id}, Dog: {dog_name}")
+            msg = f"Appt for {dog_name} on {time_str} marked as Cancelled."
+            if google_calendar_cancelled:
+                msg += " (Google Calendar event cancelled)"
+            flash(msg, "success")
     except Exception as e:
         db.session.rollback()
         print(f"[DEBUG] Exception during delete appointment ID {appointment_id}: {e}")
-        current_app.logger.error(f"Error deleting appt {appointment_id}: {e}", exc_info=True)
-        flash("Error deleting appointment.", "danger")
+        current_app.logger.error(f"Error deleting/cancelling appt {appointment_id}: {e}", exc_info=True)
+        flash("Error deleting/cancelling appointment.", "danger")
     return redirect(url_for('appointments.calendar_view'))
 
 @appointments_bp.route('/checkout', methods=['GET', 'POST'])
