@@ -461,7 +461,7 @@ def edit_appointment(appointment_id):
     Ensures that only appointments, dogs, and groomers from the current store are accessible.
     """
     store_id = session.get('store_id')  # Get store_id from session
-
+    current_app.logger.info(f"[DEBUG] (edit_appointment) session['store_id']: {store_id}")
     # Fetch the appointment, ensuring it belongs to the current store
     appt = Appointment.query.options(
         db.joinedload(Appointment.dog).joinedload(Dog.owner),
@@ -530,26 +530,12 @@ def edit_appointment(appointment_id):
             print(f"[DEBUG] Attempting to commit appointment edit for ID {appointment_id}")
             db.session.commit()
             print(f"[DEBUG] Commit successful for appointment edit ID {appointment_id}")
-            # Refetch the appointment and related objects after commit
-            refreshed_appt = Appointment.query.options(
-                db.joinedload(Appointment.dog).joinedload(Dog.owner),
-                db.joinedload(Appointment.groomer)
-            ).get(appt.id)
-            updated_dog = refreshed_appt.dog
-            updated_owner = updated_dog.owner if updated_dog else None
-            updated_groomer = refreshed_appt.groomer
-            details_needed_now = (
-                not updated_dog or not updated_dog.name or not updated_dog.name.strip() or
-                not updated_owner or not updated_owner.name or not updated_owner.name.strip() or
-                (refreshed_appt.groomer_id and (
-                    not updated_groomer or not updated_groomer.username or not updated_groomer.username.strip()
-                ))
-            )
-            if refreshed_appt.details_needed != details_needed_now:
-                refreshed_appt.details_needed = details_needed_now
-                print(f"[DEBUG] Updating details_needed for appointment ID {appointment_id} to {details_needed_now}")
-                db.session.commit()
-                print(f"[DEBUG] Commit successful for details_needed update on appointment ID {appointment_id}")
+            # After commit, check if the appointment exists and print details
+            appt_check = Appointment.query.filter_by(id=appointment_id, store_id=store_id).first()
+            if appt_check:
+                current_app.logger.info(f"[DEBUG] (edit_appointment) Appointment with ID {appointment_id} and store_id {store_id} exists after edit.")
+            else:
+                current_app.logger.warning(f"[DEBUG] (edit_appointment) Appointment with ID {appointment_id} and store_id {store_id} NOT FOUND after edit.")
             log_activity("Edited Local Appt", details=f"Appt ID: {appointment_id}, Status: {status}, Time: {local_dt_for_log.strftime('%Y-%m-%d %I:%M %p %Z') if local_dt_for_log else 'N/A'}")
             
             # --- Google Calendar Sync ---
@@ -621,7 +607,7 @@ def delete_appointment(appointment_id):
     Ensures that only appointments from the current store can be deleted.
     """
     store_id = session.get('store_id')  # Get store_id from session
-
+    current_app.logger.info(f"[DEBUG] (delete_appointment) session['store_id']: {store_id}")
     # Fetch the appointment, ensuring it belongs to the current store
     appt = Appointment.query.options(db.joinedload(Appointment.dog)).filter_by(
         id=appointment_id,
@@ -638,6 +624,12 @@ def delete_appointment(appointment_id):
         db.session.delete(appt)
         db.session.commit()
         print(f"[DEBUG] Commit successful for delete appointment ID {appointment_id}")
+        # After commit, check if the appointment still exists
+        appt_check = Appointment.query.filter_by(id=appointment_id, store_id=store_id).first()
+        if appt_check:
+            current_app.logger.warning(f"[DEBUG] (delete_appointment) Appointment with ID {appointment_id} and store_id {store_id} STILL EXISTS after delete.")
+        else:
+            current_app.logger.info(f"[DEBUG] (delete_appointment) Appointment with ID {appointment_id} and store_id {store_id} successfully deleted.")
         log_activity("Deleted Local Appt", details=f"Appt ID: {appointment_id}, Dog: {dog_name}")
         flash(f"Appt for {dog_name} on {time_str} deleted!", "success")
     except Exception as e:

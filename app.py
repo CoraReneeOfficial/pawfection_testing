@@ -58,6 +58,15 @@ def create_app():
     # Log the database URI being used
     app.logger.info(f"SQLAlchemy Database URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
 
+    # Check if 'details_needed' column exists in Appointment table
+    with app.app_context():
+        inspector = db.inspect(db.engine)
+        columns = [col['name'] for col in inspector.get_columns('appointment')]
+        if 'details_needed' in columns:
+            app.logger.info("[DEBUG] 'details_needed' column exists in 'appointment' table.")
+        else:
+            app.logger.error("[DEBUG] 'details_needed' column is MISSING from 'appointment' table!")
+
     # Initialize Flask-Migrate for database migrations
     from flask_migrate import Migrate
     migrate = Migrate(app, db)
