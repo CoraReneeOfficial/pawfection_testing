@@ -527,9 +527,9 @@ def edit_appointment(appointment_id):
         appt.groomer_id = groomer_id
         
         try:
-            current_app.logger.info(f"[DEBUG] Attempting to commit appointment edit for ID {appointment_id}")
+            print(f"[DEBUG] Attempting to commit appointment edit for ID {appointment_id}")
             db.session.commit()
-            current_app.logger.info(f"[DEBUG] Commit successful for appointment edit ID {appointment_id}")
+            print(f"[DEBUG] Commit successful for appointment edit ID {appointment_id}")
             # Refetch the appointment and related objects after commit
             refreshed_appt = Appointment.query.options(
                 db.joinedload(Appointment.dog).joinedload(Dog.owner),
@@ -547,9 +547,9 @@ def edit_appointment(appointment_id):
             )
             if refreshed_appt.details_needed != details_needed_now:
                 refreshed_appt.details_needed = details_needed_now
-                current_app.logger.info(f"[DEBUG] Updating details_needed for appointment ID {appointment_id} to {details_needed_now}")
+                print(f"[DEBUG] Updating details_needed for appointment ID {appointment_id} to {details_needed_now}")
                 db.session.commit()
-                current_app.logger.info(f"[DEBUG] Commit successful for details_needed update on appointment ID {appointment_id}")
+                print(f"[DEBUG] Commit successful for details_needed update on appointment ID {appointment_id}")
             log_activity("Edited Local Appt", details=f"Appt ID: {appointment_id}, Status: {status}, Time: {local_dt_for_log.strftime('%Y-%m-%d %I:%M %p %Z') if local_dt_for_log else 'N/A'}")
             
             # --- Google Calendar Sync ---
@@ -634,15 +634,15 @@ def delete_appointment(appointment_id):
     local_time = appt.appointment_datetime.replace(tzinfo=timezone.utc).astimezone(BUSINESS_TIMEZONE)
     time_str = local_time.strftime('%Y-%m-%d %I:%M %p %Z')
     try:
-        current_app.logger.info(f"[DEBUG] Attempting to delete appointment ID {appointment_id}")
+        print(f"[DEBUG] Attempting to delete appointment ID {appointment_id}")
         db.session.delete(appt)
         db.session.commit()
-        current_app.logger.info(f"[DEBUG] Commit successful for delete appointment ID {appointment_id}")
+        print(f"[DEBUG] Commit successful for delete appointment ID {appointment_id}")
         log_activity("Deleted Local Appt", details=f"Appt ID: {appointment_id}, Dog: {dog_name}")
         flash(f"Appt for {dog_name} on {time_str} deleted!", "success")
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"[DEBUG] Exception during delete appointment ID {appointment_id}: {e}")
+        print(f"[DEBUG] Exception during delete appointment ID {appointment_id}: {e}")
         current_app.logger.error(f"Error deleting appt {appointment_id}: {e}", exc_info=True)
         flash("Error deleting appointment.", "danger")
     return redirect(url_for('appointments.calendar_view'))
