@@ -654,3 +654,16 @@ def checkout():
     ).order_by(Appointment.appointment_datetime.asc()).all()
     # TODO: Add logic for POST/calculate/complete as needed
     return render_template('checkout.html', scheduled_appointments=scheduled_appointments)
+
+@appointments_bp.route('/appointments/debug_list')
+def debug_list_appointments():
+    """
+    Debug endpoint: Returns a plain text list of all appointments in the database.
+    """
+    appts = Appointment.query.order_by(Appointment.appointment_datetime.asc()).all()
+    lines = []
+    for appt in appts:
+        dog_name = appt.dog.name if appt.dog else 'None'
+        owner_name = appt.dog.owner.name if appt.dog and appt.dog.owner else 'None'
+        lines.append(f"ID: {appt.id}, Dog: {dog_name}, Owner: {owner_name}, Status: {appt.status}, Details Needed: {appt.details_needed}, Store ID: {appt.store_id}, DateTime: {appt.appointment_datetime}")
+    return '\n'.join(lines), 200, {'Content-Type': 'text/plain'}
