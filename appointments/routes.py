@@ -121,24 +121,19 @@ def calendar_view():
                     start = event['start'].get('dateTime') or event['start'].get('date')
                     if not start:
                         continue
-                    summary = event.get('summary', '')
                     description = event.get('description', '')
-                    # New parsing: (Dog's Name) Appointment in title, rest in description
+                    # Do NOT use the summary/title for any appointment info
+                    # Parse description for all fields: dog, owner, groomer, services, notes, status
                     dog_name = 'Unknown Dog'
                     owner_name = 'Unknown Owner'
                     groomer_name = 'Unknown Groomer'
                     services_text = None
                     notes = None
                     status = 'Scheduled'
-                    # Parse summary: (Dog's Name) Appointment
-                    summary_match = re.match(r"\\((.+?)\\) Appointment", summary)
-                    if summary_match:
-                        dog_name = summary_match.group(1).strip()
-                    # Parse description for owner, groomer, services, notes
-                    # Example:
-                    # Owner: John Doe\nGroomer: Jane Smith\nServices: Bath, Nail Trim\nNotes: Please be gentle\nStatus: Scheduled
                     for line in description.splitlines():
-                        if line.strip().lower().startswith('owner:'):
+                        if line.strip().lower().startswith('dog:'):
+                            dog_name = line.split(':', 1)[1].strip()
+                        elif line.strip().lower().startswith('owner:'):
                             owner_name = line.split(':', 1)[1].strip()
                         elif line.strip().lower().startswith('groomer:'):
                             groomer_name = line.split(':', 1)[1].strip()
@@ -151,7 +146,6 @@ def calendar_view():
                     # Try to find owner (first try full name, then fallback to first name only)
                     owner = Owner.query.filter_by(name=owner_name, store_id=store.id).first()
                     if not owner:
-                        # Try to match by first name (case-insensitive), handle single names
                         owner_first = owner_name.split()[0].strip().lower() if owner_name.strip() else None
                         if owner_first:
                             possible_owners = Owner.query.filter(Owner.store_id == store.id).all()
@@ -160,46 +154,21 @@ def calendar_view():
                                 if db_first == owner_first:
                                     owner = possible_owner
                                     break
-                    if not owner:
-                        # Check for existing owner with same phone number and store
-                        existing_owner = Owner.query.filter_by(phone_number='N/A', store_id=store.id).first()
-                        if existing_owner:
-                            owner = existing_owner
-                        else:
-                            # Check for existing owner with same email and store
-                            if owner_name != 'Unknown Owner':
-                                existing_owner_email = Owner.query.filter_by(email=description, store_id=store.id).first() if description else None
-                                if existing_owner_email:
-                                    owner = existing_owner_email
-                                else:
-                                    owner = Owner(name=owner_name, phone_number='N/A', email=description or None, store_id=store.id)
-                                    db.session.add(owner)
-                                    db.session.flush()
-                            else:
-                                owner = Owner(name=owner_name, phone_number='N/A', store_id=store.id)
-                                db.session.add(owner)
-                                db.session.flush()
+                    # Do NOT create a new owner if not found
                     # Try to find dog (first try full name, then fallback to first name only)
-                    dog = Dog.query.filter_by(name=dog_name, owner_id=owner.id, store_id=store.id).first()
-                    if not dog:
-                        # Try to match by first name (case-insensitive), handle single names
-                        dog_first = dog_name.split()[0].strip().lower() if dog_name.strip() else None
-                        if dog_first:
-                            possible_dogs = Dog.query.filter(Dog.owner_id == owner.id, Dog.store_id == store.id).all()
-                            for possible_dog in possible_dogs:
-                                db_first = possible_dog.name.split()[0].strip().lower()
-                                if db_first == dog_first:
-                                    dog = possible_dog
-                                    break
-                    if not dog:
-                        # Check for existing dog with same name, owner, and store
-                        existing_dog = Dog.query.filter_by(name=dog_name, owner_id=owner.id, store_id=store.id).first()
-                        if existing_dog:
-                            dog = existing_dog
-                        else:
-                            dog = Dog(name=dog_name, owner_id=owner.id, store_id=store.id)
-                            db.session.add(dog)
-                            db.session.flush()
+                    dog = None
+                    if owner:
+                        dog = Dog.query.filter_by(name=dog_name, owner_id=owner.id, store_id=store.id).first()
+                        if not dog:
+                            dog_first = dog_name.split()[0].strip().lower() if dog_name.strip() else None
+                            if dog_first:
+                                possible_dogs = Dog.query.filter(Dog.owner_id == owner.id, Dog.store_id == store.id).all()
+                                for possible_dog in possible_dogs:
+                                    db_first = possible_dog.name.split()[0].strip().lower()
+                                    if db_first == dog_first:
+                                        dog = possible_dog
+                                        break
+                    # Do NOT create a new dog if not found
                     # Try to find groomer
                     groomer = None
                     if groomer_name != 'Unknown Groomer':
@@ -209,14 +178,16 @@ def calendar_view():
                     appt = Appointment.query.filter_by(google_event_id=google_event_id, store_id=store.id).first()
                     if not appt:
                         # Double booking safeguard: check for same dog, datetime, and store
-                        double_booked = Appointment.query.filter_by(dog_id=dog.id, appointment_datetime=start, store_id=store.id).first()
+                        double_booked = None
+                        if dog:
+                            double_booked = Appointment.query.filter_by(dog_id=dog.id, appointment_datetime=start, store_id=store.id).first()
                         if double_booked:
                             appt = double_booked
                         else:
                             try:
                                 # --- Flag for missing details ---
                                 details_needed = False
-                                if (not dog or dog_name == 'Unknown Dog' or not owner or owner_name == 'Unknown Owner' or not groomer or groomer_name == 'Unknown Groomer'):
+                                if (not dog or not owner or dog_name == 'Unknown Dog' or owner_name == 'Unknown Owner' or not groomer or groomer_name == 'Unknown Groomer'):
                                     details_needed = True
                                 new_appt = Appointment(
                                     appointment_datetime=start,
@@ -224,9 +195,9 @@ def calendar_view():
                                     created_by_user_id=g.user.id if hasattr(g, 'user') and g.user else None,
                                     store_id=store.id,
                                     google_event_id=google_event_id,
-                                    notes=notes or summary,
+                                    notes=notes or description,
                                     requested_services_text=services_text,
-                                    dog_id=dog.id,
+                                    dog_id=dog.id if dog else None,
                                     groomer_id=groomer_id,
                                     details_needed=details_needed
                                 )
@@ -239,14 +210,14 @@ def calendar_view():
                         if str(appt.appointment_datetime) != str(start):
                             appt.appointment_datetime = start
                             updated = True
-                        if appt.notes != (notes or summary):
-                            appt.notes = notes or summary
+                        if appt.notes != (notes or description):
+                            appt.notes = notes or description
                             updated = True
                         if appt.requested_services_text != services_text:
                             appt.requested_services_text = services_text
                             updated = True
-                        if appt.dog_id != dog.id:
-                            appt.dog_id = dog.id
+                        if appt.dog_id != (dog.id if dog else None):
+                            appt.dog_id = dog.id if dog else None
                             updated = True
                         if appt.groomer_id != groomer_id:
                             appt.groomer_id = groomer_id
@@ -255,7 +226,7 @@ def calendar_view():
                             appt.status = status
                             updated = True
                         # Update details_needed flag if info is missing
-                        new_details_needed = (not dog or dog_name == 'Unknown Dog' or not owner or owner_name == 'Unknown Owner' or not groomer or groomer_name == 'Unknown Groomer')
+                        new_details_needed = (not dog or not owner or dog_name == 'Unknown Dog' or owner_name == 'Unknown Owner' or not groomer or groomer_name == 'Unknown Groomer')
                         if appt.details_needed != new_details_needed:
                             appt.details_needed = new_details_needed
                             updated = True
