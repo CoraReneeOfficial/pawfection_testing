@@ -55,6 +55,9 @@ def create_app():
     # Initialize Flask-SQLAlchemy with the app.
     db.init_app(app)
 
+    # Log the database URI being used
+    app.logger.info(f"SQLAlchemy Database URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
+
     # Initialize Flask-Migrate for database migrations
     from flask_migrate import Migrate
     migrate = Migrate(app, db)
