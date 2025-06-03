@@ -123,22 +123,26 @@ def calendar_view():
                         continue
                     summary = event.get('summary', '')
                     description = event.get('description', '')
-                    # Parse summary: DogName (OwnerName) [Groomer: GroomerName] Appointment
+                    # New parsing: (Dog's Name) Appointment in title, rest in description
                     dog_name = 'Unknown Dog'
                     owner_name = 'Unknown Owner'
                     groomer_name = 'Unknown Groomer'
-                    summary_match = re.match(r"(.+?) \((.+?)\)(?: \[Groomer: (.+?)\])? Appointment", summary)
-                    if summary_match:
-                        dog_name = summary_match.group(1).strip()
-                        owner_name = summary_match.group(2).strip()
-                        if summary_match.group(3):
-                            groomer_name = summary_match.group(3).strip()
-                    # Parse description for services, notes, status
                     services_text = None
                     notes = None
                     status = 'Scheduled'
+                    # Parse summary: (Dog's Name) Appointment
+                    summary_match = re.match(r"\\((.+?)\\) Appointment", summary)
+                    if summary_match:
+                        dog_name = summary_match.group(1).strip()
+                    # Parse description for owner, groomer, services, notes
+                    # Example:
+                    # Owner: John Doe\nGroomer: Jane Smith\nServices: Bath, Nail Trim\nNotes: Please be gentle\nStatus: Scheduled
                     for line in description.splitlines():
-                        if line.strip().lower().startswith('services:'):
+                        if line.strip().lower().startswith('owner:'):
+                            owner_name = line.split(':', 1)[1].strip()
+                        elif line.strip().lower().startswith('groomer:'):
+                            groomer_name = line.split(':', 1)[1].strip()
+                        elif line.strip().lower().startswith('services:'):
                             services_text = line.split(':', 1)[1].strip()
                         elif line.strip().lower().startswith('notes:'):
                             notes = line.split(':', 1)[1].strip()
@@ -427,8 +431,12 @@ def add_appointment():
                     )
                     service = build('calendar', 'v3', credentials=credentials)
                     event = {
-                        'summary': f"{selected_dog.name} ({selected_dog.owner.name}) Appointment",
-                        'description': notes or '',
+                        'summary': f"({selected_dog.name}) Appointment",
+                        'description': f"Owner: {selected_dog.owner.name if selected_dog and selected_dog.owner else ''}\n" +
+                                       f"Groomer: {selected_groomer.username if groomer_id and 'selected_groomer' in locals() and selected_groomer else ''}\n" +
+                                       f"Services: {services_text if services_text else ''}\n" +
+                                       f"Notes: {notes if notes else ''}\n" +
+                                       f"Status: {status if 'status' in locals() else 'Scheduled'}",
                         'start': {'dateTime': utc_dt.isoformat(), 'timeZone': 'UTC'},
                         'end': {'dateTime': (utc_dt + datetime.timedelta(hours=1)).isoformat(), 'timeZone': 'UTC'},
                     }
@@ -553,8 +561,12 @@ def edit_appointment(appointment_id):
                     )
                     service = build('calendar', 'v3', credentials=credentials)
                     event = {
-                        'summary': f"{selected_dog.name} ({selected_dog.owner.name}) Appointment",
-                        'description': notes or '',
+                        'summary': f"({selected_dog.name}) Appointment",
+                        'description': f"Owner: {selected_dog.owner.name if selected_dog and selected_dog.owner else ''}\n" +
+                                       f"Groomer: {selected_groomer.username if groomer_id and 'selected_groomer' in locals() and selected_groomer else ''}\n" +
+                                       f"Services: {services_text if services_text else ''}\n" +
+                                       f"Notes: {notes if notes else ''}\n" +
+                                       f"Status: {status if 'status' in locals() else 'Scheduled'}",
                         'start': {'dateTime': utc_dt.isoformat(), 'timeZone': 'UTC'},
                         'end': {'dateTime': (utc_dt + datetime.timedelta(hours=1)).isoformat(), 'timeZone': 'UTC'},
                     }
