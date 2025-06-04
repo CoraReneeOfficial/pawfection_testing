@@ -323,6 +323,11 @@ def create_app():
     # Apply ProxyFix middleware
     app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
+    @app.shell_context_processor
+    def make_shell_context():
+        from models import User, Store  # Add other models as needed
+        return {'db': db, 'User': User, 'Store': Store}
+
     return app
 
 if __name__ == '__main__':

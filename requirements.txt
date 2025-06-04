@@ -8,6 +8,7 @@ google-auth-oauthlib
 gunicorn
 python-dateutil
 psycopg2-binary
+pytz
 
 # Optional, but often good to specify if you rely on specific versions:
 # Werkzeug
