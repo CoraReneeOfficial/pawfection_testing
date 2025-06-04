@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g, jsonify, current_app, session
-from models import Appointment, Dog, Owner, User, ActivityLog, Store
+from models import Appointment, Dog, Owner, User, ActivityLog, Store, Service
 from extensions import db
 from sqlalchemy import or_
 from functools import wraps
@@ -696,8 +696,19 @@ def checkout():
         Appointment.status == 'Scheduled',
         Appointment.store_id == store_id
     ).order_by(Appointment.appointment_datetime.asc()).all()
+
+    # Fetch all services and fees for the current store
+    all_items = Service.query.filter_by(store_id=store_id).order_by(Service.item_type, Service.name).all()
+    all_services = [item for item in all_items if item.item_type == 'service']
+    all_fees = [item for item in all_items if item.item_type == 'fee']
+
     # TODO: Add logic for POST/calculate/complete as needed
-    return render_template('checkout.html', scheduled_appointments=scheduled_appointments)
+    return render_template(
+        'checkout.html',
+        scheduled_appointments=scheduled_appointments,
+        all_services=all_services,
+        all_fees=all_fees
+    )
 
 @appointments_bp.route('/appointments/debug_list')
 def debug_list_appointments():
