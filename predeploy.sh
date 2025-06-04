@@ -6,3 +6,6 @@ pip install -r requirements.txt
 
 # Run automatic migration script
 python auto_migrate.py
+
+# Always upgrade the database to ensure tables exist
+python -m flask db upgrade

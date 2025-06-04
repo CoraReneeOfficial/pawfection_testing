@@ -61,11 +61,14 @@ def create_app():
     # Check if 'details_needed' column exists in Appointment table
     with app.app_context():
         inspector = db.inspect(db.engine)
-        columns = [col['name'] for col in inspector.get_columns('appointment')]
-        if 'details_needed' in columns:
-            app.logger.info("[DEBUG] 'details_needed' column exists in 'appointment' table.")
-        else:
-            app.logger.error("[DEBUG] 'details_needed' column is MISSING from 'appointment' table!")
+        try:
+            columns = [col['name'] for col in inspector.get_columns('appointment')]
+            if 'details_needed' in columns:
+                app.logger.info("[DEBUG] 'details_needed' column exists in 'appointment' table.")
+            else:
+                app.logger.error("[DEBUG] 'details_needed' column is MISSING from 'appointment' table!")
+        except Exception as e:
+            app.logger.warning(f"[DEBUG] Could not inspect 'appointment' table: {e}")
 
     # Initialize Flask-Migrate for database migrations
     from flask_migrate import Migrate
