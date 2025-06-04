@@ -702,12 +702,75 @@ def checkout():
     all_services = [item for item in all_items if item.item_type == 'service']
     all_fees = [item for item in all_items if item.item_type == 'fee']
 
-    # TODO: Add logic for POST/calculate/complete as needed
+    # Defaults for template context
+    selected_appointment_id = None
+    selected_item_ids = []
+    calculated_data = None
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+        selected_appointment_id = request.form.get('appointment_id', type=int)
+        # Get selected service and fee IDs as integers
+        service_ids = request.form.getlist('service_ids')
+        fee_ids = request.form.getlist('fee_ids')
+        selected_item_ids = [int(i) for i in service_ids + fee_ids if i.isdigit()]
+
+        # Find the selected appointment
+        appointment = None
+        for appt in scheduled_appointments:
+            if appt.id == selected_appointment_id:
+                appointment = appt
+                break
+
+        # Gather selected items
+        billed_items = []
+        subtotal = 0.0
+        for s in all_services:
+            if s.id in selected_item_ids:
+                billed_items.append(s)
+                subtotal += s.base_price
+        for f in all_fees:
+            if f.id in selected_item_ids:
+                billed_items.append(f)
+                subtotal += f.base_price
+        total = subtotal  # Add tax/discount logic here if needed
+
+        if action == 'calculate_total':
+            if appointment:
+                calculated_data = {
+                    'appointment': appointment,
+                    'dog': appointment.dog,
+                    'owner': appointment.dog.owner,
+                    'billed_items': billed_items,
+                    'subtotal': subtotal,
+                    'total': total
+                }
+        elif action == 'complete_checkout':
+            if appointment:
+                # Mark appointment as completed and save total
+                appointment.status = 'Completed'
+                appointment.checkout_total_amount = total
+                db.session.commit()
+                calculated_data = {
+                    'appointment': appointment,
+                    'dog': appointment.dog,
+                    'owner': appointment.dog.owner,
+                    'billed_items': billed_items,
+                    'subtotal': subtotal,
+                    'total': total
+                }
+                flash('Checkout completed and appointment marked as completed.', 'success')
+                # Optionally, redirect to a confirmation or dashboard page
+                return redirect(url_for('appointments.checkout'))
+
     return render_template(
         'checkout.html',
         scheduled_appointments=scheduled_appointments,
         all_services=all_services,
-        all_fees=all_fees
+        all_fees=all_fees,
+        selected_appointment_id=selected_appointment_id,
+        selected_item_ids=selected_item_ids,
+        calculated_data=calculated_data
     )
 
 @appointments_bp.route('/appointments/debug_list')
