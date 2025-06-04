@@ -3,28 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Appointment Confirmation</title>
+    <title>Your Pawfection Grooming Appointment is Confirmed!</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
-        .container { max-width: 600px; margin: 20px auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        .header { background-color: #4A90E2; color: white; padding: 10px 20px; text-align: center; border-top-left-radius: 8px; border-top-right-radius: 8px; }
-        .header h1 { margin: 0; font-size: 24px; }
-        .content { padding: 20px; }
-        .content p { margin-bottom: 10px; }
-        .content strong { color: #4A90E2; }
-        .footer { text-align: center; font-size: 0.9em; color: #777; margin-top: 20px; padding-top: 10px; border-top: 1px solid #eee; }
-        .appointment-details { background-color: #f9f9f9; border: 1px solid #eee; padding: 15px; border-radius: 5px; margin-top: 15px; }
-        .appointment-details p { margin: 5px 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f0f4f8; /* Light blue-gray background */
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 0; /* Remove padding here, add to inner divs */
+            background-color: #fff;
+            border-radius: 12px; /* More rounded corners */
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08); /* Softer, larger shadow */
+            overflow: hidden; /* Ensures rounded corners apply to children */
+        }
+        .header {
+            background-color: #6B46C1; /* A professional purple */
+            color: white;
+            padding: 20px 30px;
+            text-align: center;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            background-image: linear-gradient(to right, #6B46C1, #805AD5); /* Subtle gradient */
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px; /* Slightly larger heading */
+            font-weight: 700;
+        }
+        .content {
+            padding: 30px;
+        }
+        .content p {
+            margin-bottom: 15px; /* More spacing between paragraphs */
+            font-size: 16px;
+            color: #4a5568; /* Darker gray for text */
+        }
+        .content strong {
+            color: #6B46C1; /* Highlight important text with purple */
+            font-weight: 600;
+        }
+        .appointment-details {
+            background-color: #f7fafc; /* Very light gray for details block */
+            border: 1px solid #e2e8f0; /* Light border */
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 25px;
+            margin-bottom: 25px;
+        }
+        .appointment-details p {
+            margin: 8px 0; /* More spacing within details */
+            font-size: 15px;
+        }
+        .footer {
+            text-align: center;
+            font-size: 0.85em;
+            color: #718096; /* Medium gray for footer text */
+            margin-top: 20px;
+            padding: 20px 30px;
+            border-top: 1px solid #e2e8f0;
+            background-color: #edf2f7; /* Light gray for footer background */
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+        }
+        .button {
+            display: inline-block;
+            background-color: #6B46C1;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 20px;
+            transition: background-color 0.3s ease;
+        }
+        .button:hover {
+            background-color: #805AD5;
+        }
+        .automated-message-note {
+            font-size: 0.9em;
+            color: #718096;
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px 0;
+            border-bottom: 1px dashed #e2e8f0;
+            border-top: 1px dashed #e2e8f0;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Appointment Confirmed!</h1>
+            <h1>Your Pawfection Grooming Appointment is Confirmed!</h1>
         </div>
         <div class="content">
+            <p class="automated-message-note">
+                This is an automated message sent from the Pawfection Grooming Solutions scheduling app.
+            </p>
+
             <p>Hello {{ owner_name or 'Valued Client' }},</p>
-            <p>This email confirms your grooming appointment for <strong>{{ dog_name }}</strong> with {{ business_name or 'us' }}.</p>
+            <p>We're excited to confirm your upcoming grooming appointment for <strong>{{ dog_name }}</strong> with Pawfection Grooming Solutions!</p>
             
             <div class="appointment-details">
                 <p><strong>Date:</strong> {{ appointment_datetime_local.strftime('%A, %B %d, %Y') if appointment_datetime_local else 'N/A' }}</p>
@@ -33,15 +116,23 @@
                 {% if groomer_name %}
                     <p><strong>Assigned Groomer:</strong> {{ groomer_name }}</p>
                 {% endif %}
+                <p><strong>Location:</strong> 123 Pet Paradise Lane, Animal City, PA 12345</p> {# Example location #}
+                <p><strong>Contact:</strong> (555) 123-4567 | info@pawfectiongrooming.com</p> {# Example contact #}
             </div>
 
-            <p>If you have any questions or need to reschedule, please contact us at your earliest convenience.</p>
-            <p>We look forward to seeing you and {{ dog_name }}!</p>
-            <p>Sincerely,<br>The Team at {{ business_name or 'Your Grooming Salon' }}</p>
+            <p>Please arrive 5-10 minutes before your scheduled time to ensure a smooth check-in process. If you need to make any changes to your appointment, please use the link below or contact us directly.</p>
+
+            <p style="text-align: center;">
+                <a href="{{ reschedule_link or '#' }}" class="button">Manage Your Appointment</a>
+            </p>
+
+            <p>We can't wait to pamper {{ dog_name }}!</p>
+            <p>Sincerely,<br>The Team at Pawfection Grooming Solutions</p>
         </div>
         <div class="footer">
-            <p>&copy; {{ now().year }} {{ business_name or 'Your Grooming Salon' }}. All rights reserved.</p>
-            {# Add your salon's address or contact info here if desired #}
+            <p>&copy; {{ now().year }} Pawfection Grooming Solutions. All rights reserved.</p>
+            <p>123 Pet Paradise Lane, Animal City, PA 12345</p>
+            <p>(555) 123-4567 | info@pawfectiongrooming.com</p>
         </div>
     </div>
 </body>

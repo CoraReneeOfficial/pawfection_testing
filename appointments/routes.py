@@ -12,6 +12,9 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 import json
 import re
+import os
+import base64
+from email.mime.text import MIMEText
 
 appointments_bp = Blueprint('appointments', __name__)
 
@@ -321,6 +324,60 @@ def api_appointments():
         })
     return jsonify(events)
 
+def send_appointment_confirmation_email(store, owner, dog, appointment, groomer=None, services_text=None):
+    """
+    Sends an appointment confirmation email to the owner using the store's Gmail API credentials.
+    """
+    if not owner.email:
+        current_app.logger.warning(f"No email for owner {owner.name}, skipping confirmation email.")
+        return False
+    if not store or not store.google_token_json:
+        current_app.logger.warning(f"No Google token for store {getattr(store, 'id', None)}, cannot send email.")
+        return False
+    try:
+        # Load Gmail credentials
+        token_data = json.loads(store.google_token_json)
+        credentials = Credentials(
+            token=token_data['token'],
+            refresh_token=token_data.get('refresh_token'),
+            token_uri=token_data['token_uri'],
+            client_id=token_data['client_id'],
+            client_secret=token_data['client_secret'],
+            scopes=SCOPES
+        )
+        service = build('gmail', 'v1', credentials=credentials)
+
+        # Prepare email context
+        business_name = store.name if hasattr(store, 'name') and store.name else 'Pawfection Grooming'
+        BUSINESS_TIMEZONE_NAME = 'America/New_York'
+        BUSINESS_TIMEZONE = tz.gettz(BUSINESS_TIMEZONE_NAME)
+        appointment_datetime_local = appointment.appointment_datetime.replace(tzinfo=timezone.utc).astimezone(BUSINESS_TIMEZONE)
+        groomer_name = groomer.username if groomer else None
+        # Render the email HTML using the template
+        html_body = render_template('email/appointment_confirmation.html',
+            owner_name=owner.name,
+            dog_name=dog.name,
+            business_name=business_name,
+            appointment_datetime_local=appointment_datetime_local,
+            services_text=services_text,
+            groomer_name=groomer_name,
+            BUSINESS_TIMEZONE_NAME=BUSINESS_TIMEZONE_NAME,
+            now=datetime.datetime.now
+        )
+        subject = f"Appointment Confirmation for {dog.name} at {business_name}"
+        message = MIMEText(html_body, 'html')
+        message['to'] = owner.email
+        message['from'] = token_data.get('sender_email', owner.email) if token_data.get('sender_email') else owner.email
+        message['subject'] = subject
+        raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+        send_message = {'raw': raw}
+        service.users().messages().send(userId='me', body=send_message).execute()
+        current_app.logger.info(f"Sent appointment confirmation email to {owner.email}")
+        return True
+    except Exception as e:
+        current_app.logger.error(f"Failed to send appointment confirmation email: {e}", exc_info=True)
+        return False
+
 @appointments_bp.route('/add_appointment', methods=['GET', 'POST'])
 def add_appointment():
     """
@@ -426,6 +483,20 @@ def add_appointment():
             else:
                 flash("Appointment saved, but Google Calendar is not connected for this store.", "info")
             
+            # --- Send Confirmation Email if enabled ---
+            # Load notification settings
+            notification_settings_path = os.path.join(current_app.root_path, '..', 'notification_settings.json')
+            try:
+                with open(notification_settings_path, 'r') as f:
+                    notification_settings = json.load(f)
+            except Exception as e:
+                notification_settings = {}
+                current_app.logger.error(f"Could not load notification settings: {e}")
+            if notification_settings.get('send_confirmation_email', False):
+                owner = selected_dog.owner
+                groomer = selected_groomer if groomer_id else None
+                send_appointment_confirmation_email(store, owner, selected_dog, new_appt, groomer=groomer, services_text=services_text)
+
             return redirect(url_for('appointments.calendar_view'))
         except Exception as e:
             db.session.rollback()
