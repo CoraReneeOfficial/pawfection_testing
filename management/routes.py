@@ -15,6 +15,7 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 import json
 from google.oauth2.credentials import Credentials as GoogleCredentials
+import pytz
 
 management_bp = Blueprint('management', __name__)
 
@@ -856,3 +857,31 @@ def google_oauth2callback():
         flash("No store context. Cannot save Google token.", "danger")
     current_app.logger.info(f"[Google OAuth] oauth2callback complete for user: {getattr(g.user, 'id', None)} store: {getattr(g.user, 'store_id', None)}")
     return redirect(url_for('management.management'))
+
+@management_bp.route('/manage/store/edit', methods=['GET', 'POST'])
+@admin_required
+def edit_store():
+    """
+    Allows admin to edit store information, including name, address, contact info, and timezone.
+    """
+    store = Store.query.filter_by(id=g.user.store_id).first()
+    if not store:
+        abort(404)
+
+    # List of common timezones (can be expanded)
+    timezones = pytz.all_timezones
+
+    if request.method == 'POST':
+        store.name = request.form.get('name', store.name)
+        store.address = request.form.get('address', store.address)
+        store.phone = request.form.get('phone', store.phone)
+        store.email = request.form.get('email', store.email)
+        store.timezone = request.form.get('timezone', store.timezone)
+        try:
+            db.session.commit()
+            flash('Store information updated successfully.', 'success')
+            return redirect(url_for('management.edit_store'))
+        except Exception as e:
+            db.session.rollback()
+            flash('Failed to update store information.', 'danger')
+    return render_template('edit_store.html', store=store, timezones=timezones)
