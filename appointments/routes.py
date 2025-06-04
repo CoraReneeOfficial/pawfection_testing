@@ -67,6 +67,10 @@ def calendar_view():
         Appointment.store_id == store_id
     ).order_by(Appointment.appointment_datetime.asc()).all()
 
+    # Log all loaded appointments for debugging
+    for appt in local_appointments:
+        current_app.logger.info(f"[DEBUG] calendar_view loaded: ID={appt.id}, Time={appt.appointment_datetime}, Status={appt.status}, Dog={appt.dog.name if appt.dog else 'None'}, Notes={appt.notes}")
+
     is_google_calendar_connected = False
     pawfection_calendar_id = None
     pawfection_calendar_embed_url = None
