@@ -822,6 +822,41 @@ def checkout():
                 appointment.status = 'Completed'
                 appointment.checkout_total_amount = total
                 db.session.commit()
+
+                # --- Google Calendar Sync ---
+                store = Store.query.get(session.get('store_id'))
+                if store and store.google_token_json and appointment.google_event_id:
+                    try:
+                        token_data = json.loads(store.google_token_json)
+                        credentials = Credentials(
+                            token=token_data['token'],
+                            refresh_token=token_data.get('refresh_token'),
+                            token_uri=token_data['token_uri'],
+                            client_id=token_data['client_id'],
+                            client_secret=token_data['client_secret'],
+                            scopes=SCOPES
+                        )
+                        service = build('calendar', 'v3', credentials=credentials)
+                        # Prepare event update
+                        event = {
+                            'summary': f"({appointment.dog.name}) Appointment",
+                            'description': f"Owner: {appointment.dog.owner.name if appointment.dog and appointment.dog.owner else ''}\n" +
+                                           f"Groomer: {appointment.groomer.username if appointment.groomer else ''}\n" +
+                                           f"Services: {appointment.requested_services_text if appointment.requested_services_text else ''}\n" +
+                                           f"Notes: {appointment.notes if appointment.notes else ''}\n" +
+                                           f"Status: Completed",
+                            'start': {'dateTime': appointment.appointment_datetime.isoformat(), 'timeZone': 'UTC'},
+                            'end': {'dateTime': (appointment.appointment_datetime + datetime.timedelta(hours=1)).isoformat(), 'timeZone': 'UTC'},
+                        }
+                        calendar_id = store.google_calendar_id if store.google_calendar_id else 'primary'
+                        service.events().update(calendarId=calendar_id, eventId=appointment.google_event_id, body=event).execute()
+                        flash("Appointment synced to Google Calendar.", "success")
+                    except Exception as e:
+                        current_app.logger.error(f"Google Calendar sync failed: {e}", exc_info=True)
+                        flash("Appointment completed, but failed to sync with Google Calendar.", "warning")
+                else:
+                    flash("Appointment completed, but Google Calendar is not connected for this store.", "info")
+
                 calculated_data = {
                     'appointment': appointment,
                     'dog': appointment.dog,
