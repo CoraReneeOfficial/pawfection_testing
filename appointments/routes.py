@@ -190,7 +190,7 @@ def calendar_view():
                             double_booked = Appointment.query.filter_by(dog_id=dog.id, appointment_datetime=start, store_id=store.id).first()
                         if double_booked:
                             appt = double_booked
-                        else:
+                        elif dog:  # Only create if dog is not None
                             try:
                                 # --- Flag for missing details ---
                                 details_needed = False
@@ -211,6 +211,8 @@ def calendar_view():
                                 db.session.add(new_appt)
                             except Exception as e:
                                 current_app.logger.error(f"Failed to create Appointment from Google event: {e}", exc_info=True)
+                        else:
+                            current_app.logger.warning(f"[Google Sync] Skipping event with unmatched dog: '{dog_name}' (owner: '{owner_name}')")
                     else:
                         # Update existing Appointment if details have changed
                         updated = False
