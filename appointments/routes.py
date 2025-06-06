@@ -175,7 +175,18 @@ def calendar_view():
                                     if db_first == dog_first:
                                         dog = possible_dog
                                         break
-                    # Do NOT create a new dog if not found
+                    # If still not found, create or use a placeholder dog for this owner/store
+                    if owner and not dog:
+                        placeholder_name = 'Unknown Dog'
+                        dog = Dog.query.filter_by(name=placeholder_name, owner_id=owner.id, store_id=store.id).first()
+                        if not dog:
+                            dog = Dog(name=placeholder_name, owner_id=owner.id, store_id=store.id)
+                            db.session.add(dog)
+                            db.session.commit()
+                        current_app.logger.warning(f"[Google Sync] Created/used placeholder dog for unmatched event: '{dog_name}' (owner: '{owner_name}')")
+                    elif not owner and not dog:
+                        current_app.logger.warning(f"[Google Sync] Skipping event with unmatched owner and dog: '{dog_name}' (owner: '{owner_name}')")
+                        continue
                     # Try to find groomer
                     groomer = None
                     if groomer_name != 'Unknown Groomer':
@@ -194,6 +205,14 @@ def calendar_view():
                             try:
                                 # --- Flag for missing details ---
                                 details_needed = False
+                                placeholder_name = 'Unknown Dog'
+                                # If this is a placeholder dog, set details_needed True and add a note
+                                if dog.name == placeholder_name:
+                                    details_needed = True
+                                    if notes:
+                                        notes = f"[UNMATCHED DOG - PLEASE REVIEW] {notes}"
+                                    else:
+                                        notes = "[UNMATCHED DOG - PLEASE REVIEW]"
                                 if (not dog or not owner or dog_name == 'Unknown Dog' or owner_name == 'Unknown Owner' or not groomer or groomer_name == 'Unknown Groomer'):
                                     details_needed = True
                                 new_appt = Appointment(
@@ -204,7 +223,7 @@ def calendar_view():
                                     google_event_id=google_event_id,
                                     notes=notes or description,
                                     requested_services_text=services_text,
-                                    dog_id=dog.id if dog else None,
+                                    dog_id=dog.id,
                                     groomer_id=groomer_id,
                                     details_needed=details_needed
                                 )
@@ -212,7 +231,7 @@ def calendar_view():
                             except Exception as e:
                                 current_app.logger.error(f"Failed to create Appointment from Google event: {e}", exc_info=True)
                         else:
-                            current_app.logger.warning(f"[Google Sync] Skipping event with unmatched dog: '{dog_name}' (owner: '{owner_name}')")
+                            current_app.logger.warning(f"[Google Sync] Skipping creation of appointment for event with unmatched dog: '{dog_name}' (owner: '{owner_name}')")
                     else:
                         # Update existing Appointment if details have changed
                         updated = False
@@ -225,9 +244,13 @@ def calendar_view():
                         if appt.requested_services_text != services_text:
                             appt.requested_services_text = services_text
                             updated = True
-                        if appt.dog_id != (dog.id if dog else None):
-                            appt.dog_id = dog.id if dog else None
+                        # --- IMPORTANT: Never set dog_id to None. Only update or create if dog is found. Unmatched dogs are skipped. ---
+                        # Only update dog_id if dog is found
+                        if dog and appt.dog_id != dog.id:
+                            appt.dog_id = dog.id
                             updated = True
+                        elif not dog and appt.dog_id is None:
+                            current_app.logger.warning(f"[Google Sync] Skipping update of dog_id for appointment ID {appt.id} because dog could not be matched.")
                         if appt.groomer_id != groomer_id:
                             appt.groomer_id = groomer_id
                             updated = True
