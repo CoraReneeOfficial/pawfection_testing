@@ -484,29 +484,24 @@ def create_app():
         from models import Store
         domain_url = request.host_url.rstrip('/')
         try:
-            # Debug: print current user and store_id
-            print(f"[DEBUG] current_user: id={getattr(current_user, 'id', None)}, username={getattr(current_user, 'username', None)}, store_id={getattr(current_user, 'store_id', None)}")
-            app.logger.info(f"[DEBUG] current_user: id={getattr(current_user, 'id', None)}, username={getattr(current_user, 'username', None)}, store_id={getattr(current_user, 'store_id', None)}")
+            app.logger.info(f"[CHECKOUT] current_user: id={getattr(current_user, 'id', None)}, username={getattr(current_user, 'username', None)}, store_id={getattr(current_user, 'store_id', None)}")
             # Get the store for the current user
             store = None
             if hasattr(current_user, 'store_id') and current_user.store_id:
-                print(f"[DEBUG] Attempting to fetch Store with id={current_user.store_id}")
-                app.logger.info(f"[DEBUG] Attempting to fetch Store with id={current_user.store_id}")
+                app.logger.info(f"[CHECKOUT] Attempting to fetch Store with id={current_user.store_id}")
                 try:
                     store = Store.query.get(int(current_user.store_id))
                 except Exception as e:
-                    print(f"[DEBUG] Exception when querying Store: {e}")
-                    app.logger.error(f"[DEBUG] Exception when querying Store: {e}")
-            print(f"[DEBUG] Store fetched: {store}")
-            app.logger.info(f"[DEBUG] Store fetched: {store}")
+                    app.logger.error(f"[CHECKOUT] Exception when querying Store: {e}")
+            app.logger.info(f"[CHECKOUT] Store fetched: {store}")
             if not store:
-                app.logger.error('No store found for current user.')
-                print("[DEBUG] No store found for current user.")
+                app.logger.error('[CHECKOUT] No store found for current user.')
                 return jsonify(error='No store found for current user.'), 400
 
             # Create or retrieve Stripe customer for the store
             customer_id = store.stripe_customer_id
             if not customer_id:
+                app.logger.info(f"[CHECKOUT] Creating Stripe customer for store {store.id} ({store.name})")
                 customer = stripe.Customer.create(
                     email=store.email or current_user.email,
                     name=store.name,
@@ -515,8 +510,12 @@ def create_app():
                 customer_id = customer.id
                 store.stripe_customer_id = customer_id
                 db.session.commit()
+                app.logger.info(f"[CHECKOUT] Created Stripe customer with id={customer_id}")
+            else:
+                app.logger.info(f"[CHECKOUT] Using existing Stripe customer id={customer_id}")
 
             # Create checkout session for the store
+            app.logger.info(f"[CHECKOUT] Creating Stripe checkout session for customer_id={customer_id} and price_id={app.config['STRIPE_PRICE_ID']}")
             checkout_session = stripe.checkout.Session.create(
                 customer=customer_id,
                 payment_method_types=['card'],
@@ -529,16 +528,19 @@ def create_app():
                 cancel_url=domain_url + url_for('subscribe'),
                 metadata={'store_id': store.id}
             )
+            app.logger.info(f"[CHECKOUT] Created Stripe checkout session with id={checkout_session['id']}")
             return jsonify({'sessionId': checkout_session['id']})
         except Exception as e:
-            app.logger.error(f"Stripe checkout session error: {e}")
+            app.logger.error(f"[CHECKOUT] Stripe checkout session error: {e}")
             return jsonify(error=str(e)), 400
+
 
     # --- Subscription Success Page ---
     @app.route('/subscription-success')
     def subscription_success():
         flash('Your subscription was successful!', 'success')
-        return redirect(url_for('home'))
+        return redirect(url_for('dashboard'))
+
 
     # --- Stripe Webhook ---
     @app.route('/stripe_webhook', methods=['POST'])
@@ -547,20 +549,31 @@ def create_app():
         sig_header = request.headers.get('stripe-signature')
         endpoint_secret = os.environ.get('STRIPE_WEBHOOK_SECRET')
         event = None
+        import sys
+        app.logger.info('[WEBHOOK] Stripe webhook received')
+        if not endpoint_secret:
+            app.logger.error('[WEBHOOK] STRIPE_WEBHOOK_SECRET not set!')
+            return 'Webhook secret not configured', 500
         try:
             event = stripe.Webhook.construct_event(
                 payload, sig_header, endpoint_secret
             )
         except Exception as e:
+            app.logger.error(f"[WEBHOOK] Error verifying webhook signature: {e}")
             return str(e), 400
 
+        app.logger.info(f"[WEBHOOK] Stripe event type: {event.get('type')}")
         # Handle subscription created or updated event
         if event['type'] == 'checkout.session.completed':
             session_obj = event['data']['object']
-            store_id = session_obj['metadata'].get('store_id')
+            app.logger.info(f"[WEBHOOK] checkout.session.completed: session_obj={session_obj}")
+            metadata = session_obj.get('metadata', {})
+            store_id = metadata.get('store_id')
             subscription_id = session_obj.get('subscription')
             customer_id = session_obj.get('customer')
-            # Update store in DB
+            if not store_id:
+                app.logger.error('[WEBHOOK] No store_id in session metadata!')
+                return 'No store_id in metadata', 400
             from models import Store
             store = Store.query.get(int(store_id))
             if store:
@@ -568,6 +581,9 @@ def create_app():
                 store.stripe_subscription_id = subscription_id
                 store.subscription_status = 'active'
                 db.session.commit()
+                app.logger.info(f"[WEBHOOK] Store {store.id} subscription activated. customer_id={customer_id}, subscription_id={subscription_id}")
+            else:
+                app.logger.error(f"[WEBHOOK] No store found for store_id={store_id}")
         elif event['type'] == 'customer.subscription.deleted':
             subscription = event['data']['object']
             customer_id = subscription.get('customer')
@@ -576,7 +592,9 @@ def create_app():
             if store:
                 store.subscription_status = 'inactive'
                 db.session.commit()
+                app.logger.info(f"[WEBHOOK] Store {store.id} subscription set to inactive (deleted event)")
         return '', 200
+
 
 
     return app
