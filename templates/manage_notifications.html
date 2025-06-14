@@ -3,101 +3,295 @@
 {% block title %}Manage Customer Notifications{% endblock %}
 
 {% block head %}
+{{ super() }}
+{# Font Awesome is used for icons, keeping it for the visual enhancement #}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 <style>
-    .notification-settings-form .form-group {
-        margin-bottom: 1.5rem;
+    /* This style block is now much smaller.
+    It only contains styles for components unique to this page,
+    and it USES the variables from your main style.css for consistency.
+    */
+
+    .notification-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--border-color);
     }
-    .notification-settings-form .form-group label {
-        font-weight: 600;
-        display: block;
-        margin-bottom: 0.5rem;
+    
+    .notification-header h1 {
+        margin-bottom: 0;
     }
-    .notification-settings-form .checkbox-group label {
-        font-weight: normal;
-        margin-left: 0.5rem;
+
+    /* A simple button style for the "Back" button to complement button-primary */
+    .button-secondary {
+        background-color: var(--secondary-light);
+        color: var(--secondary-dark);
+        border-color: var(--border-color);
     }
-    .reminder-options-group .form-group-inline {
-        margin-bottom: 0.5rem;
-    }
-    .reminder-options-group legend {
-        font-size: 1em;
-        font-weight: 600;
-        margin-bottom: 0.75rem;
+    .button-secondary:hover {
+        background-color: var(--border-color);
         color: var(--text-dark);
+        text-decoration: none;
+    }
+
+    /* Card styling for grouping settings, using theme variables */
+    .settings-card {
+        background-color: var(--white);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        margin-top: 2rem;
+        overflow: hidden;
+    }
+
+    .settings-card-header {
+        padding: 1rem 1.5rem;
+        background-color: var(--secondary-light);
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .settings-card-header h2 {
+        font-size: 1.25rem;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .settings-card-body {
+        padding: 1rem 1.5rem;
+    }
+
+    /* A single setting item within a card */
+     .setting-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .setting-item:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+    .setting-item:first-child {
+        padding-top: 0;
+    }
+    
+    .setting-item-label strong {
+        font-weight: 500;
+        color: var(--text-dark);
+    }
+    .setting-item-label small {
+        font-size: 0.9em;
+        color: var(--text-muted);
+    }
+
+    /* Toggle Switch Styling using theme variables */
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 28px;
+        flex-shrink: 0;
+    }
+
+    .toggle-switch input { display: none; }
+
+    .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 28px;
+    }
+
+    .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+
+    input:checked + .toggle-slider {
+        background-color: var(--success-color);
+    }
+
+    input:checked + .toggle-slider:before {
+        transform: translateX(22px);
+    }
+    
+    /* Reminder options styling using theme variables */
+    .reminder-options {
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border-color);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    
+    .reminder-options.disabled {
+        opacity: 0.5;
+        pointer-events: none;
+        transform: translateY(-10px);
+    }
+
+    .reminder-days-group {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .reminder-days-group label {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background-color: var(--white);
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+    
+    .reminder-days-group input[type="checkbox"] { display: none; }
+
+    .reminder-days-group input[type="checkbox"]:checked + label {
+        background-color: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+    
+    .reminder-days-group label:hover {
+        border-color: var(--secondary-dark);
+    }
+    
+    .reminder-days-group input[type="checkbox"]:checked + label:hover {
+         background-color: var(--primary-hover);
+         border-color: var(--primary-hover);
+    }
+
+    .notification-footer {
+        margin-top: 2rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-color);
+        font-size: 0.9em;
+        color: var(--text-muted);
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="content-card">
-    <div class="content-header">
-        <h1>Manage Customer Notifications</h1>
-        <a href="{{ url_for('management.management') }}" class="button button-secondary">Back to Management</a>
+    <div class="notification-header">
+        <h1>Customer Notifications</h1>
+        <a href="{{ url_for('management.management') }}" class="button button-secondary">
+            <i class="fas fa-arrow-left" style="margin-right: 0.5rem;"></i> Back
+        </a>
     </div>
 
-    <p>Configure settings for automated email notifications sent to clients.</p>
+    <p>Configure automated email notifications sent to your clients to keep them informed.</p>
 
-    <form method="POST" action="{{ url_for('management.manage_notifications') }}" class="notification-settings-form" style="margin-top: 2rem;">
-        <div class="form-section">
-            <h2>Appointment Confirmations</h2>
-            <div class="form-group form-group-inline">
-                <input type="checkbox" id="send_confirmation_email" name="send_confirmation_email" value="true" 
-                       {% if current_settings.get('send_confirmation_email') %}checked{% endif %}>
-                <label for="send_confirmation_email">Send email confirmation when an appointment is booked.</label>
+    <form method="POST" action="{{ url_for('management.manage_notifications') }}">
+        
+        <!-- Appointment Confirmation Card -->
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <h2><i class="fas fa-check-circle" style="color: var(--success-text);"></i>Appointment Confirmations</h2>
+            </div>
+            <div class="settings-card-body">
+                <div class="setting-item">
+                    <div class="setting-item-label">
+                       <strong>Send Confirmation Emails</strong>
+                       <small>Automatically email clients when an appointment is booked.</small>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="send_confirmation_email" name="send_confirmation_email" value="true" 
+                               {% if current_settings.get('send_confirmation_email') %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
             </div>
         </div>
 
-        <div class="form-section" style="margin-top: 2rem; padding-top:1.5rem; border-top: 1px solid var(--border-color-light);">
-            <h2>Appointment Reminders</h2>
-            <div class="form-group form-group-inline">
-                <input type="checkbox" id="send_reminder_email" name="send_reminder_email" value="true" 
-                       {% if current_settings.get('send_reminder_email') %}checked{% endif %}>
-                <label for="send_reminder_email">Enable automated reminder emails.</label>
+        <!-- Appointment Reminders Card -->
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <h2><i class="fas fa-bell" style="color: var(--primary-color);"></i>Appointment Reminders</h2>
             </div>
+            <div class="settings-card-body">
+                <div class="setting-item">
+                    <div class="setting-item-label">
+                        <strong>Enable Reminder Emails</strong>
+                        <small>Send automated reminders before scheduled appointments.</small>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="send_reminder_email" name="send_reminder_email" value="true"
+                               {% if current_settings.get('send_reminder_email') %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                
+                <div id="reminder-options-wrapper" class="reminder-options">
+                    <div class="form-group">
+                        <label>Send reminder on these days:</label>
+                        <div class="reminder-days-group">
+                            {% for day in [1, 2, 3, 7] %}
+                            <input type="checkbox" id="reminder_{{day}}_day" name="reminder_days_before" value="{{day}}" {% if day in current_settings.get('reminder_days_before', []) %}checked{% endif %}>
+                            <label for="reminder_{{day}}_day">{{day}} day{% if day > 1 %}s{% endif %} before</label>
+                            {% endfor %}
+                        </div>
+                    </div>
 
-            <fieldset class="form-group reminder-options-group">
-                <legend>Send reminders:</legend>
-                <div class="form-group-inline">
-                    <input type="checkbox" id="reminder_1_day" name="reminder_days_before" value="1" 
-                           {% if 1 in current_settings.get('reminder_days_before', []) %}checked{% endif %}>
-                    <label for="reminder_1_day">1 day before appointment</label>
+                    <div class="form-group">
+                        <label for="default_reminder_time">Default Reminder Time</label>
+                        <input type="time" id="default_reminder_time" name="default_reminder_time" class="form-input" 
+                               value="{{ current_settings.get('default_reminder_time', '09:00') }}" style="max-width: 160px;">
+                        <small class="text-muted" style="display: block; margin-top: 5px;">Time is based on your business timezone: <strong>{{ BUSINESS_TIMEZONE_NAME }}</strong>.</small>
+                    </div>
                 </div>
-                <div class="form-group-inline">
-                    <input type="checkbox" id="reminder_2_days" name="reminder_days_before" value="2"
-                           {% if 2 in current_settings.get('reminder_days_before', []) %}checked{% endif %}>
-                    <label for="reminder_2_days">2 days before appointment</label>
-                </div>
-                <div class="form-group-inline">
-                    <input type="checkbox" id="reminder_3_days" name="reminder_days_before" value="3"
-                           {% if 3 in current_settings.get('reminder_days_before', []) %}checked{% endif %}>
-                    <label for="reminder_3_days">3 days before appointment</label>
-                </div>
-                <div class="form-group-inline">
-                    <input type="checkbox" id="reminder_7_days" name="reminder_days_before" value="7"
-                           {% if 7 in current_settings.get('reminder_days_before', []) %}checked{% endif %}>
-                    <label for="reminder_7_days">7 days before appointment</label>
-                </div>
-            </fieldset>
-
-            <div class="form-group">
-                <label for="default_reminder_time">Default Reminder Time (Business Timezone: {{ BUSINESS_TIMEZONE_NAME }})</label>
-                <input type="time" id="default_reminder_time" name="default_reminder_time" class="form-input" 
-                       value="{{ current_settings.get('default_reminder_time', '09:00') }}" style="max-width: 150px;">
-                <small class="text-muted">Reminders will be scheduled around this time on the selected days.</small>
             </div>
         </div>
 
-        <div class="form-button-wrapper" style="margin-top: 2rem;">
-            <button type="submit" class="button button-primary">Save Notification Settings</button>
+        <div class="form-button-wrapper">
+            <button type="submit" class="button button-primary"><i class="fas fa-save" style="margin-right: 0.5rem;"></i>Save Settings</button>
         </div>
     </form>
 
-    <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border-color-light);">
-        <p class="text-muted" style="font-size:0.9em;">
-            <strong>Note:</strong> For automated reminders to be sent, a background scheduling system needs to be active.
-            This page currently configures the preferences. The actual sending mechanism for scheduled reminders will be implemented separately.
-            Appointment confirmation emails will be sent immediately upon booking if enabled.
-        </p>
+    <div class="notification-footer">
+        <p><strong>Note:</strong> For reminders to be sent, a background scheduling system must be active. This page configures the preferences, but the actual sending is handled by the server. Confirmation emails are sent immediately if enabled.</p>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const reminderToggle = document.getElementById('send_reminder_email');
+    const reminderOptionsWrapper = document.getElementById('reminder-options-wrapper');
+
+    function toggleReminderOptions() {
+        if (reminderToggle.checked) {
+            reminderOptionsWrapper.classList.remove('disabled');
+        } else {
+            reminderOptionsWrapper.classList.add('disabled');
+        }
+    }
+
+    // Initial check on page load
+    toggleReminderOptions();
+
+    // Add event listener for changes
+    reminderToggle.addEventListener('change', toggleReminderOptions);
+});
+</script>
 {% endblock %}

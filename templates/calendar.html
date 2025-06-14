@@ -93,6 +93,9 @@
 
     {# --- Local App Appointments List --- #}
     <div class="local-appointments-section">
+        <div style="margin-bottom: 1em;">
+            <a href="{{ url_for('appointments.appointments_needs_review') }}" class="button button-danger">View Appointments Needing Review</a>
+        </div>
         <h2>Scheduled Appointments (Managed in App)</h2> {# Updated title to reflect filtering #}
         {# 'local_appointments' is passed from the /calendar route in app.py #}
         {% if local_appointments %}
@@ -110,11 +113,11 @@
                         {% endif %}
                     </div>
                     <div class="appointment-info">
-                        {% set local_appt_time = appointment.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(BUSINESS_TIMEZONE) if BUSINESS_TIMEZONE else appointment.appointment_datetime %}
+                        {% set local_appt_time = appointment.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(STORE_TIMEZONE) if STORE_TIMEZONE else appointment.appointment_datetime %}
                         <span class="appointment-datetime">{{ local_appt_time.strftime('%a, %b %d, %Y @ %I:%M %p') }}</span>
                         <span class="status-badge status-{{ appointment.status }}">{{ appointment.status }}</span>
                         {% if appointment.details_needed %}
-                            <span class="status-badge" style="background-color: #dc3545; margin-left: 0.5em;">Additional Details Needed</span>
+                            <span class="status-badge" style="background-color: #dc3545; margin-left: 0.5em;">Needs Review</span>
                         {% endif %}
                         <br>
                         <span class="appointment-dog-owner">

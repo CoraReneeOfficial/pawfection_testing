@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g, current_app, session
-from models import Dog, Owner, Appointment, ActivityLog
+from models import Dog, Owner, Appointment, ActivityLog, Store
 from extensions import db
 from werkzeug.utils import secure_filename
 import os
@@ -7,6 +7,9 @@ import uuid
 from functools import wraps
 from utils import allowed_file # Keep allowed_file from utils
 from utils import log_activity   # IMPORT log_activity from utils.py
+from utils import subscription_required  # Import subscription_required decorator
+import pytz
+from dateutil import tz
 
 dogs_bp = Blueprint('dogs', __name__)
 
@@ -48,6 +51,7 @@ def _handle_dog_picture_upload(dog_instance, request_files):
     return None
 
 @dogs_bp.route('/owner/<int:owner_id>/add_dog', methods=['GET', 'POST'])
+@subscription_required
 def add_dog(owner_id):
     """
     Handles adding a new dog for a specific owner.
@@ -99,6 +103,7 @@ def add_dog(owner_id):
     return render_template('add_dog.html', owner=owner, dog={})
 
 @dogs_bp.route('/dog/<int:dog_id>')
+@subscription_required
 def view_dog(dog_id):
     """
     Displays the profile of a specific dog.
@@ -114,11 +119,19 @@ def view_dog(dog_id):
     # Appointments for this dog will inherently be filtered by dog.id,
     # and since dog.store_id is checked, these appointments will also belong to the current store.
     appointments_for_dog = dog.appointments.options(db.joinedload(Appointment.groomer)).all()
-    
+
+    # Fetch store and its timezone
+    store = db.session.get(Store, store_id)
+    store_tz_str = getattr(store, 'timezone', None) or 'UTC'
+    try:
+        BUSINESS_TIMEZONE = pytz.timezone(store_tz_str)
+    except Exception:
+        BUSINESS_TIMEZONE = pytz.UTC
     log_activity("Viewed Dog Profile", details=f"Dog: {dog.name}")
-    return render_template('dog_profile.html', dog=dog, appointments=appointments_for_dog)
+    return render_template('dog_profile.html', dog=dog, appointments=appointments_for_dog, BUSINESS_TIMEZONE=BUSINESS_TIMEZONE, tz=tz)
 
 @dogs_bp.route('/dog/<int:dog_id>/edit', methods=['GET', 'POST'])
+@subscription_required
 def edit_dog(dog_id):
     """
     Handles editing the profile of a specific dog.
@@ -166,6 +179,7 @@ def edit_dog(dog_id):
     return render_template('edit_dog.html', dog=dog)
 
 @dogs_bp.route('/dog/<int:dog_id>/delete', methods=['POST'])
+@subscription_required
 def delete_dog(dog_id):
     """
     Handles deleting a specific dog.

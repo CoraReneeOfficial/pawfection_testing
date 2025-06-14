@@ -131,7 +131,7 @@
                 <select name="appointment_id" id="appointment_id" required class="form-input">
                     <option value="" disabled {% if not selected_appointment_id %}selected{% endif %}>-- Select an Appointment --</option>
                     {% for appt in scheduled_appointments %}
-                        {% set local_appt_time = appt.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(BUSINESS_TIMEZONE) if BUSINESS_TIMEZONE else appt.appointment_datetime %}
+                        {% set local_appt_time = appt.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(STORE_TIMEZONE) if STORE_TIMEZONE else appt.appointment_datetime %}
                         <option value="{{ appt.id }}" {% if appt.id == selected_appointment_id %}selected{% endif %}>
                             {{ local_appt_time.strftime('%a, %b %d @ %I:%M %p') }} - {{ appt.dog.name }} ({{ appt.dog.owner.name }})
                         </option>
@@ -203,7 +203,7 @@
             <p><strong>Date & Time:</strong>
                 {# Ensure calculated_data.appointment.appointment_datetime exists before trying to format #}
                 {% if calculated_data.appointment and calculated_data.appointment.appointment_datetime %}
-                    {% set display_time = calculated_data.appointment.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(BUSINESS_TIMEZONE) if BUSINESS_TIMEZONE else calculated_data.appointment.appointment_datetime %}
+                    {% set display_time = calculated_data.appointment.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(STORE_TIMEZONE) if STORE_TIMEZONE else calculated_data.appointment.appointment_datetime %}
                     {{ display_time.strftime('%a, %b %d, %Y @ %I:%M %p') }}
                 {% else %}
                     N/A

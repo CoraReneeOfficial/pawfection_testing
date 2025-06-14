@@ -45,10 +45,26 @@
 {% block content %}
 <div class="form-wrapper">
     <h2 class="form-title">Edit Store Information</h2>
-    <form method="POST">
+    <form method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+            <label class="form-label" for="logo">Store Logo</label>
+            {% if store.logo_filename %}
+                <img src="{{ url_for('static', filename='uploads/store_logos/' ~ store.logo_filename) }}" alt="Store Logo" style="max-width:120px;display:block;margin-bottom:0.5rem;">
+            {% endif %}
+            <input class="form-input" type="file" id="logo" name="logo">
+        </div>
         <div class="form-group">
             <label class="form-label" for="name">Store Name</label>
             <input class="form-input" type="text" id="name" name="name" value="{{ store.name or '' }}" required>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="username">Username</label>
+            <input class="form-input" type="text" id="username" name="username" value="{{ store.username or '' }}" required>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="password">Password</label>
+            <input class="form-input" type="password" id="password" name="password" autocomplete="new-password">
+            <small style="color: #888;">Leave blank to keep current password.</small>
         </div>
         <div class="form-group">
             <label class="form-label" for="address">Address</label>
@@ -70,10 +86,77 @@
                 {% endfor %}
             </select>
         </div>
+        <div class="form-group">
+            <label class="form-label" for="subscription_status">Subscription Status</label>
+            <select class="form-select" id="subscription_status" name="subscription_status">
+                <option value="active" {% if store.subscription_status == 'active' %}selected{% endif %}>Active</option>
+                <option value="trial" {% if store.subscription_status == 'trial' %}selected{% endif %}>Trial</option>
+                <option value="unpaid" {% if store.subscription_status == 'unpaid' %}selected{% endif %}>Unpaid</option>
+                <option value="cancelled" {% if store.subscription_status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+            </select>
+        </div>
+        {% if store.subscription_ends_at %}
+        <div class="form-group">
+            <label class="form-label">Subscription Ends At</label>
+            <input class="form-input" type="text" value="{{ store.subscription_ends_at.strftime('%Y-%m-%d %H:%M') }}" readonly>
+        </div>
+        {% endif %}
+        <div class="form-group">
+            <label class="form-label" for="status">Store Status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="active" {% if store.status == 'active' %}selected{% endif %}>Active</option>
+                <option value="inactive" {% if store.status == 'inactive' %}selected{% endif %}>Inactive</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="business_hours">Business Hours (JSON or text)</label>
+            <textarea class="form-input" id="business_hours" name="business_hours" rows="2">{{ store.business_hours or '' }}</textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="description">Description/About</label>
+            <textarea class="form-input" id="description" name="description" rows="2">{{ store.description or '' }}</textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="facebook_url">Facebook URL</label>
+            <input class="form-input" type="url" id="facebook_url" name="facebook_url" value="{{ store.facebook_url or '' }}">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="instagram_url">Instagram URL</label>
+            <input class="form-input" type="url" id="instagram_url" name="instagram_url" value="{{ store.instagram_url or '' }}">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="website_url">Website URL</label>
+            <input class="form-input" type="url" id="website_url" name="website_url" value="{{ store.website_url or '' }}">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="tax_id">Tax/Business ID</label>
+            <input class="form-input" type="text" id="tax_id" name="tax_id" value="{{ store.tax_id or '' }}">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="notification_preferences">Notification Preferences (JSON or text)</label>
+            <textarea class="form-input" id="notification_preferences" name="notification_preferences" rows="2">{{ store.notification_preferences or '' }}</textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="default_appointment_duration">Default Appointment Duration (minutes)</label>
+            <input class="form-input" type="number" id="default_appointment_duration" name="default_appointment_duration" value="{{ store.default_appointment_duration or '' }}">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="default_appointment_buffer">Default Appointment Buffer (minutes)</label>
+            <input class="form-input" type="number" id="default_appointment_buffer" name="default_appointment_buffer" value="{{ store.default_appointment_buffer or '' }}">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="payment_settings">Payment Settings (JSON or text)</label>
+            <textarea class="form-input" id="payment_settings" name="payment_settings" rows="2">{{ store.payment_settings or '' }}</textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="is_archived">Archive Store</label>
+            <input type="checkbox" id="is_archived" name="is_archived" value="1" {% if store.is_archived %}checked{% endif %}>
+            <span style="color:#888;">(Archived stores are hidden but not deleted.)</span>
+        </div>
         <div class="form-actions">
             <button type="submit" class="button button-primary">Save Changes</button>
             <a href="{{ url_for('management.management') }}" class="button button-secondary">Cancel</a>
         </div>
     </form>
 </div>
-{% endblock %} 
+{% endblock %}

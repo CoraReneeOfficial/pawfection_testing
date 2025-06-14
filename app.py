@@ -14,7 +14,11 @@ from functools import wraps
 from werkzeug.middleware.proxy_fix import ProxyFix
 import logging
 from sqlalchemy.exc import IntegrityError
-from utils import log_activity
+from utils import log_activity, subscription_required
+from auth.routes import oauth
+import stripe
+from utils import is_user_subscribed
+from flask import request, jsonify, render_template
 # Removed import for datetime as it's not directly used at top level of app.py anymore
 # Removed log_activity definition as it's now in utils.py
 
@@ -27,6 +31,23 @@ def create_app():
     This function acts as the application factory.
     """
     app = Flask(__name__)
+
+    # --- Initialize Flask-Login ---
+    from flask_login import LoginManager
+    login_manager = LoginManager()
+    login_manager.login_view = 'auth.login'  # Update if your login route endpoint is different
+    login_manager.init_app(app)
+
+    # Register user loader
+    @login_manager.user_loader
+    def load_user(user_id):
+        return db.session.get(User, int(user_id))
+
+    # Initialize Stripe
+    app.config['STRIPE_PUBLISHABLE_KEY'] = os.environ.get('STRIPE_PUBLISHABLE_KEY')
+    app.config['STRIPE_SECRET_KEY'] = os.environ.get('STRIPE_SECRET_KEY')
+    stripe.api_key = app.config['STRIPE_SECRET_KEY']
+    app.config['STRIPE_PRICE_ID'] = os.environ.get('STRIPE_PRICE_ID')
 
     # Define base directories for persistent data and uploads.
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -54,6 +75,8 @@ def create_app():
 
     # Initialize Flask-SQLAlchemy with the app.
     db.init_app(app)
+    # Initialize OAuth for Google login
+    oauth.init_app(app)
 
     # Log the database URI being used
     app.logger.info(f"SQLAlchemy Database URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
@@ -86,12 +109,16 @@ def create_app():
     with app.app_context():
         db.create_all()
 
-    # Register Flask Blueprints.
+    # Register blueprints for modular routes
     app.register_blueprint(auth_bp)
     app.register_blueprint(owners_bp)
     app.register_blueprint(dogs_bp)
     app.register_blueprint(appointments_bp)
     app.register_blueprint(management_bp)
+
+    # Register Google Calendar webhook blueprint
+    from appointments.google_calendar_webhook import webhook_bp as google_calendar_webhook_bp
+    app.register_blueprint(google_calendar_webhook_bp)
 
     # This function runs before every request to load the logged-in user.
     @app.before_request
@@ -104,7 +131,7 @@ def create_app():
             g.user = None
             app.logger.debug("No user_id found in session. g.user set to None.")
         else:
-            g.user = User.query.get(user_id)
+            g.user = db.session.get(User, user_id)
             if g.user:
                 app.logger.debug(f"Loaded user {g.user.username} (ID: {g.user.id}, Store ID: {g.user.store_id}) from session.")
             else:
@@ -146,9 +173,117 @@ def create_app():
     # Dashboard route
     @app.route('/dashboard')
     @login_required
+    @subscription_required
     def dashboard():
         from flask import render_template
-        return render_template('dashboard.html')
+        import pytz
+        from models import Appointment, Dog, Store, Owner
+        from sqlalchemy.orm import joinedload
+        from dateutil import tz
+        import datetime
+        from sqlalchemy import func, and_, or_
+        store_id = session.get('store_id')
+        store = None
+        STORE_TIMEZONE = pytz.UTC
+        if store_id:
+            store = db.session.get(Store, store_id)
+            store_tz_str = getattr(store, 'timezone', None) or 'UTC'
+            try:
+                STORE_TIMEZONE = pytz.timezone(store_tz_str)
+            except Exception:
+                STORE_TIMEZONE = pytz.UTC
+        now_utc = datetime.datetime.utcnow()
+        today_start = now_utc.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_end = today_start + datetime.timedelta(days=1)
+        week_start = (today_start - datetime.timedelta(days=today_start.weekday()))
+        week_end = week_start + datetime.timedelta(days=7)
+
+        # Appointments Today
+        appointments_today = 0
+        # Pending Checkouts
+        pending_checkouts = 0
+        # New Clients This Week
+        new_clients_week = 0
+        # Revenue Today
+        revenue_today = 0.0
+        # Appointments needing details
+        appointments_details_needed = []
+        # Upcoming appointments
+        upcoming_appointments = []
+
+        if store_id:
+            # Appointments Today
+            appointments_today = Appointment.query.filter(
+                Appointment.status == 'Scheduled',
+                Appointment.store_id == store_id,
+                Appointment.appointment_datetime >= today_start,
+                Appointment.appointment_datetime < today_end
+            ).count()
+
+            # Pending Checkouts (appointments scheduled for today or earlier, not completed/cancelled)
+            pending_checkouts = Appointment.query.filter(
+                Appointment.status == 'Scheduled',
+                Appointment.store_id == store_id,
+                Appointment.appointment_datetime < now_utc
+            ).count()
+
+            # New Clients This Week
+            new_clients_week = Owner.query.filter(
+                Owner.store_id == store_id,
+                Owner.created_at >= week_start,
+                Owner.created_at < week_end
+            ).count()
+
+            # Revenue Today (sum of completed appointments today)
+            revenue_today = db.session.query(func.coalesce(func.sum(Appointment.checkout_total_amount), 0)).filter(
+                Appointment.status == 'Completed',
+                Appointment.store_id == store_id,
+                Appointment.appointment_datetime >= today_start,
+                Appointment.appointment_datetime < today_end
+            ).scalar() or 0.0
+
+            # Appointments needing details
+            appointments_details_needed = (
+                Appointment.query.options(
+                    joinedload(Appointment.dog).joinedload(Dog.owner),
+                    joinedload(Appointment.groomer)
+                )
+                .filter(
+                    Appointment.status == 'Scheduled',
+                    Appointment.store_id == store_id,
+                    Appointment.details_needed == True
+                )
+                .order_by(Appointment.appointment_datetime.asc())
+                .all()
+            )
+
+            # Upcoming appointments (next 5)
+            upcoming_appointments = (
+                Appointment.query.options(
+                    joinedload(Appointment.dog).joinedload(Dog.owner),
+                    joinedload(Appointment.groomer)
+                )
+                .filter(
+                    Appointment.status == 'Scheduled',
+                    Appointment.store_id == store_id,
+                    Appointment.appointment_datetime >= now_utc
+                )
+                .order_by(Appointment.appointment_datetime.asc())
+                .limit(5)
+                .all()
+            )
+
+        return render_template(
+            'dashboard.html',
+            appointments_today=appointments_today,
+            pending_checkouts=pending_checkouts,
+            new_clients_week=new_clients_week,
+            revenue_today=revenue_today,
+            appointments_details_needed=appointments_details_needed,
+            upcoming_appointments=upcoming_appointments,
+            STORE_TIMEZONE=STORE_TIMEZONE,
+            tz=tz
+        )
 
     # Store login route
     @app.route('/store/login', methods=['GET', 'POST'])
@@ -189,7 +324,7 @@ def create_app():
                 session.permanent = True
                 app.logger.info(f"Superadmin '{user.username}' (ID: {user.id}) logged in.")
                 flash(f"Superadmin '{user.username}' logged in.", "success")
-                return redirect(url_for('dashboard'))
+                return redirect(url_for('superadmin_dashboard'))
             else:
                 app.logger.warning(f"Invalid superadmin username or password attempt for username: {username}.")
                 flash('Invalid superadmin username or password.', 'danger')
@@ -295,7 +430,7 @@ def create_app():
             flash('Access denied.', 'danger')
             return redirect(url_for('superadmin_login'))
         
-        store_to_impersonate = Store.query.get(store_id)
+        store_to_impersonate = db.session.get(Store, store_id)
         if not store_to_impersonate:
             flash("Store not found for impersonation.", "danger")
             return redirect(url_for('superadmin_dashboard'))
@@ -330,6 +465,119 @@ def create_app():
     def make_shell_context():
         from models import User, Store  # Add other models as needed
         return {'db': db, 'User': User, 'Store': Store}
+
+    # --- Subscription Required Decorator ---
+    # (Moved to utils.py)
+
+    # --- Subscription Page ---
+    @app.route('/subscribe')
+    @login_required
+    def subscribe():
+        return render_template('subscribe.html',
+                              stripe_publishable_key=app.config['STRIPE_PUBLISHABLE_KEY'])
+
+    # --- Create Stripe Checkout Session ---
+    @app.route('/create-checkout-session', methods=['POST'])
+    @login_required
+    def create_checkout_session():
+        from flask_login import current_user
+        from models import Store
+        domain_url = request.host_url.rstrip('/')
+        try:
+            # Debug: print current user and store_id
+            print(f"[DEBUG] current_user: id={getattr(current_user, 'id', None)}, username={getattr(current_user, 'username', None)}, store_id={getattr(current_user, 'store_id', None)}")
+            app.logger.info(f"[DEBUG] current_user: id={getattr(current_user, 'id', None)}, username={getattr(current_user, 'username', None)}, store_id={getattr(current_user, 'store_id', None)}")
+            # Get the store for the current user
+            store = None
+            if hasattr(current_user, 'store_id') and current_user.store_id:
+                print(f"[DEBUG] Attempting to fetch Store with id={current_user.store_id}")
+                app.logger.info(f"[DEBUG] Attempting to fetch Store with id={current_user.store_id}")
+                try:
+                    store = Store.query.get(int(current_user.store_id))
+                except Exception as e:
+                    print(f"[DEBUG] Exception when querying Store: {e}")
+                    app.logger.error(f"[DEBUG] Exception when querying Store: {e}")
+            print(f"[DEBUG] Store fetched: {store}")
+            app.logger.info(f"[DEBUG] Store fetched: {store}")
+            if not store:
+                app.logger.error('No store found for current user.')
+                print("[DEBUG] No store found for current user.")
+                return jsonify(error='No store found for current user.'), 400
+
+            # Create or retrieve Stripe customer for the store
+            customer_id = store.stripe_customer_id
+            if not customer_id:
+                customer = stripe.Customer.create(
+                    email=store.email or current_user.email,
+                    name=store.name,
+                    metadata={'store_id': store.id}
+                )
+                customer_id = customer.id
+                store.stripe_customer_id = customer_id
+                db.session.commit()
+
+            # Create checkout session for the store
+            checkout_session = stripe.checkout.Session.create(
+                customer=customer_id,
+                payment_method_types=['card'],
+                line_items=[{
+                    'price': app.config['STRIPE_PRICE_ID'],
+                    'quantity': 1,
+                }],
+                mode='subscription',
+                success_url=domain_url + url_for('subscription_success'),
+                cancel_url=domain_url + url_for('subscribe'),
+                metadata={'store_id': store.id}
+            )
+            return jsonify({'sessionId': checkout_session['id']})
+        except Exception as e:
+            app.logger.error(f"Stripe checkout session error: {e}")
+            return jsonify(error=str(e)), 400
+
+    # --- Subscription Success Page ---
+    @app.route('/subscription-success')
+    def subscription_success():
+        flash('Your subscription was successful!', 'success')
+        return redirect(url_for('home'))
+
+    # --- Stripe Webhook ---
+    @app.route('/stripe_webhook', methods=['POST'])
+    def stripe_webhook():
+        payload = request.data
+        sig_header = request.headers.get('stripe-signature')
+        endpoint_secret = os.environ.get('STRIPE_WEBHOOK_SECRET')
+        event = None
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, endpoint_secret
+            )
+        except Exception as e:
+            return str(e), 400
+
+        # Handle subscription created or updated event
+        if event['type'] == 'checkout.session.completed':
+            session_obj = event['data']['object']
+            store_id = session_obj['metadata'].get('store_id')
+            subscription_id = session_obj.get('subscription')
+            customer_id = session_obj.get('customer')
+            # Update store in DB
+            from models import Store
+            store = Store.query.get(int(store_id))
+            if store:
+                store.stripe_customer_id = customer_id
+                store.stripe_subscription_id = subscription_id
+                store.subscription_status = 'active'
+                db.session.commit()
+        elif event['type'] == 'customer.subscription.deleted':
+            subscription = event['data']['object']
+            customer_id = subscription.get('customer')
+            from models import Store
+            store = Store.query.filter_by(stripe_customer_id=customer_id).first()
+            if store:
+                store.subscription_status = 'inactive'
+                db.session.commit()
+        return '', 200
+
 
     return app
 

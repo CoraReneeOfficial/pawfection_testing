@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Subscribe</title>
+    <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+    <h2>Subscribe to Unlock Full Access</h2>
+    <p>Click below to subscribe and unlock all features.</p>
+    <button id="checkout-button">Subscribe</button>
+    <div id="error-message" style="color:red;"></div>
+    <script>
+        var stripe = Stripe("{{ stripe_publishable_key }}");
+        document.getElementById("checkout-button").addEventListener("click", function () {
+            fetch("/create-checkout-session", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                credentials: "include" // Ensure cookies/session are sent
+            })
+            .then(function (response) { return response.json(); })
+            .then(function (session) {
+                if(session.sessionId) {
+                    return stripe.redirectToCheckout({ sessionId: session.sessionId });
+                } else {
+                    document.getElementById("error-message").textContent = session.error || "An error occurred.";
+                }
+            })
+            .catch(function (error) {
+                document.getElementById("error-message").textContent = error.toString();
+            });
+        });
+    </script>
+</body>
+</html>

@@ -6,13 +6,15 @@ class Store(db.Model):
     """
     Represents a single grooming business store.
     Each store has its own set of users, owners, dogs, services, and appointments.
+
+    New fields added for business management and customization.
     """
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
     username = db.Column(db.String(80), unique=True, nullable=False) # Username for store login
     password_hash = db.Column(db.String(128), nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.datetime.now(timezone.utc))
-    subscription_status = db.Column(db.String(20), default='active', nullable=False)  # e.g., active, trial, unpaid, cancelled
+    subscription_status = db.Column(db.String(20), default='inactive', nullable=False)  # e.g., active, trial, unpaid, cancelled; default is 'inactive' so new stores must subscribe
     subscription_ends_at = db.Column(db.DateTime, nullable=True)
     google_token_json = db.Column(db.Text, nullable=True)  # Store Google OAuth token as JSON per store
     google_calendar_id = db.Column(db.String(255), nullable=True)  # Store Google Calendar ID for the store
@@ -20,6 +22,25 @@ class Store(db.Model):
     phone = db.Column(db.String(50), nullable=True)
     email = db.Column(db.String(120), nullable=True)
     timezone = db.Column(db.String(64), nullable=True)
+
+    # --- New fields for advanced store management ---
+    logo_filename = db.Column(db.String(200), nullable=True)  # Logo or profile image filename
+    status = db.Column(db.String(20), default='active', nullable=False)  # Store status: active/inactive
+    business_hours = db.Column(db.Text, nullable=True)  # JSON/text for business hours
+    description = db.Column(db.Text, nullable=True)  # Store description/about
+    facebook_url = db.Column(db.String(255), nullable=True)  # Facebook page link
+    instagram_url = db.Column(db.String(255), nullable=True)  # Instagram profile link
+    website_url = db.Column(db.String(255), nullable=True)  # Store website
+    tax_id = db.Column(db.String(100), nullable=True)  # Tax/business ID
+    notification_preferences = db.Column(db.Text, nullable=True)  # JSON/text for notification settings
+    default_appointment_duration = db.Column(db.Integer, nullable=True)  # Default appointment duration in minutes
+    default_appointment_buffer = db.Column(db.Integer, nullable=True)  # Buffer time between appointments in minutes
+    payment_settings = db.Column(db.Text, nullable=True)  # JSON/text for payment settings (e.g., Stripe, PayPal)
+    is_archived = db.Column(db.Boolean, default=False, nullable=False)  # Soft delete/archive flag
+
+    # --- Stripe integration fields ---
+    stripe_customer_id = db.Column(db.String(255), nullable=True)
+    stripe_subscription_id = db.Column(db.String(255), nullable=True)
 
     # Relationships to other models, ensuring data is linked to the store
     users = db.relationship('User', backref='store', lazy=True)
@@ -56,6 +77,13 @@ class User(db.Model):
     is_groomer = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.datetime.now(timezone.utc))
     picture_filename = db.Column(db.String(200), nullable=True)
+    google_sub = db.Column(db.String(255), unique=True, nullable=True)  # Google unique user ID
+    email = db.Column(db.String(255), unique=True, nullable=True)  # Email address
+
+    # Stripe subscription fields
+    stripe_customer_id = db.Column(db.String(255), nullable=True)
+    stripe_subscription_id = db.Column(db.String(255), nullable=True)
+    is_subscribed = db.Column(db.Boolean, default=False, nullable=False)
 
     # Relationships to data created or assigned by this user
     activity_logs = db.relationship('ActivityLog', backref='user', lazy=True)
@@ -77,6 +105,22 @@ class User(db.Model):
 
     def __repr__(self):
         return f"<User {self.username} (ID: {self.id}, Role: {self.role}, Store: {self.store_id})>"
+
+    # --- Flask-Login integration ---
+    @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_active(self):
+        return True
+
+    @property
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return str(self.id)
 
 class Owner(db.Model):
     """

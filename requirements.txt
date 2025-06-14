@@ -9,6 +9,10 @@ gunicorn
 python-dateutil
 psycopg2-binary
 pytz
+python-dotenv
+Authlib>=1.2.1
+APScheduler
+stripe
 
 # Optional, but often good to specify if you rely on specific versions:
 # Werkzeug
@@ -27,6 +31,7 @@ pytz
 # google-auth-httplib2 (Google library dependency)
 # oauthlib (Google library dependency)
 # requests-oauthlib (Google library dependency)
+stripe
 # certifi (requests dependency)
 # charset-normalizer (requests dependency)
 # idna (requests dependency)

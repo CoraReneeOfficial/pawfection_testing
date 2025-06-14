@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g, current_app, session, abort
-from models import User, Service, Appointment, ActivityLog, Store
+from models import User, Service, Appointment, ActivityLog, Store, Dog, Owner
 from extensions import db
 from sqlalchemy.exc import IntegrityError
 from decimal import Decimal, InvalidOperation
@@ -16,6 +16,11 @@ from googleapiclient.discovery import build
 import json
 from google.oauth2.credentials import Credentials as GoogleCredentials
 import pytz
+import re
+from dateutil import tz
+from sqlalchemy import or_, func
+from dateutil import parser as dateutil_parser
+from notifications.email_utils import send_appointment_confirmation_email, send_appointment_cancelled_email, send_appointment_edited_email
 
 management_bp = Blueprint('management', __name__)
 
@@ -37,14 +42,29 @@ def admin_required(f):
     return decorated_function
 
 def load_notification_preferences():
-    # This should be adapted to use current_app context if needed
-    # For a multi-store setup, notification preferences should ideally be stored per store in the DB
-    pass  # Placeholder for actual implementation
+    """
+    Loads notification preferences from notification_settings.json (in the main app directory).
+    """
+    notification_settings_path = os.path.join(current_app.root_path, 'notification_settings.json')
+    try:
+        with open(notification_settings_path, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        current_app.logger.error(f"Could not load notification settings: {e}")
+        return {}
 
-def save_notification_preferences():
-    # This should be adapted to use current_app context if needed
-    # For a multi-store setup, notification preferences should ideally be stored per store in the DB
-    pass  # Placeholder for actual implementation
+def save_notification_preferences(preferences):
+    """
+    Saves notification preferences to notification_settings.json (in the main app directory).
+    """
+    notification_settings_path = os.path.join(current_app.root_path, 'notification_settings.json')
+    try:
+        with open(notification_settings_path, 'w') as f:
+            json.dump(preferences, f, indent=4)
+        return True
+    except Exception as e:
+        current_app.logger.error(f"Could not save notification settings: {e}")
+        return False
 
 def _handle_user_picture_upload(user_instance, request_files):
     """
@@ -153,8 +173,13 @@ def management():
         if store and store.google_token_json:
             try:
                 token_data = json.loads(store.google_token_json)
-                # Normalize scopes: strip whitespace and trailing semicolons
-                scopes = [s.strip().rstrip(';') for s in token_data.get('scopes', [])]
+                # Handle both 'scopes' (list) and 'scope' (space-separated string)
+                if 'scopes' in token_data:
+                    scopes = [s.strip().rstrip(';') for s in token_data['scopes']]
+                elif 'scope' in token_data:
+                    scopes = token_data['scope'].split()
+                else:
+                    scopes = []
                 current_app.logger.info(f"[DEBUG] store.google_token_json: {store.google_token_json}")
                 current_app.logger.info(f"[DEBUG] parsed scopes: {scopes}")
                 is_google_calendar_connected = 'https://www.googleapis.com/auth/calendar' in scopes
@@ -644,17 +669,8 @@ def manage_notifications():
     NOTE: Current implementation uses a global NOTIFICATION_PREFERENCES.
     For multi-store separation, these preferences should be stored per store in the database.
     """
-    # You may need to adapt NOTIFICATION_PREFERENCES and helpers to work in blueprint context
-    # For true multi-store separation, these settings should be loaded/saved from the Store model
-    # or a dedicated StoreSettings model, filtered by session.get('store_id').
-    NOTIFICATION_PREFERENCES = current_app.config.get('NOTIFICATION_PREFERENCES', {})
-    
-    # Placeholder for loading store-specific preferences
-    # Example:
-    # store_id = session.get('store_id')
-    # store = Store.query.filter_by(id=store_id).first()
-    # if store and store.notification_settings_json:
-    #     NOTIFICATION_PREFERENCES = json.loads(store.notification_settings_json)
+    # Load from file instead of config
+    NOTIFICATION_PREFERENCES = load_notification_preferences()
 
     if request.method == 'POST':
         NOTIFICATION_PREFERENCES['send_confirmation_email'] = 'send_confirmation_email' in request.form
@@ -666,13 +682,11 @@ def manage_notifications():
             flash("Invalid input for reminder days.", "danger")
         NOTIFICATION_PREFERENCES['default_reminder_time'] = request.form.get('default_reminder_time', '09:00')
         NOTIFICATION_PREFERENCES['sender_name'] = request.form.get('sender_name', 'Pawfection Grooming').strip()
-        
-        save_notification_preferences() # This needs to save to the current store's settings
+        save_notification_preferences(NOTIFICATION_PREFERENCES)
         log_activity("Updated Notification Settings", details=str(NOTIFICATION_PREFERENCES))
         flash("Notification settings updated successfully!", "success")
         return redirect(url_for('management.manage_notifications'))
-            
-    load_notification_preferences() # This needs to load from the current store's settings
+
     log_activity("Viewed Manage Customer Notifications page")
     return render_template('manage_notifications.html', current_settings=NOTIFICATION_PREFERENCES)
 
@@ -821,12 +835,12 @@ def google_oauth2callback():
                 # --- Test the token by making a Calendar API call ---
                 # This ensures the token is valid and has the necessary permissions
                 test_credentials = GoogleCredentials(
-                    token=credentials.token,
-                    refresh_token=credentials.refresh_token,
-                    token_uri=credentials.token_uri,
-                    client_id=credentials.client_id,
-                    client_secret=credentials.client_secret,
-                    scopes=credentials.scopes
+                    token=token_data.get('token') or token_data.get('access_token'),
+                    refresh_token=token_data.get('refresh_token'),
+                    token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
+                    client_id=token_data.get('client_id') or os.environ.get('GOOGLE_CLIENT_ID'),
+                    client_secret=token_data.get('client_secret') or os.environ.get('GOOGLE_CLIENT_SECRET'),
+                    scopes=token_data['scopes']
                 )
                 current_app.logger.info(f"[Google OAuth] Built test credentials. About to call Calendar API...")
                 service = build('calendar', 'v3', credentials=test_credentials)
@@ -871,12 +885,82 @@ def edit_store():
     # List of common timezones (can be expanded)
     timezones = pytz.all_timezones
 
+    import re
+    import shutil
+    from werkzeug.utils import secure_filename
+    
     if request.method == 'POST':
+        errors = []
+        # Username uniqueness check
+        new_username = request.form.get('username', store.username)
+        if new_username != store.username:
+            existing = Store.query.filter_by(username=new_username).first()
+            if existing and existing.id != store.id:
+                errors.append('Username already exists. Please choose a different one.')
+        # Email format validation
+        email = request.form.get('email', store.email)
+        if email and not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            errors.append('Invalid email format.')
+        # Handle logo upload
+        logo_file = request.files.get('logo')
+        if logo_file and logo_file.filename:
+            filename = secure_filename(logo_file.filename)
+            upload_folder = os.path.join(current_app.static_folder, 'uploads', 'store_logos')
+            os.makedirs(upload_folder, exist_ok=True)
+            file_path = os.path.join(upload_folder, filename)
+            logo_file.save(file_path)
+            # Optionally delete old logo file
+            if store.logo_filename and store.logo_filename != filename:
+                old_path = os.path.join(upload_folder, store.logo_filename)
+                try:
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                except Exception:
+                    pass
+            store.logo_filename = filename
+        # Password logic
+        password = request.form.get('password', '')
+        if password:
+            if len(password) < 8:
+                errors.append('Password must be at least 8 characters.')
+            else:
+                store.set_password(password)
+        # Set all other fields
         store.name = request.form.get('name', store.name)
+        store.username = new_username
         store.address = request.form.get('address', store.address)
         store.phone = request.form.get('phone', store.phone)
-        store.email = request.form.get('email', store.email)
+        store.email = email
         store.timezone = request.form.get('timezone', store.timezone)
+        store.subscription_status = request.form.get('subscription_status', store.subscription_status)
+        store.status = request.form.get('status', store.status)
+        store.business_hours = request.form.get('business_hours', store.business_hours)
+        store.description = request.form.get('description', store.description)
+        store.facebook_url = request.form.get('facebook_url', store.facebook_url)
+        store.instagram_url = request.form.get('instagram_url', store.instagram_url)
+        store.website_url = request.form.get('website_url', store.website_url)
+        store.tax_id = request.form.get('tax_id', store.tax_id)
+        store.notification_preferences = request.form.get('notification_preferences', store.notification_preferences)
+        try:
+            store.default_appointment_duration = int(request.form.get('default_appointment_duration', store.default_appointment_duration) or 0) or None
+        except ValueError:
+            errors.append('Default appointment duration must be a number.')
+        try:
+            store.default_appointment_buffer = int(request.form.get('default_appointment_buffer', store.default_appointment_buffer) or 0) or None
+        except ValueError:
+            errors.append('Default appointment buffer must be a number.')
+        store.payment_settings = request.form.get('payment_settings', store.payment_settings)
+        store.is_archived = 'is_archived' in request.form
+        # If errors, show them and don't commit
+        if errors:
+            for err in errors:
+                flash(err, 'danger')
+            return render_template('edit_store.html', store=store, timezones=timezones)
+        # Audit log for sensitive changes
+        if new_username != store.username:
+            current_app.logger.info(f"[AUDIT] Store username changed for store {store.id}")
+        if password:
+            current_app.logger.info(f"[AUDIT] Store password changed for store {store.id}")
         try:
             db.session.commit()
             flash('Store information updated successfully.', 'success')
@@ -885,3 +969,239 @@ def edit_store():
             db.session.rollback()
             flash('Failed to update store information.', 'danger')
     return render_template('edit_store.html', store=store, timezones=timezones)
+
+def sync_google_calendar_for_store(store, user):
+    if not store or not store.google_token_json or not store.google_calendar_id:
+        current_app.logger.warning("[SYNC] Store missing Google token or calendar ID.")
+        return 0
+    try:
+        # Use store's timezone if set, else default to UTC
+        store_tz_str = getattr(store, 'timezone', None) or 'UTC'
+        try:
+            store_tz = pytz.timezone(store_tz_str)
+        except Exception:
+            store_tz = pytz.UTC
+        token_data = json.loads(store.google_token_json)
+        credentials = GoogleCredentials(
+            token=token_data.get('token') or token_data.get('access_token'),
+            refresh_token=token_data.get('refresh_token'),
+            token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
+            client_id=token_data.get('client_id') or os.environ.get('GOOGLE_CLIENT_ID'),
+            client_secret=token_data.get('client_secret') or os.environ.get('GOOGLE_CLIENT_SECRET'),
+            scopes=[
+                "https://www.googleapis.com/auth/calendar",
+                "https://www.googleapis.com/auth/calendar.events",
+                "https://www.googleapis.com/auth/calendar.readonly",
+                "openid",
+                "https://www.googleapis.com/auth/userinfo.email",
+                "https://www.googleapis.com/auth/userinfo.profile"
+            ]
+        )
+        service = build('calendar', 'v3', credentials=credentials)
+        now_utc = datetime.datetime.utcnow().replace(tzinfo=pytz.UTC)
+        now = now_utc.astimezone(store_tz).isoformat()
+        events_result = service.events().list(
+            calendarId=store.google_calendar_id,
+            timeMin=now,
+            maxResults=250,
+            singleEvents=True,
+            orderBy='startTime'
+        ).execute()
+        events = events_result.get('items', [])
+        current_app.logger.info(f"[SYNC] Retrieved {len(events)} events from Google Calendar.")
+        for event in events:
+            current_app.logger.info(f"[SYNC] Event: id={event.get('id')}, summary={event.get('summary')}, description={event.get('description')}, start={event.get('start')}")
+        created_appointments = []
+        for event in events:
+            details_needed = False
+            missing_fields = []
+            desc = event.get('description', '')
+            # Parse fields from description using regex or simple search
+            dog = owner = groomer = services = notes = None
+            dog_match = re.search(r'Dog: ([^\n]+)', desc)
+            owner_match = re.search(r'Owner: ([^\n]+)', desc)
+            groomer_match = re.search(r'Groomer: ([^\n]+)', desc)
+            services_match = re.search(r'Services: ([^\n]+)', desc)
+            notes_match = re.search(r'Notes: ([^\n]+)', desc)
+            status_match = re.search(r'Status: ([^\n]+)', desc)
+            if dog_match:
+                dog = dog_match.group(1).strip()
+            if owner_match:
+                owner = owner_match.group(1).strip()
+            if groomer_match:
+                groomer = groomer_match.group(1).strip()
+            if services_match:
+                services = services_match.group(1).strip()
+            if notes_match:
+                notes = notes_match.group(1).strip()
+            status = status_match.group(1).strip() if status_match else 'Scheduled'
+            # Check if the event is cancelled in Google Calendar
+            is_cancelled = event.get('status', '').lower() == 'cancelled'
+            # Parse start time
+            start_str = event['start'].get('dateTime') or event['start'].get('date')
+            appt_dt = None
+            try:
+                if start_str:
+                    # Parse with timezone awareness
+                    appt_dt = dateutil_parser.isoparse(start_str)
+                    if appt_dt.tzinfo is None:
+                        appt_dt = store_tz.localize(appt_dt)
+                    # Always convert to UTC for storage
+                    appt_dt = appt_dt.astimezone(pytz.UTC)
+            except Exception:
+                appt_dt = None
+            # Skip if required info is missing or dog is a placeholder
+            if not dog or dog == 'Unknown Dog':
+                dog = 'Unknown Dog'
+                missing_fields.append('dog')
+            if not owner:
+                owner = 'Unknown Owner'
+                missing_fields.append('owner')
+            if not appt_dt:
+                # Use a far-future date as a placeholder if missing
+                appt_dt = datetime.datetime(2099, 1, 1, tzinfo=pytz.UTC)
+                missing_fields.append('date')
+            if missing_fields:
+                details_needed = True
+                current_app.logger.warning(f"[SYNC] Event {event.get('id')} missing: {', '.join(missing_fields)}. Created/updated with placeholders and details_needed=True.")
+            # Find or create owner (by full name or first name)
+            owner_first = owner.split()[0]
+            owner_obj = Owner.query.filter(
+                Owner.store_id == store.id,
+                or_(func.lower(Owner.name) == owner.lower(),
+                    func.lower(func.substr(Owner.name, 1, func.instr(Owner.name, ' ') - 1)) == owner_first.lower() if owner_first else False)
+            ).first()
+            # --- BEGIN: Updated logic for unknown dog/owner ---
+            owner_obj_found = True
+            if not owner_obj:
+                owner_obj_found = False
+            dog_obj_found = True
+            dog_first = dog.split()[0]
+            dog_obj = None
+            if owner_obj:
+                dog_obj = Dog.query.filter(
+                    Dog.owner_id == owner_obj.id,
+                    Dog.store_id == store.id,
+                    or_(func.lower(Dog.name) == dog.lower(),
+                        func.lower(func.substr(Dog.name, 1, func.instr(Dog.name, ' ') - 1)) == dog_first.lower() if dog_first else False)
+                ).first()
+            if not dog_obj:
+                dog_obj_found = False
+
+            # If neither owner nor dog found, create both as unknown and link them
+            if not owner_obj_found and not dog_obj_found:
+                owner_obj = Owner(name="Unknown Owner", phone_number='000-000-0000', email='unknown@unknown.com', store_id=store.id)
+                db.session.add(owner_obj)
+                db.session.commit()
+                dog_obj = Dog(name="Unknown Dog", owner_id=owner_obj.id, store_id=store.id)
+                db.session.add(dog_obj)
+                db.session.commit()
+            else:
+                # If only owner is missing, create owner as usual
+                if not owner_obj_found:
+                    owner_obj = Owner(name=owner, phone_number='000-000-0000', email='unknown@unknown.com', store_id=store.id)
+                    try:
+                        db.session.add(owner_obj)
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+                        details_needed = True
+                        missing_fields.append('Owner')
+                # If only dog is missing, create dog as usual
+                if not dog_obj_found:
+                    dog_obj = Dog(name=dog, owner_id=owner_obj.id, store_id=store.id)
+                    db.session.add(dog_obj)
+                    db.session.commit()
+            # --- END: Updated logic for unknown dog/owner ---
+            # Find groomer (by full username or first name)
+            groomer_obj = None
+            if groomer:
+                groomer_first = groomer.split()[0]
+                groomer_obj = User.query.filter(
+                    User.is_groomer == True,
+                    User.store_id == store.id,
+                    or_(func.lower(User.username) == groomer.lower(),
+                        func.lower(func.substr(User.username, 1, func.instr(User.username, ' ') - 1)) == groomer_first.lower() if groomer_first else False)
+                ).first()
+            # Add missing info to notes
+            notes_with_missing = notes or ''
+            if status == 'Scheduled' and (not dog_obj or not owner_obj or not appt_dt):
+                details_needed = True
+                missing_fields = []
+                if not dog_obj:
+                    missing_fields.append('Dog')
+                if not owner_obj:
+                    missing_fields.append('Owner')
+                if not appt_dt:
+                    missing_fields.append('Date/Time')
+            if details_needed and missing_fields:
+                notes_with_missing += ('\n' if notes_with_missing else '') + f"[Needs Review: Missing {', '.join(missing_fields)}]"
+            # Check if appointment already exists (by eventId and store_id)
+            existing = Appointment.query.filter_by(
+                store_id=store.id,
+                google_event_id=event['id']
+            ).first()
+            if existing:
+                # Only update fields that should be synced from Google
+                existing.appointment_datetime = appt_dt
+                
+                # Don't update status to 'Cancelled' if it's already set to 'Completed' or 'No Show'
+                if existing.status not in ['Completed', 'No Show']:
+                    existing.status = 'Cancelled' if is_cancelled else status
+                
+                # Don't overwrite services and notes if they exist locally
+                if not existing.requested_services_text and services:
+                    existing.requested_services_text = services
+                if not existing.notes and notes:
+                    existing.notes = notes_with_missing
+                    
+                # Only set details_needed to True if it's not already set
+                if not existing.details_needed:
+                    existing.details_needed = details_needed
+                    
+                # Update the dog and groomer relationships if they're not set
+                if not existing.dog_id and dog_obj:
+                    existing.dog_id = dog_obj.id
+                if not existing.groomer_id and groomer_obj:
+                    existing.groomer_id = groomer_obj.id
+                    
+                if user and user.id and not existing.created_by_user_id:
+                    existing.created_by_user_id = user.id
+                    
+                db.session.commit()
+                current_app.logger.info(f"[SYNC] Updated existing appointment for Google event {event['id']} (store {store.id})")
+            else:
+                # Only create if not already present
+                appt = Appointment(
+                    dog_id=dog_obj.id,
+                    appointment_datetime=appt_dt,
+                    requested_services_text=services,
+                    notes=notes_with_missing,
+                    status=status,
+                    created_by_user_id=user.id if user else None,
+                    groomer_id=groomer_obj.id if groomer_obj else None,
+                    store_id=store.id,
+                    google_event_id=event['id'],
+                    details_needed=details_needed
+                )
+                db.session.add(appt)
+                db.session.commit()
+                created_appointments.append(appt)
+                current_app.logger.info(f"[SYNC] Created new appointment for Google event {event['id']} (store {store.id})")
+        return len(created_appointments)
+    except Exception as e:
+        current_app.logger.error(f"Failed to sync Google Calendar: {e}", exc_info=True)
+        return 0
+
+@management_bp.route('/sync_google_calendar')
+@admin_required
+def sync_google_calendar():
+    store_id = session.get('store_id')
+    store = db.session.get(Store, store_id)
+    num_synced = sync_google_calendar_for_store(store, g.user)
+    if num_synced > 0:
+        flash(f'Synced {num_synced} new appointments from Google Calendar.', 'success')
+        log_activity(f'Synced {num_synced} appts from Google Calendar')
+    else:
+        flash('No new appointments to sync from Google Calendar.', 'info')
+    return redirect(url_for('management.management'))

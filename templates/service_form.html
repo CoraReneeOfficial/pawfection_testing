@@ -65,27 +65,27 @@
             <div class="form-group">
                 <label for="name">{{ item_type_display }} Name *</label>
                 {# Pre-fill name if editing or if there was a validation error on add #}
-                <input type="text" id="name" name="name" required class="form-input" value="{{ item_data.get('name', '') }}" autofocus>
+                <input type="text" id="name" name="name" required class="form-input" value="{{ item_data.name if mode == 'edit' else item_data.get('name', '') }}" autofocus>
             </div>
 
             <div class="form-group">
                 <label for="description">Description</label>
                 {# Pre-fill description #}
-                <textarea id="description" name="description" rows="3" class="form-input" placeholder="Optional: Brief description of the {{ item_type_display.lower() }}">{{ item_data.get('description', '') }}</textarea>
+                <textarea id="description" name="description" rows="3" class="form-input" placeholder="Optional: Brief description of the {{ item_type_display.lower() }}">{{ item_data.description if mode == 'edit' else item_data.get('description', '') }}</textarea>
             </div>
 
             <div class="form-group">
                 <label for="base_price">Base Price *</label>
                 {# Pre-fill price #}
-                <input type="number" id="base_price" name="base_price" required class="form-input" step="0.01" min="0" value="{{ item_data.get('base_price', '') }}" placeholder="e.g., 25.00">
+                <input type="number" id="base_price" name="base_price" required class="form-input" step="0.01" min="0" value="{{ item_data.base_price if mode == 'edit' else item_data.get('base_price', '') }}" placeholder="e.g., 25.00">
             </div>
             
             <div class="form-group">
                 <label for="item_type">Item Type *</label>
                 <select name="item_type" id="item_type" required class="form-input">
                     {# Pre-select the item type. Default to 'service' for add mode if not specified. #}
-                    <option value="service" {% if item_data.get('item_type', 'service' if mode == 'add' else '') == 'service' %}selected{% endif %}>Service</option>
-                    <option value="fee" {% if item_data.get('item_type') == 'fee' %}selected{% endif %}>Fee</option>
+                    <option value="service" {% if (item_data.item_type if mode == 'edit' else item_data.get('item_type', 'service' if mode == 'add' else '')) == 'service' %}selected{% endif %}>Service</option>
+                    <option value="fee" {% if (item_data.item_type if mode == 'edit' else item_data.get('item_type')) == 'fee' %}selected{% endif %}>Fee</option>
                 </select>
             </div>
 

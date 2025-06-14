@@ -1,0 +1,26 @@
+🐾 Pawfection App: Quick Project Context for AI
+Project Type:
+Flask web app for a dog grooming business (appointments, clients, notifications, admin, etc.)
+Key Structure:
+app.py: Main Flask app, registers blueprints, configures extensions.
+models.py: SQLAlchemy models for User, Dog, Appointment, etc.
+extensions.py: Initializes Flask extensions (DB, mail, etc.).
+utils.py: Helper functions.
+requirements.txt: Python dependencies.
+migrations/: Alembic DB migrations.
+static/: CSS, JS, images.
+uploads/: User-uploaded images (profile pics, dog pics).
+templates/: Jinja2 HTML templates (dashboard, email, errors, etc.).
+appointments/, auth/, dogs/, owners/, notifications/, management/:
+Each is a Flask blueprint for a feature (routes, forms, logic).
+How it works:
+Blueprints handle different features (appointments, auth, etc.).
+Routes fetch data from models.py and render templates/.
+User images are stored in uploads/ and served via Flask routes.
+Dashboard and other pages use Jinja2 templates with variables passed from routes.
+Admin/management features are in management/.
+Notifications (email/SMS) are in notifications/.
+Typical flow:
+User logs in (auth/).
+Visits a page (e.g., dashboard) → route handler fetches data from models → renders template.
+User actions (add appointment, upload image, etc.) update the DB and/or files.

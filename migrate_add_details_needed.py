@@ -18,20 +18,40 @@ def main():
     )
     cur = conn.cursor()
 
-    # Check if the column already exists
-    cur.execute("""
-        SELECT column_name
-        FROM information_schema.columns
-        WHERE table_name='appointment' AND column_name='details_needed';
-    """)
-    if cur.fetchone():
-        print("Column 'details_needed' already exists. No changes made.")
-    else:
-        cur.execute("""
-            ALTER TABLE appointment
-            ADD COLUMN details_needed BOOLEAN NOT NULL DEFAULT FALSE;
-        """)
-        print("Column 'details_needed' added successfully.")
+    # List of new columns to add to the store table: (name, SQL type, default, nullable)
+    new_columns = [
+        ("logo_filename", "VARCHAR(200)", None, True),
+        ("status", "VARCHAR(20)", "'active'", False),
+        ("business_hours", "TEXT", None, True),
+        ("description", "TEXT", None, True),
+        ("facebook_url", "VARCHAR(255)", None, True),
+        ("instagram_url", "VARCHAR(255)", None, True),
+        ("website_url", "VARCHAR(255)", None, True),
+        ("tax_id", "VARCHAR(100)", None, True),
+        ("notification_preferences", "TEXT", None, True),
+        ("default_appointment_duration", "INTEGER", None, True),
+        ("default_appointment_buffer", "INTEGER", None, True),
+        ("payment_settings", "TEXT", None, True),
+        ("is_archived", "BOOLEAN", "FALSE", False)
+    ]
+
+    for col, sqltype, default, nullable in new_columns:
+        cur.execute(f"""
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name='store' AND column_name=%s;
+        """, (col,))
+        if cur.fetchone():
+            print(f"Column '{col}' already exists. Skipping.")
+        else:
+            alter = f"ALTER TABLE store ADD COLUMN {col} {sqltype}"
+            if not nullable:
+                alter += " NOT NULL"
+            if default is not None:
+                alter += f" DEFAULT {default}"
+            alter += ";"
+            cur.execute(alter)
+            print(f"Column '{col}' added successfully.")
 
     conn.commit()
     cur.close()

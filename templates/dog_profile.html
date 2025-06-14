@@ -161,7 +161,7 @@
                 <span class="date-time">{{ local_appt_time.strftime('%a, %b %d, %Y @ %I:%M %p') }}</span>
                 <span class="status-badge status-{{ appt.status }}">{{ appt.status }}</span>
                 {% if appt.details_needed %}
-                    <span class="status-badge" style="background-color: #dc3545; margin-left: 0.5em;">Additional Details Needed</span>
+                    <span class="status-badge" style="background-color: #dc3545; margin-left: 0.5em;">Needs Review</span>
                 {% endif %}
                 {% if appt.groomer %}
                     <span class="groomer-info">Groomer: {{ appt.groomer.username }}</span>

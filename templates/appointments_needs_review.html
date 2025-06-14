@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}Appointments Needing Review{% endblock %}
+{% block content %}
+<div class="container">
+    <h2>Appointments Needing Review</h2>
+    {% if appointments %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Date/Time</th>
+                    <th>Dog</th>
+                    <th>Owner</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for appt in appointments %}
+                {% set local_appt_time = appt.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(STORE_TIMEZONE) if STORE_TIMEZONE else appt.appointment_datetime %}
+                <tr>
+                    <td>{{ local_appt_time.strftime('%Y-%m-%d %I:%M %p') }}</td>
+                    <td>{{ appt.dog.name }}</td>
+                    <td>{{ appt.dog.owner.name }}</td>
+                    <td>
+                        <span class="status-badge status-{{ appt.status }}">{{ appt.status }}</span>
+                        {% if appt.details_needed %}
+                            <span class="status-badge" style="background-color: #dc3545; margin-left: 0.5em;">Needs Review</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if appt.notes %}
+                            {{ appt.notes|replace('\n', '<br>')|safe }}
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('appointments.edit_appointment', appointment_id=appt.id) }}" class="button button-primary">Edit</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="no-appointments">No appointments need review at this time.</div>
+    {% endif %}
+    <a href="{{ url_for('appointments.calendar_view') }}" class="button button-secondary" style="margin-top:1em;">Back to Calendar</a>
+</div>
+{% endblock %} 

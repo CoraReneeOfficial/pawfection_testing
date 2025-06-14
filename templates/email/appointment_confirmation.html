@@ -99,15 +99,15 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Your Pawfection Grooming Appointment is Confirmed!</h1>
+            <h1>Your Appointment with {{ business_name or 'Your Grooming Store' }} is Confirmed!</h1>
         </div>
         <div class="content">
             <p class="automated-message-note">
-                This is an automated message sent from the Pawfection Grooming Solutions scheduling app.
+                This is an automated message sent from Pawfection Grooming Solutions.
             </p>
 
             <p>Hello {{ owner_name or 'Valued Client' }},</p>
-            <p>We're excited to confirm your upcoming grooming appointment for <strong>{{ dog_name }}</strong> with Pawfection Grooming Solutions!</p>
+            <p>We're excited to confirm your upcoming grooming appointment for <strong>{{ dog_name }}</strong> with <strong>{{ business_name or 'Your Grooming Store' }}</strong>!</p>
             
             <div class="appointment-details">
                 <p><strong>Date:</strong> {{ appointment_datetime_local.strftime('%A, %B %d, %Y') if appointment_datetime_local else 'N/A' }}</p>
@@ -116,8 +116,8 @@
                 {% if groomer_name %}
                     <p><strong>Assigned Groomer:</strong> {{ groomer_name }}</p>
                 {% endif %}
-                <p><strong>Location:</strong> 123 Pet Paradise Lane, Animal City, PA 12345</p> {# Example location #}
-                <p><strong>Contact:</strong> (555) 123-4567 | info@pawfectiongrooming.com</p> {# Example contact #}
+                <p><strong>Location:</strong> {{ contact_address or '123 Pet Paradise Lane, Animal City, PA 12345' }}</p>
+                <p><strong>Contact:</strong> {{ contact_phone or '(555) 123-4567' }} | {{ contact_email or 'info@pawfectiongrooming.com' }}</p>
             </div>
 
             <p>Please arrive 5-10 minutes before your scheduled time to ensure a smooth check-in process. If you need to make any changes to your appointment, please use the link below or contact us directly.</p>
@@ -127,12 +127,12 @@
             </p>
 
             <p>We can't wait to pamper {{ dog_name }}!</p>
-            <p>Sincerely,<br>The Team at Pawfection Grooming Solutions</p>
+            <p>Sincerely,<br>The Team at {{ business_name or 'Your Grooming Store' }}</p>
         </div>
         <div class="footer">
-            <p>&copy; {{ now().year }} Pawfection Grooming Solutions. All rights reserved.</p>
-            <p>123 Pet Paradise Lane, Animal City, PA 12345</p>
-            <p>(555) 123-4567 | info@pawfectiongrooming.com</p>
+            <p>&copy; {{ now().year }} {{ business_name or 'Your Grooming Store' }}. All rights reserved.</p>
+            <p>{{ contact_address or '123 Pet Paradise Lane, Animal City, PA 12345' }}</p>
+            <p>{{ contact_phone or '(555) 123-4567' }} | {{ contact_email or 'info@pawfectiongrooming.com' }}</p>
         </div>
     </div>
 </body>
