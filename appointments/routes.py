@@ -761,7 +761,14 @@ def delete_appointment(appointment_id):
             msg = f"Appt for {dog_name} on {time_str} deleted!"
             if google_calendar_deleted:
                 msg += " (Google Calendar event deleted)"
-            # ... send email logic ...
+            # Send cancellation email to owner
+            if appt.dog is not None and appt.dog.owner is not None:
+                owner = appt.dog.owner
+                groomer = appt.groomer if hasattr(appt, 'groomer') else None
+                services_text = appt.requested_services_text
+                send_appointment_cancelled_email(store, owner, appt.dog, appt, groomer, services_text)
+            else:
+                current_app.logger.warning(f"[CANCEL EMAIL] Skipping email: appt.dog or appt.dog.owner missing for appt ID {appointment_id}")
             flash(msg, "success")
         else:
             # Mark as Cancelled in app
@@ -780,7 +787,14 @@ def delete_appointment(appointment_id):
             msg = f"Appt for {dog_name} on {time_str} marked as Cancelled."
             if google_calendar_cancelled:
                 msg += " (Google Calendar event cancelled)"
-            # ... send email logic ...
+            # Send cancellation email to owner
+            if appt.dog is not None and appt.dog.owner is not None:
+                owner = appt.dog.owner
+                groomer = appt.groomer if hasattr(appt, 'groomer') else None
+                services_text = appt.requested_services_text
+                send_appointment_cancelled_email(store, owner, appt.dog, appt, groomer, services_text)
+            else:
+                current_app.logger.warning(f"[CANCEL EMAIL] Skipping email: appt.dog or appt.dog.owner missing for appt ID {appointment_id}")
             flash(msg, "success")
     except Exception as e:
         db.session.rollback()

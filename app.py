@@ -584,6 +584,24 @@ def create_app():
                 app.logger.info(f"[WEBHOOK] Store {store.id} subscription activated. customer_id={customer_id}, subscription_id={subscription_id}")
             else:
                 app.logger.error(f"[WEBHOOK] No store found for store_id={store_id}")
+        elif event['type'] in ['customer.subscription.created', 'customer.subscription.updated']:
+            subscription = event['data']['object']
+            customer_id = subscription.get('customer')
+            subscription_id = subscription.get('id')
+            status = subscription.get('status')
+            from models import Store
+            store = Store.query.filter_by(stripe_customer_id=customer_id).first()
+            if store:
+                store.stripe_subscription_id = subscription_id
+                # Only set to active if Stripe says it's active or trialing
+                if status in ['active', 'trialing']:
+                    store.subscription_status = 'active'
+                    db.session.commit()
+                    app.logger.info(f"[WEBHOOK] Store {store.id} subscription set to active ({event['type']}). customer_id={customer_id}, subscription_id={subscription_id}, status={status}")
+                else:
+                    app.logger.info(f"[WEBHOOK] Store {store.id} subscription received {event['type']} but status is {status}, not activating.")
+            else:
+                app.logger.error(f"[WEBHOOK] No store found for customer_id={customer_id} in {event['type']}")
         elif event['type'] == 'customer.subscription.deleted':
             subscription = event['data']['object']
             customer_id = subscription.get('customer')
