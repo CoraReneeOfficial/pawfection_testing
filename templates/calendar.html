@@ -77,7 +77,7 @@
 <div class="content-card">
     <div class="content-header">
         <h1>Appointment Calendar</h1>
-        <a href="{{ url_for('appointments.add_appointment') }}" class="button button-primary">Add New Appointment (In App)</a>
+        <a href="{{ url_for('appointments.add_appointment') }}" class="button button-primary">Add New Appointment</a>
     </div>
 
     <p>
@@ -93,10 +93,11 @@
 
     {# --- Local App Appointments List --- #}
     <div class="local-appointments-section">
-        <div style="margin-bottom: 1em;">
-            <a href="{{ url_for('appointments.appointments_needs_review') }}" class="button button-danger">View Appointments Needing Review</a>
-        </div>
-        <h2>Scheduled Appointments (Managed in App)</h2> {# Updated title to reflect filtering #}
+
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
+            <h2 style="margin:0;">Scheduled Appointments (Managed in App)</h2>
+            <a href="{{ url_for('appointments.all_appointments') }}" class="button button-secondary">View All Appointments</a>
+        </div> {# Updated title to reflect filtering #}
         {# 'local_appointments' is passed from the /calendar route in app.py #}
         {% if local_appointments %}
             <ul class="appointment-list">

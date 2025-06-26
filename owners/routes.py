@@ -26,7 +26,7 @@ def directory():
         log_activity("Searched Directory", details=f"Query: '{search_query}', Store ID: {store_id}")
         search_term = f"%{search_query}%"
         # Join with Dog for dog name search, ensuring Dog also belongs to the same store
-        owners_query = owners_query.join(Dog, Owner.id == Dog.owner.id, isouter=True).filter( # Corrected join condition
+        owners_query = owners_query.join(Dog, Owner.id == Dog.owner_id, isouter=True).filter(  # Join Owner to Dog via foreign key
             or_(
                 Owner.name.ilike(search_term), 
                 Owner.phone_number.ilike(search_term),

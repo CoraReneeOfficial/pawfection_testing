@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Appointment Request{% endblock %}
+
+{% block content %}
+<h1>Edit Appointment Request</h1>
+{% if public_page_url %}
+<p style="margin-top:0.3rem; font-size:0.95rem;">
+    Customer-facing page: <a href="{{ public_page_url }}" target="_blank">{{ public_page_url }}</a>
+</p>
+{% endif %}
+<form method="POST" class="content-card" style="max-width:640px;">
+    <div class="form-group">
+        <label>Existing Owner (optional)</label>
+        <select class="form-input" name="owner_id" id="owner_select">
+            <option value="">-- Select Existing Owner --</option>
+            {% for o in owners %}
+            <option value="{{ o.id }}" {% if req.owner_id==o.id %}selected{% endif %}>{{ o.name }} ({{ o.phone_number }})</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label>Existing Dog (optional)</label>
+        <select class="form-input" name="dog_id" id="dog_select">
+            <option value="">-- Select Existing Dog --</option>
+            {% if req.dog_id %}
+                {% for o in owners %}
+                    {% for d in o.dogs %}
+                        <option value="{{ d.id }}" data-owner="{{ o.id }}" {% if req.dog_id==d.id %}selected{% endif %}>{{ d.name }} (Owner: {{ o.name }})</option>
+                    {% endfor %}
+                {% endfor %}
+            {% endif %}
+        </select>
+        <small>If no owner/dog selected, the request info below will be used to create new records.</small>
+    </div>
+    <hr>
+    <div class="form-group">
+        <label>Name *</label>
+        <input class="form-input" type="text" name="customer_name" id="customer_name" value="{{ req.customer_name }}" required>
+    </div>
+    <div class="form-group">
+        <label>Phone *</label>
+        <input class="form-input" type="text" name="phone" value="{{ req.phone }}" required>
+    </div>
+    <div class="form-group">
+        <label>Email</label>
+        <input class="form-input" type="email" name="email" value="{{ req.email }}">
+    </div>
+    <div class="form-group">
+        <label>Dog Name</label>
+        <input class="form-input" type="text" name="dog_name" id="dog_name_input" value="{{ req.dog_name }}">
+    </div>
+    <div class="form-group">
+        <label>Preferred Date</label>
+        <input class="form-input" type="date" name="preferred_date" value="{{ pref_date }}">
+    </div>
+    <div class="form-group">
+        <label>Preferred Time</label>
+        <input class="form-input" type="time" name="preferred_time" value="{{ pref_time }}" step="900">
+    </div>
+    <div class="form-group">
+        <label>Requested Services</label>
+        <select class="form-input" name="services" multiple size="4" style="min-height:100px;">
+            {% for s in services %}
+            {% set selected = req.requested_services_text and (s.id|string) in req.requested_services_text.split(',') %}
+            <option value="{{ s.id }}" {% if selected %}selected{% endif %}>{{ s.name }}</option>
+            {% endfor %}
+        </select>
+        <small>Hold Ctrl/⌘ to select multiple.</small>
+    </div>
+    <div class="form-group">
+        <label>Assign Groomer</label>
+        <select class="form-input" name="groomer_id">
+            <option value="">-- Unassigned --</option>
+            {% for g in groomers %}
+            <option value="{{ g.id }}" {% if req.groomer_id==g.id %}selected{% endif %}>{{ g.username }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label>Notes</label>
+        <textarea class="form-input" name="notes" rows="3">{{ req.notes }}</textarea>
+    </div>
+    <div style="margin-top:1rem;">
+        <button type="submit" class="button button-primary">Save Changes</button>
+        <a href="{{ url_for('management.pending_appointments') }}" class="button button-secondary">Cancel</a>
+    </div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+const ownersData = {{ owners_json|tojson }};
+const ownerSelect = document.getElementById('owner_select');
+const dogSelect = document.getElementById('dog_select');
+function populateDogs(ownerId){
+    dogSelect.innerHTML = '<option value="">-- Select Existing Dog --</option>';
+    if(!ownerId) return;
+    const owner = ownersData.find(o=>o.id == ownerId);
+    if(owner){
+        owner.dogs.forEach(d=>{
+            const opt = document.createElement('option');
+            opt.value = d.id;
+            opt.textContent = d.name;
+            dogSelect.appendChild(opt);
+        });
+    }
+}
+ownerSelect.addEventListener('change', e=>{
+    populateDogs(e.target.value);
+});
+// Initialize if owner pre-selected
+populateDogs(ownerSelect.value);
+</script>
+{% endblock %}

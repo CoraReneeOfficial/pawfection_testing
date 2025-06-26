@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}{{ status }} Appointments{% endblock %}
+
+{% block content %}
+<div class="content-card">
+    <div class="content-header" style="justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+        <h1 style="margin:0;">{{ status }} Appointments</h1>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <a href="{{ url_for('appointments.all_appointments') }}" class="button button-secondary">Back to Overview</a>
+            <a href="{{ url_for('appointments.calendar_view') }}" class="button button-secondary">Calendar</a>
+        </div>
+    </div>
+
+    <form method="get" action="" style="margin-bottom:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+        <input type="text" name="q" value="{{ search_query }}" placeholder="Search dog or owner" class="form-control" style="flex:1;min-width:200px;">
+        <button type="submit" class="button">Search</button>
+        {% if search_query %}
+            <a href="{{ url_for('appointments.view_appointments_by_status', status=status.lower()) }}" class="button button-secondary">Clear</a>
+        {% endif %}
+    </form>
+
+    {% if appointments %}
+        <ul class="appointment-list">
+        {% for appointment in appointments %}
+            <li class="appointment-item">
+                <div class="appointment-info">
+                    {% set local_appt_time = appointment.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(STORE_TIMEZONE) if STORE_TIMEZONE else appointment.appointment_datetime %}
+                    <span class="appointment-datetime">{{ local_appt_time.strftime('%a, %b %d, %Y @ %I:%M %p') }}</span>
+                    <br>
+                    <strong>{{ appointment.dog.name }}</strong> &mdash; Owner: {{ appointment.dog.owner.name }}
+                    {% if appointment.groomer %}<span class="appointment-groomer-info">Groomer: {{ appointment.groomer.username }}</span>{% endif %}
+                </div>
+                <div class="appointment-actions" style="margin-left:auto;">
+                    <a href="{{ url_for('appointments.edit_appointment', appointment_id=appointment.id) }}" class="button">Edit</a>
+                </div>
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p class="no-appointments" style="padding:1rem;">No {{ status }} appointments found{% if search_query %} for "{{ search_query }}"{% endif %}.</p>
+    {% endif %}
+</div>
+{% endblock %}

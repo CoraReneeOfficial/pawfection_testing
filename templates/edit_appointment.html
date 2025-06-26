@@ -128,7 +128,7 @@
             <div class="form-group">
                 <label for="services_text">Services/Fees Performed</label>
                  {# Pre-fill with existing text #}
-                <input type="text" id="services_text" name="services_text" class="form-input" value="{{ appointment_data.requested_services_text or '' }}" placeholder="Optional: e.g., Full Groom, Bath & Brush, Matting Fee">
+                <input type="text" id="services_text" name="services_text" class="form-input" value="{{ appointment_data.get('services_text', appointment_data.requested_services_text) or '' }}" placeholder="Optional: e.g., Full Groom, Bath & Brush, Matting Fee">
                 <small class="text-muted">List the main services/fees performed (will appear on calendar/history).</small>
             </div>
 

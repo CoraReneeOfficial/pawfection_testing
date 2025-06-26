@@ -220,6 +220,31 @@ class Appointment(db.Model):
     def __repr__(self):
         return f"<Appointment ID: {self.id}, Dog ID: {self.dog_id}, DateTime: {self.appointment_datetime}, Status: {self.status}, Store ID: {self.store_id}>"
 
+class AppointmentRequest(db.Model):
+    """
+    Represents a customer-submitted appointment request from the public store page.
+    Admins can later approve (which will convert it into proper Owner / Dog / Appointment records) or reject.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    store_id = db.Column(db.Integer, db.ForeignKey('store.id'), nullable=False)
+    customer_name = db.Column(db.String(100), nullable=False)
+    phone = db.Column(db.String(20), nullable=False)
+    email = db.Column(db.String(120), nullable=True)
+    dog_name = db.Column(db.String(100), nullable=True)
+    preferred_datetime = db.Column(db.String(100), nullable=True)  # Free-form preferred date/time
+    owner_id = db.Column(db.Integer, db.ForeignKey('owner.id'), nullable=True)
+    dog_id = db.Column(db.Integer, db.ForeignKey('dog.id'), nullable=True)
+    requested_services_text = db.Column(db.Text, nullable=True)  # Comma-separated list of service IDs requested
+    groomer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(20), default='pending', nullable=False)  # pending / approved / rejected
+    created_at = db.Column(db.DateTime, default=lambda: datetime.datetime.now(timezone.utc), nullable=False)
+
+    store = db.relationship('Store', backref='appointment_requests', lazy=True)
+
+    def __repr__(self):
+        return f"<ApptRequest {self.customer_name} for store {self.store_id} (status {self.status})>"
+
 class ActivityLog(db.Model):
     """
     Records user actions within the application, associated with a user and a store.

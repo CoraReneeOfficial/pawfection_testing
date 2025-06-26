@@ -1,0 +1,207 @@
+2025-06-24 23:39:37,560 - app - INFO - Logging configured successfully
+2025-06-24 23:39:37,572 - app - INFO - SQLAlchemy Database URI: sqlite:///C:\Users\coras\Documents\GitHub\pawfection_testing\grooming_business_v2.db
+2025-06-24 23:39:37,574 - app - INFO - [DEBUG] 'details_needed' column exists in 'appointment' table.
+2025-06-24 23:39:42,230 - app - INFO - Logging configured successfully
+2025-06-24 23:39:42,242 - app - INFO - SQLAlchemy Database URI: sqlite:///C:\Users\coras\Documents\GitHub\pawfection_testing\grooming_business_v2.db
+2025-06-24 23:39:42,244 - app - INFO - [DEBUG] 'details_needed' column exists in 'appointment' table.
+2025-06-24 23:41:45,447 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:41:45,494 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:41:45,554 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:41:45,559 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:41:45,559 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:41:45,563 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:42:22,410 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:42:22,411 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:42:22,445 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', 'Your request has been submitted! We will contact you soon.')], '_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:42:22,446 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:42:22,481 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', 'Your request has been submitted! We will contact you soon.')], '_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:42:22,483 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', 'Your request has been submitted! We will contact you soon.')], '_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:42:22,483 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:42:22,485 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:42:28,712 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', 'Your request has been submitted! We will contact you soon.')], '_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:42:28,713 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:42:28,780 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:42:28,782 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:42:45,383 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:42:45,385 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:42:45,421 - app - ERROR - Error sending confirmation email for appointment 10: name 'logging' is not defined
+Traceback (most recent call last):
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\management\routes.py", line 227, in approve_appointment_request
+    send_appointment_confirmation_email(
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\notifications\email_utils.py", line 17, in send_appointment_confirmation_email
+    logger = logging.getLogger('app.email')
+             ^^^^^^^
+NameError: name 'logging' is not defined
+2025-06-24 23:42:47,042 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', 'Appointment request approved and scheduled. Confirmation email sent.')], '_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:42:47,053 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:42:47,100 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:42:47,101 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:44:29,881 - app - INFO - Logging configured successfully
+2025-06-24 23:44:29,893 - app - INFO - SQLAlchemy Database URI: sqlite:///C:\Users\coras\Documents\GitHub\pawfection_testing\grooming_business_v2.db
+2025-06-24 23:44:29,895 - app - INFO - [DEBUG] 'details_needed' column exists in 'appointment' table.
+2025-06-24 23:51:03,467 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:51:03,503 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:51:03,581 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:51:03,583 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:51:18,204 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:51:18,206 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:51:18,224 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', 'Request updated.')], '_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:51:18,225 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:51:18,278 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:51:18,279 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:51:20,602 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:51:20,603 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:51:20,629 - app.email - INFO - === Starting email sending process ===
+2025-06-24 23:51:20,631 - app.email - INFO - Function called with: store_id=2, owner_id=4, dog_id=5, appointment_id=11
+2025-06-24 23:51:20,631 - app.email - INFO - Preparing to send email to: corasings93@gmail.com
+2025-06-24 23:51:20,632 - app.email - DEBUG - Store name: Fur Fabulous Pet Spa & Mobile
+2025-06-24 23:51:20,632 - app.email - DEBUG - Owner name: Cora Kirkpatrick
+2025-06-24 23:51:20,633 - app.email - DEBUG - Dog name: Atlas Damien Kirkpatrick
+2025-06-24 23:51:20,633 - app.email - DEBUG - Appointment time: 2025-06-25 08:00:00
+2025-06-24 23:51:20,633 - app.email - DEBUG - Groomer: Amanda
+2025-06-24 23:51:20,633 - app.email - DEBUG - Services: Not specified
+2025-06-24 23:51:20,633 - app.email - DEBUG - Successfully parsed Google token JSON
+2025-06-24 23:51:20,633 - app.email - DEBUG - Token data keys: ['token', 'refresh_token', 'token_uri', 'client_id', 'client_secret', 'scopes']
+2025-06-24 23:51:20,634 - app.email - DEBUG - Creating credentials with scopes: ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/calendar.events', 'https://www.googleapis.com/auth/calendar.readonly', 'https://www.googleapis.com/auth/gmail.send', 'openid', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile']
+2025-06-24 23:51:20,634 - app.email - DEBUG - Client ID: ***.com
+2025-06-24 23:51:20,634 - app.email - DEBUG - Building Gmail service
+2025-06-24 23:51:22,968 - app.email - DEBUG - Using timezone: America/New_York
+2025-06-24 23:51:22,968 - app.email - DEBUG - Converted appointment time to local timezone
+2025-06-24 23:51:22,968 - app.email - DEBUG - Rendering email template with context: {'owner_name': 'Cora Kirkpatrick', 'dog_name': 'Atlas Damien Kirkpatrick', 'business_name': 'Fur Fabulous Pet Spa & Mobile', 'appointment_datetime_local': datetime.datetime(2025, 6, 25, 4, 0, tzinfo=<DstTzInfo 'America/New_York' EDT-1 day, 20:00:00 DST>), 'services_text': None, 'groomer_name': 'Amanda', 'BUSINESS_TIMEZONE_NAME': 'America/New_York', 'contact_address': '669 NC-16 Business, Denver, NC 28037, USA', 'contact_phone': '704-489-6775', 'contact_email': 'furfabpetspa@gmail.com'}
+2025-06-24 23:51:22,974 - app.email - DEBUG - Email subject: Appointment Confirmation for Atlas Damien Kirkpatrick at Fur Fabulous Pet Spa & Mobile
+2025-06-24 23:51:22,974 - app.email - DEBUG - Prepared email message. From: corasings93@gmail.com, To: corasings93@gmail.com
+2025-06-24 23:51:22,976 - app.email - DEBUG - Sending email through Gmail API...
+2025-06-24 23:51:24,437 - app.email - INFO - Successfully sent appointment confirmation email. Message ID: 197a5363adbf1269
+2025-06-24 23:51:24,437 - app.email - INFO - Email sent to: corasings93@gmail.com
+2025-06-24 23:51:24,437 - app - INFO - Confirmation email sent for appointment 11 to corasings93@gmail.com
+2025-06-24 23:51:25,836 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', 'Appointment request approved and scheduled. Confirmation email sent.')], '_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:51:25,837 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:51:25,873 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:51:25,874 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:56:13,419 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:56:13,425 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:56:13,485 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:56:13,486 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:56:13,488 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:56:13,490 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:56:18,113 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:56:18,115 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:56:18,131 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-06-24 23:56:18,135 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-06-24 23:56:18,135 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-06-24 23:56:18,190 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:56:18,192 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:56:18,197 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:56:18,198 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:56:39,421 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:56:39,423 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:56:39,424 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-06-24 23:56:39,429 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-06-24 23:56:39,438 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-06-24 23:56:39,452 - app - INFO - Fetching appointments for store_id: 2
+2025-06-24 23:56:39,453 - app - INFO - Starting Google Calendar sync...
+2025-06-24 23:56:40,702 - app - INFO - [SYNC] Retrieved 5 events from Google Calendar.
+2025-06-24 23:56:40,702 - app - INFO - [SYNC] Event: id=03fp6epa94qi8j9s0pqnrkpuqc, summary=Atlas Damien Kirkpatrick's Grooming Appointment, description=Owner: Cora Kirkpatrick
+Phone: 7047409740
+Notes: No notes
+Services: Not specified, start={'dateTime': '2025-06-25T08:00:00-04:00', 'timeZone': 'America/New_York'}
+2025-06-24 23:56:40,703 - app - INFO - [SYNC] Event: id=aogafpsn26mgsmam5sjotg3lb4, summary=Atlas Damien Kirkpatrick's Grooming Appointment, description=Owner: Cora Kirkpatrick
+Phone: 7047409740
+Notes: No notes
+Services: Not specified, start={'dateTime': '2025-06-25T08:00:00-04:00', 'timeZone': 'America/New_York'}
+2025-06-24 23:56:40,703 - app - INFO - [SYNC] Event: id=j3qmorlsqtv78rt14jrdm6sais, summary=Atlas Damien Kirkpatrick's Grooming Appointment, description=Owner: Cora Kirkpatrick
+Phone: 7047409740
+Notes: No notes
+Services: Not specified, start={'dateTime': '2025-06-25T08:00:00-04:00', 'timeZone': 'America/New_York'}
+2025-06-24 23:56:40,703 - app - INFO - [SYNC] Event: id=ce4vat2jr1k69ael8pjuhh6qhg, summary=Atlas Damien Kirkpatrick's Grooming Appointment, description=Owner: Cora Kirkpatrick
+Phone: 7047409740
+Notes: No notes
+Services: Not specified, start={'dateTime': '2025-06-25T11:00:00-04:00', 'timeZone': 'America/New_York'}
+2025-06-24 23:56:40,703 - app - INFO - [SYNC] Event: id=9a0i66t3gjsdklreta090f6mec, summary=COMPLETED - [SCHEDULED] (Atlas Damien Kirkpatrick) Appointment, description=Owner: Cora Kirkpatrick
+Groomer: Amanda
+Services: Full Groom
+Notes: 
+Status: Scheduled
+Status: Completed, start={'dateTime': '2025-06-26T04:00:00-04:00', 'timeZone': 'UTC'}
+2025-06-24 23:56:40,704 - app - WARNING - [SYNC] Event 03fp6epa94qi8j9s0pqnrkpuqc missing: dog. Created/updated with placeholders and details_needed=True.
+2025-06-24 23:56:40,727 - app - INFO - [SYNC] Updated existing appointment for Google event 03fp6epa94qi8j9s0pqnrkpuqc (store 2)
+2025-06-24 23:56:40,729 - app - WARNING - [SYNC] Event aogafpsn26mgsmam5sjotg3lb4 missing: dog. Created/updated with placeholders and details_needed=True.
+2025-06-24 23:56:40,734 - app - INFO - [SYNC] Updated existing appointment for Google event aogafpsn26mgsmam5sjotg3lb4 (store 2)
+2025-06-24 23:56:40,735 - app - WARNING - [SYNC] Event j3qmorlsqtv78rt14jrdm6sais missing: dog. Created/updated with placeholders and details_needed=True.
+2025-06-24 23:56:40,746 - app - INFO - [SYNC] Updated existing appointment for Google event j3qmorlsqtv78rt14jrdm6sais (store 2)
+2025-06-24 23:56:40,746 - app - WARNING - [SYNC] Event ce4vat2jr1k69ael8pjuhh6qhg missing: dog. Created/updated with placeholders and details_needed=True.
+2025-06-24 23:56:40,758 - app - INFO - [SYNC] Updated existing appointment for Google event ce4vat2jr1k69ael8pjuhh6qhg (store 2)
+2025-06-24 23:56:40,759 - app - WARNING - [SYNC] Event 9a0i66t3gjsdklreta090f6mec missing: dog. Created/updated with placeholders and details_needed=True.
+2025-06-24 23:56:40,819 - app - INFO - [SYNC] Updated existing appointment for Google event 9a0i66t3gjsdklreta090f6mec (store 2)
+2025-06-24 23:56:40,820 - app - INFO - Google Calendar sync completed
+2025-06-24 23:56:40,820 - app - INFO - Querying local appointments...
+2025-06-24 23:56:40,829 - app - INFO - Retrieved 10 appointments
+2025-06-24 23:56:40,829 - app - INFO - Appt 1: ID=1, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-06-20 15:00:00-04:00, GoogleEventID=5hc4ev7s3ne1hhu9lt0quqgnhk, DetailsNeeded=False
+2025-06-24 23:56:40,830 - app - INFO - Appt 2: ID=4, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-06-21 02:47:00-04:00, GoogleEventID=1p6g78au4l1m8pc5q5jobn9iac, DetailsNeeded=False
+2025-06-24 23:56:40,830 - app - INFO - Appt 3: ID=3, Status=Cancelled, Dog=Vega Marie Hartman (ID: 6), Groomer=Amanda (ID: 3), Time=2025-06-21 06:00:00-04:00, GoogleEventID=o2ckpe696norj0957jsnuoief0, DetailsNeeded=False
+2025-06-24 23:56:40,830 - app - INFO - Appt 4: ID=7, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-06-23 06:00:00-04:00, GoogleEventID=ath5kf551egp2q3u6p6fvndjc8, DetailsNeeded=False
+2025-06-24 23:56:40,830 - app - INFO - Appt 5: ID=5, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-06-23 14:15:00-04:00, GoogleEventID=dq0dqf3u1ovcmua1jt4p3ucub8, DetailsNeeded=False
+2025-06-24 23:56:40,830 - app - INFO - Appt 6: ID=8, Status=Scheduled, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-06-25 08:00:00-04:00, GoogleEventID=aogafpsn26mgsmam5sjotg3lb4, DetailsNeeded=False
+2025-06-24 23:56:40,830 - app - INFO - Appt 7: ID=10, Status=Scheduled, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-06-25 08:00:00-04:00, GoogleEventID=j3qmorlsqtv78rt14jrdm6sais, DetailsNeeded=False
+2025-06-24 23:56:40,831 - app - INFO - Appt 8: ID=11, Status=Scheduled, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-06-25 08:00:00-04:00, GoogleEventID=03fp6epa94qi8j9s0pqnrkpuqc, DetailsNeeded=False
+2025-06-24 23:56:40,831 - app - INFO - Appt 9: ID=9, Status=Scheduled, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-06-25 11:00:00-04:00, GoogleEventID=ce4vat2jr1k69ael8pjuhh6qhg, DetailsNeeded=False
+2025-06-24 23:56:40,832 - app - INFO - Appt 10: ID=6, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-06-26 04:00:00-04:00, GoogleEventID=9a0i66t3gjsdklreta090f6mec, DetailsNeeded=False
+2025-06-24 23:56:40,832 - app - INFO - Successfully formatted 10 events for calendar
+2025-06-24 23:56:40,870 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:56:40,871 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:56:40,872 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:56:40,873 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:59:46,647 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:59:46,648 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:59:46,648 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-06-24 23:59:46,651 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-06-24 23:59:46,654 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-06-24 23:59:46,716 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:59:46,718 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-24 23:59:46,718 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-24 23:59:46,720 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-25 00:00:34,824 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-25 00:00:34,825 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-25 00:00:34,839 - app - INFO - [DEBUG] store.google_token_json: {"token": "ya29.a0AW4XtxjdrQbTBgIZDIkH3Dz421AM8h-LxajD6L9il2pyZR-QLLeA9U_0W15aQPJHimdHpOQ6dkT9IiVyTfLrDrM8KJ_1pvaJ8g8U3jH8gaXL4AEGqaUTOCi07PyRThWVoLWGGIvfSSfNocJiBIzI54y1KDVO95fJygHSCgxOaCgYKAasSARYSFQHGX2MiitCa-M14A4AXy91JAdKvvA0175", "refresh_token": "1//01v4HU9_UXG9mCgYIARAAGAESNwF-L9IroDsaaIYZyynqAz-_MLAyiw36RHcDvpVveMgDhg4yskSjeX0dQNYMOjhX42Cu08NYP2w", "token_uri": "https://oauth2.googleapis.com/token", "client_id": "832000035869-b43ljrbcl33h2ksfkhha9a8kt48pefl4.apps.googleusercontent.com", "client_secret": "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", "scopes": ["https://www.googleapis.com/auth/calendar.readonly", "https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/gmail.send", "https://www.googleapis.com/auth/calendar", "https://www.googleapis.com/auth/userinfo.profile", "openid"]}
+2025-06-25 00:00:34,844 - app - INFO - [DEBUG] parsed scopes: ['https://www.googleapis.com/auth/calendar.readonly', 'https://www.googleapis.com/auth/calendar.events', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/gmail.send', 'https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/userinfo.profile', 'openid']
+2025-06-25 00:00:34,899 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-25 00:00:34,901 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-25 00:22:33,352 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-25 00:22:33,379 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-25 00:22:33,380 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-06-25 00:22:33,384 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-06-25 00:22:33,387 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-06-25 00:22:33,463 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-25 00:22:33,465 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-25 00:22:33,466 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-25 00:22:33,467 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-25 00:22:41,610 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-25 00:22:41,612 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-25 00:22:41,634 - app - INFO - [DEBUG] store.google_token_json: {"token": "ya29.a0AW4XtxjdrQbTBgIZDIkH3Dz421AM8h-LxajD6L9il2pyZR-QLLeA9U_0W15aQPJHimdHpOQ6dkT9IiVyTfLrDrM8KJ_1pvaJ8g8U3jH8gaXL4AEGqaUTOCi07PyRThWVoLWGGIvfSSfNocJiBIzI54y1KDVO95fJygHSCgxOaCgYKAasSARYSFQHGX2MiitCa-M14A4AXy91JAdKvvA0175", "refresh_token": "1//01v4HU9_UXG9mCgYIARAAGAESNwF-L9IroDsaaIYZyynqAz-_MLAyiw36RHcDvpVveMgDhg4yskSjeX0dQNYMOjhX42Cu08NYP2w", "token_uri": "https://oauth2.googleapis.com/token", "client_id": "832000035869-b43ljrbcl33h2ksfkhha9a8kt48pefl4.apps.googleusercontent.com", "client_secret": "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", "scopes": ["https://www.googleapis.com/auth/calendar.readonly", "https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/gmail.send", "https://www.googleapis.com/auth/calendar", "https://www.googleapis.com/auth/userinfo.profile", "openid"]}
+2025-06-25 00:22:41,636 - app - INFO - [DEBUG] parsed scopes: ['https://www.googleapis.com/auth/calendar.readonly', 'https://www.googleapis.com/auth/calendar.events', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/gmail.send', 'https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/userinfo.profile', 'openid']
+2025-06-25 00:22:41,673 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-25 00:22:41,675 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-25 00:22:44,095 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-25 00:22:44,097 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-25 00:22:44,184 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-25 00:22:44,185 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-25 00:22:50,974 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-25 00:22:50,975 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-25 00:22:51,024 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-25 00:22:51,025 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-25 00:27:24,573 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-25 00:27:24,574 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-25 00:27:24,689 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', "Service 'Full Groom - Large Dog (Over 50 Lbs.)' added.")], '_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-25 00:27:24,690 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-25 00:27:24,747 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-25 00:27:24,749 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-25 00:29:07,663 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-25 00:29:07,665 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-25 00:29:07,717 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-25 00:29:07,719 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-25 00:32:02,178 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-25 00:32:02,179 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-25 00:32:02,221 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', "Service 'Bath and Brush - Large Dog (Over 50 Lbs.)' added.")], '_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-25 00:32:02,223 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-06-25 00:32:02,285 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': '5bee8ba317c18f301d42cf091ffb8f06a2dfe60240685547134b4a0575c0d8da754b6a4200b3eed09a57db7af35a92b67b0cf9f75279e16add36fdaf4e5b3fbc', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-06-25 00:32:02,286 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.

@@ -285,7 +285,6 @@
         <a href="{{ url_for('appointments.calendar_view') }}" class="quick-link-card blue"><h3>📅 View Calendar</h3><p>Check and manage upcoming appointments.</p></a>
         <a href="{{ url_for('owners.directory') }}" class="quick-link-card green"><h3>📂 Directory</h3><p>Manage client and pet profiles.</p></a>
         <a href="{{ url_for('appointments.checkout') }}" class="quick-link-card yellow"><h3>🛒 Checkout</h3><p>Process appointments and payments.</p></a>
-        <a href="{{ url_for('management.view_logs') }}" class="quick-link-card gray"><h3>📜 Activity Log</h3><p>Review recent actions in the app.</p></a>
         {% if g.user.is_admin %}
         <a href="{{ url_for('management.management') }}" class="quick-link-card red"><h3>⚙️ Management</h3><p>Manage users, services, and reports.</p></a>
         {% endif %}
@@ -295,7 +294,7 @@
     </div>
 
     {# New Section: Urgent Tasks/Alerts to draw attention to critical items #}
-    <div class="alerts-section">
+    <div class="alerts-section" style="display:none;"> <!-- alerts section hidden per user request -->
         <h2>Tasks & Alerts</h2>
         <ul class="appointment-summary-list">
             {% if appointments_details_needed %} {# Assumes your backend passes a list of appointments needing details #}
@@ -324,7 +323,7 @@
                 </li>
             {% endif %}
         </ul>
-        <p><a href="{{ url_for('appointments.appointments_needing_details') }}">View All Tasks &raquo;</a></p> {# Link to a dedicated page for all tasks/alerts #}
+        <!-- Link to dedicated tasks page removed per user request -->
     </div>
 
 

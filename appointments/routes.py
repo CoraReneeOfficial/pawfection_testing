@@ -142,6 +142,8 @@ def calendar_view():
             current_app.logger.error(f"Error formatting appointment {getattr(appt, 'id', 'unknown')}: {str(e)}", exc_info=True)
     
     current_app.logger.info(f"Successfully formatted {len(events)} events for calendar")
+    # Limit to first 5 scheduled appointments for the calendar page preview
+    local_appointments_display = [a for a in local_appointments if a.status == 'Scheduled'][:5]
     # Determine Google Calendar embed URL and connection status
     pawfection_calendar_embed_url = None
     is_google_calendar_connected = False
@@ -154,7 +156,7 @@ def calendar_view():
 
     return render_template(
         'calendar.html',
-        local_appointments=local_appointments,
+        local_appointments=local_appointments_display,
         pawfection_calendar_embed_url=pawfection_calendar_embed_url,
         is_google_calendar_connected=is_google_calendar_connected,
         events=json.dumps(events),
@@ -320,7 +322,7 @@ def add_appointment():
                     )
                     service = build('calendar', 'v3', credentials=credentials)
                     event = {
-                        'summary': f"({selected_dog.name}) Appointment",
+                        'summary': f"[{status.upper() if 'status' in locals() else 'SCHEDULED'}] ({selected_dog.name}) Appointment",
                         'description': f"Owner: {selected_dog.owner.name if selected_dog and selected_dog.owner else ''}\n" +
                                        f"Groomer: {selected_groomer.username if selected_groomer else ''}\n" +
                                        f"Services: {services_text if services_text else ''}\n" +
@@ -509,7 +511,7 @@ def edit_appointment(appointment_id):
                         )
                         service = build('calendar', 'v3', credentials=credentials)
                         event = {
-                            'summary': f"({selected_dog.name}) Appointment",
+                            'summary': f"[{status.upper() if 'status' in locals() else 'SCHEDULED'}] ({selected_dog.name}) Appointment",
                             'description': f"Owner: {selected_dog.owner.name if selected_dog and selected_dog.owner else ''}\n" +
                                            f"Groomer: {selected_groomer.username if selected_groomer else ''}\n" +
                                            f"Services: {services_text if services_text else ''}\n" +
@@ -616,7 +618,7 @@ def edit_appointment(appointment_id):
                     )
                     service = build('calendar', 'v3', credentials=credentials)
                     event = {
-                        'summary': f"({selected_dog.name}) Appointment",
+                        'summary': f"[{status.upper() if 'status' in locals() else 'SCHEDULED'}] ({selected_dog.name}) Appointment",
                         'description': f"Owner: {selected_dog.owner.name if selected_dog and selected_dog.owner else ''}\n" +
                                        f"Groomer: {selected_groomer.username if selected_groomer else ''}\n" +
                                        f"Services: {services_text if services_text else ''}\n" +
@@ -751,7 +753,21 @@ def delete_appointment(appointment_id):
             # ... (rest of delete logic is fine)
             if store and store.google_token_json and google_event_id:
                 try:
-                    # ... google api call ...
+                    # Build credentials and Google Calendar service
+                    token_data = json.loads(store.google_token_json)
+                    credentials = Credentials(
+                        token=token_data.get('token') or token_data.get('access_token'),
+                        refresh_token=token_data.get('refresh_token'),
+                        token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
+                        client_id=token_data.get('client_id') or os.environ.get('GOOGLE_CLIENT_ID'),
+                        client_secret=token_data.get('client_secret') or os.environ.get('GOOGLE_CLIENT_SECRET'),
+                        scopes=SCOPES
+                    )
+                    service = build('calendar', 'v3', credentials=credentials)
+                    calendar_id = store.google_calendar_id if store.google_calendar_id else 'primary'
+
+                    # Delete the event from Google Calendar
+                    service.events().delete(calendarId=calendar_id, eventId=google_event_id).execute()
                     google_calendar_deleted = True
                 except Exception as e:
                     current_app.logger.error(f"Failed to delete Google Calendar event: {e}", exc_info=True)
@@ -779,7 +795,25 @@ def delete_appointment(appointment_id):
             # Update Google Calendar event if possible
             if store and store.google_token_json and google_event_id:
                 try:
-                    # ... google api call ...
+                    # Build credentials and Google Calendar service
+                    token_data = json.loads(store.google_token_json)
+                    credentials = Credentials(
+                        token=token_data.get('token') or token_data.get('access_token'),
+                        refresh_token=token_data.get('refresh_token'),
+                        token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
+                        client_id=token_data.get('client_id') or os.environ.get('GOOGLE_CLIENT_ID'),
+                        client_secret=token_data.get('client_secret') or os.environ.get('GOOGLE_CLIENT_SECRET'),
+                        scopes=SCOPES
+                    )
+                    service = build('calendar', 'v3', credentials=credentials)
+                    calendar_id = store.google_calendar_id if store.google_calendar_id else 'primary'
+
+                    # Mark the event as cancelled in Google Calendar (soft delete so history remains)
+                    service.events().patch(
+                        calendarId=calendar_id,
+                        eventId=google_event_id,
+                        body={"status": "cancelled", "summary": f"[CANCELLED] ({appt.dog.name}) Appointment"}
+                    ).execute()
                     google_calendar_cancelled = True
                 except Exception as e:
                     current_app.logger.error(f"Failed to cancel Google Calendar event: {e}", exc_info=True)
@@ -803,6 +837,62 @@ def delete_appointment(appointment_id):
     return redirect(url_for('appointments.calendar_view'))
 
 # ... (the rest of the file remains the same) ...
+
+@appointments_bp.route('/all_appointments')
+@subscription_required
+def all_appointments():
+    """Overview page: shows first 5 of each status with view-all buttons."""
+    store_id = session.get('store_id')
+    store = Store.query.get(store_id)
+    store_timezone_name = getattr(store, 'timezone', None) or 'America/New_York'
+    store_timezone = tz.gettz(store_timezone_name) or tz.gettz('America/New_York')
+
+    def _query(status):
+        return Appointment.query.options(
+            db.joinedload(Appointment.dog).joinedload(Dog.owner),
+            db.joinedload(Appointment.groomer)
+        ).filter_by(store_id=store_id, status=status).order_by(Appointment.appointment_datetime.asc()).limit(5).all()
+
+    appointments_by_status = {
+        'Scheduled': _query('Scheduled'),
+        'Completed': _query('Completed'),
+        'Cancelled': _query('Cancelled')
+    }
+    return render_template('all_appointments.html', appointments_by_status=appointments_by_status, STORE_TIMEZONE=store_timezone, tz=tz)
+
+
+@appointments_bp.route('/appointments/view/<status>')
+@subscription_required
+def view_appointments_by_status(status):
+    """Show all appointments for a specific status with optional search."""
+    allowed_statuses = {'scheduled': 'Scheduled', 'completed': 'Completed', 'cancelled': 'Cancelled'}
+    status_key = status.lower()
+    if status_key not in allowed_statuses:
+        flash('Invalid status specified.', 'danger')
+        return redirect(url_for('appointments.all_appointments'))
+
+    proper_status = allowed_statuses[status_key]
+    store_id = session.get('store_id')
+    search_query = request.args.get('q', '').strip()
+
+    query = Appointment.query.options(
+        db.joinedload(Appointment.dog).joinedload(Dog.owner),
+        db.joinedload(Appointment.groomer)
+    ).filter_by(store_id=store_id, status=proper_status)
+
+    if search_query:
+        like_str = f"%{search_query}%"
+        query = query.join(Dog).join(Owner).filter(
+            or_(Dog.name.ilike(like_str), Owner.name.ilike(like_str))
+        )
+
+    appointments = query.order_by(Appointment.appointment_datetime.asc()).all()
+    store = Store.query.get(store_id)
+    store_timezone_name = getattr(store, 'timezone', None) or 'America/New_York'
+    store_timezone = tz.gettz(store_timezone_name) or tz.gettz('America/New_York')
+
+    return render_template('appointments_by_status.html', appointments=appointments, status=proper_status, search_query=search_query, STORE_TIMEZONE=store_timezone, tz=tz)
+
 
 # Register the Google Calendar webhook blueprint
 from appointments.google_calendar_webhook import webhook_bp as google_calendar_webhook_bp
@@ -875,7 +965,29 @@ def checkout():
                 store = db.session.get(Store, g.user.store_id)
                 if store and store.google_token_json and appointment.google_event_id:
                     try:
-                        # ... google sync logic ...
+                        try:
+                            token_info = json.loads(store.google_token_json)
+                            creds = Credentials.from_authorized_user_info(token_info, SCOPES)
+                            service = build('calendar', 'v3', credentials=creds)
+
+                            # Fetch current event
+                            event = service.events().get(calendarId=store.google_calendar_id, eventId=appointment.google_event_id).execute()
+                            # Prepend COMPLETED to title if not already
+                            summary = event.get('summary', '')
+                            if not summary.lower().startswith('completed'):
+                                event['summary'] = f"COMPLETED - {summary}"
+
+                            # Update description with status marker
+                            desc = event.get('description', '') or ''
+                            if 'Status: Completed' not in desc:
+                                desc = desc + ("\n" if desc else "") + "Status: Completed"
+                            event['description'] = desc
+
+                            updated_event = service.events().update(calendarId=store.google_calendar_id, eventId=appointment.google_event_id, body=event).execute()
+                            current_app.logger.info(f"Google Calendar event updated to completed for appointment {appointment.id}: {updated_event.get('id')}")
+                        except Exception as gc_e:
+                            current_app.logger.error(f"Failed to mark Google Calendar event completed: {gc_e}", exc_info=True)
+                            flash("Appointment completed, but failed to update Google Calendar event.", "warning")
                         flash("Appointment synced to Google Calendar.", "success")
                     except Exception as e:
                         current_app.logger.error(f"Google Calendar sync failed: {e}", exc_info=True)

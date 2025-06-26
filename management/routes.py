@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g, current_app, session, abort
-from models import User, Service, Appointment, ActivityLog, Store, Dog, Owner
+from models import User, Service, Appointment, ActivityLog, Store, Dog, Owner, AppointmentRequest
 from extensions import db
 from sqlalchemy.exc import IntegrityError
 from decimal import Decimal, InvalidOperation
@@ -155,6 +155,207 @@ def get_date_range(range_type, start_date_str=None, end_date_str=None):
     return None, None, period_display
 
 # --- Management Routes ---
+@management_bp.route('/pending_appointments')
+@admin_required
+def pending_appointments():
+    """Displays pending customer appointment requests for the current store."""
+    store_id = session.get('store_id')
+    pending_requests = AppointmentRequest.query.filter_by(store_id=store_id, status='pending').order_by(AppointmentRequest.created_at.asc()).all()
+    store = Store.query.get(store_id) if store_id else None
+    public_page_url = url_for('public.public_store_page', store_username=store.username, _external=True) if store else None
+    return render_template('pending_appointments.html', requests=pending_requests, public_page_url=public_page_url)
+
+@management_bp.route('/pending_appointments/<int:req_id>/approve', methods=['POST'])
+@admin_required
+def approve_appointment_request(req_id):
+    """Approve an appointment request, converting it into Owner, Dog, and Appointment records."""
+    req = AppointmentRequest.query.get_or_404(req_id)
+    if req.status != 'pending':
+        flash('Request already processed.', 'warning')
+        return redirect(url_for('management.pending_appointments'))
+    try:
+        # Create owner if phone or email not already
+        # Use linked owner if provided
+        owner = None
+        if req.owner_id:
+            owner = Owner.query.get(req.owner_id)
+        if not owner:
+            owner = Owner.query.filter_by(phone_number=req.phone, store_id=req.store_id).first()
+        if not owner:
+            owner = Owner(name=req.customer_name, phone_number=req.phone, email=req.email, store_id=req.store_id, created_by_user_id=g.user.id)
+            db.session.add(owner)
+            db.session.flush()
+        # Create dog
+        if req.dog_id:
+            dog = Dog.query.get(req.dog_id)
+        else:
+            dog = Dog(name=(req.dog_name or 'Dog'), owner_id=owner.id, store_id=req.store_id, created_by_user_id=g.user.id)
+            db.session.add(dog)
+            db.session.flush()
+        # Create appointment with placeholder datetime parse
+        preferred_dt = datetime.datetime.strptime(req.preferred_datetime, '%Y-%m-%d %H:%M') if req.preferred_datetime else datetime.datetime.utcnow()
+        appt = Appointment(
+            dog_id=dog.id,
+            appointment_datetime=preferred_dt,
+            notes=req.notes,
+            status='Scheduled',
+            created_by_user_id=g.user.id,
+            store_id=req.store_id,
+            requested_services_text=req.requested_services_text,
+            groomer_id=req.groomer_id
+        )
+        db.session.add(appt)
+        db.session.flush()  # Flush to get the appt ID
+        
+        # Commit the transaction first
+        req.status = 'approved'
+        db.session.commit()
+        
+        # Get store info for email and calendar
+        store = Store.query.get(req.store_id)
+        groomer = User.query.get(req.groomer_id) if req.groomer_id else None
+        
+        # Ensure we have a valid store
+        if not store:
+            current_app.logger.error(f"No store found for store_id: {req.store_id}")
+            flash('Error: Store information not found.', 'danger')
+            return redirect(url_for('management.pending_appointments'))
+        
+        # Send confirmation email
+        try:
+            if owner.email:
+                send_appointment_confirmation_email(
+                    store=store,
+                    owner=owner,
+                    dog=dog,
+                    appointment=appt,
+                    groomer=groomer,
+                    services_text=req.requested_services_text
+                )
+                current_app.logger.info(f"Confirmation email sent for appointment {appt.id} to {owner.email}")
+        except Exception as email_error:
+            current_app.logger.error(f"Error sending confirmation email for appointment {appt.id}: {email_error}", exc_info=True)
+            # Continue even if email fails
+        
+        # Sync with Google Calendar if enabled
+        if store and store.google_token_json and store.google_calendar_id:
+            try:
+                credentials = GoogleCredentials.from_authorized_user_info(
+                    json.loads(store.google_token_json),
+                    scopes=[
+                        'https://www.googleapis.com/auth/calendar',
+                        'https://www.googleapis.com/auth/calendar.events'
+                    ]
+                )
+                
+                service = build('calendar', 'v3', credentials=credentials)
+                
+                # Format the event
+                event = {
+                    'summary': f"{dog.name}'s Grooming Appointment",
+                    'description': f"Owner: {owner.name}\nPhone: {owner.phone_number}\nNotes: {req.notes or 'No notes'}\nServices: {req.requested_services_text or 'Not specified'}",
+                    'start': {
+                        'dateTime': appt.appointment_datetime.isoformat(),
+                        'timeZone': store.timezone if store and store.timezone else 'America/New_York',
+                    },
+                    'end': {
+                        'dateTime': (appt.appointment_datetime + datetime.timedelta(hours=1)).isoformat(),
+                        'timeZone': store.timezone if store and store.timezone else 'America/New_York',
+                    },
+                    'reminders': {
+                        'useDefault': True,
+                    },
+                }
+                
+                # Add the event to Google Calendar
+                created_event = service.events().insert(
+                    calendarId=store.google_calendar_id,
+                    body=event
+                ).execute()
+                
+                # Update the appointment with the Google Event ID
+                appt.google_event_id = created_event.get('id')
+                db.session.commit()
+                
+            except Exception as calendar_error:
+                current_app.logger.error(f"Error syncing with Google Calendar for appointment {appt.id}: {calendar_error}")
+                # Continue even if calendar sync fails
+        
+        flash('Appointment request approved and scheduled. Confirmation email sent.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error approving request {req_id}: {e}", exc_info=True)
+        flash('Error approving request.', 'danger')
+    return redirect(url_for('management.pending_appointments'))
+
+@management_bp.route('/pending_appointments/<int:req_id>/edit', methods=['GET','POST'])
+@admin_required
+def edit_appointment_request(req_id):
+    req = AppointmentRequest.query.get_or_404(req_id)
+    if req.status != 'pending':
+        flash('Only pending requests can be edited.', 'warning')
+        return redirect(url_for('management.pending_appointments'))
+    if request.method == 'POST':
+        req.customer_name = request.form.get('customer_name','').strip()
+        req.phone = request.form.get('phone','').strip()
+        req.email = request.form.get('email','').strip()
+        req.dog_name = request.form.get('dog_name','').strip()
+        date = request.form.get('preferred_date','').strip()
+        time = request.form.get('preferred_time','').strip()
+        req.preferred_datetime = f"{date} {time}".strip() if date and time else ''
+        req.notes = request.form.get('notes','').strip()
+        # Services (list of IDs)
+        services_selected = request.form.getlist('services')
+        req.requested_services_text = ','.join(services_selected) if services_selected else None
+        # Groomer assignment
+        groomer_val = request.form.get('groomer_id')
+        req.groomer_id = int(groomer_val) if groomer_val else None
+        # Link to existing owner/dog if chosen
+        owner_id_val = request.form.get('owner_id')
+        req.owner_id = int(owner_id_val) if owner_id_val else None
+        dog_id_val = request.form.get('dog_id')
+        req.dog_id = int(dog_id_val) if dog_id_val else None
+        db.session.commit()
+        flash('Request updated.', 'success')
+        return redirect(url_for('management.pending_appointments'))
+    # GET render form
+    public_page_url = url_for('public.public_store_page', store_username=req.store.username, _external=True)
+    # split preferred_datetime
+    pref_date, pref_time = '', ''
+    if req.preferred_datetime and ' ' in req.preferred_datetime:
+        pref_date, pref_time = req.preferred_datetime.split(' ',1)
+    from sqlalchemy.orm import joinedload
+    owners = Owner.query.options(joinedload(Owner.dogs)).filter_by(store_id=req.store_id).all()
+    # Fetch services and groomers lists for dropdowns
+    services = Service.query.filter_by(store_id=req.store_id, item_type='service').order_by(Service.name.asc()).all()
+    from sqlalchemy import or_
+    groomers = User.query.filter(
+        User.store_id == req.store_id,
+        or_(User.role == 'groomer', User.role == 'admin')
+    ).order_by(User.username.asc()).all()
+
+    owners_data = [{
+        'id': o.id,
+        'name': o.name,
+        'phone': o.phone_number,
+        'dogs': [{'id': d.id, 'name': d.name} for d in o.dogs]
+    } for o in owners]
+    return render_template('edit_appointment_request.html', req=req, public_page_url=public_page_url, pref_date=pref_date, pref_time=pref_time,
+                           owners=owners, owners_json=owners_data, services=services, groomers=groomers)
+
+@management_bp.route('/pending_appointments/<int:req_id>/reject', methods=['POST'])
+@admin_required
+def reject_appointment_request(req_id):
+    req = AppointmentRequest.query.get_or_404(req_id)
+    if req.status != 'pending':
+        flash('Request already processed.', 'warning')
+    else:
+        req.status = 'rejected'
+        db.session.commit()
+        flash('Appointment request rejected.', 'info')
+    return redirect(url_for('management.pending_appointments'))
+
 @management_bp.route('/management')
 @admin_required
 def management():
@@ -187,7 +388,11 @@ def management():
             except Exception as e:
                 current_app.logger.error(f"[DEBUG] Error parsing google_token_json: {e}")
                 
+    public_page_url = None
+    if store:
+        public_page_url = url_for('public.public_store_page', store_username=store.username, _external=True)
     return render_template('management.html',
+        public_page_url=public_page_url,
         is_google_calendar_connected=is_google_calendar_connected,
         is_gmail_for_sending_connected=is_gmail_for_sending_connected)
 
@@ -1107,11 +1312,15 @@ def sync_google_calendar_for_store(store, user):
                         db.session.rollback()
                         details_needed = True
                         missing_fields.append('Owner')
-                # If only dog is missing, create dog as usual
-                if not dog_obj_found:
+                # If only dog is missing, create dog as usual **but skip if the dog name is the placeholder**
+                if not dog_obj_found and dog.lower() != 'unknown dog':
                     dog_obj = Dog(name=dog, owner_id=owner_obj.id, store_id=store.id)
                     db.session.add(dog_obj)
                     db.session.commit()
+                elif not dog_obj_found and dog.lower() == 'unknown dog':
+                    # Do not create a placeholder dog record tied to a real owner; instead, flag that details are needed.
+                    details_needed = True
+                    missing_fields.append('dog')
             # --- END: Updated logic for unknown dog/owner ---
             # Find groomer (by full username or first name)
             groomer_obj = None

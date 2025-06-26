@@ -39,6 +39,28 @@
         gap: 1rem;
         justify-content: flex-end;
     }
+    /* Polished UI improvements */
+    body {
+        background: #f5f7fa;
+    }
+    .form-wrapper {
+        max-width: 650px;
+        background: #ffffff;
+        border: none;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    }
+    .form-input:focus,
+    .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.15rem rgba(65, 140, 255, 0.25);
+        outline: none;
+    }
+    .form-title {
+        text-align: center;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+
 </style>
 {% endblock %}
 
@@ -87,26 +109,16 @@
             </select>
         </div>
         <div class="form-group">
-            <label class="form-label" for="subscription_status">Subscription Status</label>
-            <select class="form-select" id="subscription_status" name="subscription_status">
-                <option value="active" {% if store.subscription_status == 'active' %}selected{% endif %}>Active</option>
-                <option value="trial" {% if store.subscription_status == 'trial' %}selected{% endif %}>Trial</option>
-                <option value="unpaid" {% if store.subscription_status == 'unpaid' %}selected{% endif %}>Unpaid</option>
-                <option value="cancelled" {% if store.subscription_status == 'cancelled' %}selected{% endif %}>Cancelled</option>
-            </select>
-        </div>
-        {% if store.subscription_ends_at %}
-        <div class="form-group">
-            <label class="form-label">Subscription Ends At</label>
-            <input class="form-input" type="text" value="{{ store.subscription_ends_at.strftime('%Y-%m-%d %H:%M') }}" readonly>
-        </div>
-        {% endif %}
-        <div class="form-group">
-            <label class="form-label" for="status">Store Status</label>
-            <select class="form-select" id="status" name="status">
-                <option value="active" {% if store.status == 'active' %}selected{% endif %}>Active</option>
-                <option value="inactive" {% if store.status == 'inactive' %}selected{% endif %}>Inactive</option>
-            </select>
+            <label class="form-label">Stripe Subscription</label>
+            {% if store.stripe_subscription_id %}
+                <div style="margin-bottom:0.5rem;">
+                    <strong>Status:</strong> {{ store.subscription_status or 'Unknown' | capitalize }}
+                </div>
+                <a href="{{ url_for('stripe_portal') }}" class="button button-primary" target="_blank">Manage Subscription</a>
+            {% else %}
+                <a href="{{ url_for('stripe_checkout') }}" class="button button-primary" target="_blank">Subscribe with Stripe</a>
+            {% endif %}
+            <small style="color:#888;display:block;margin-top:0.5rem;">All subscriptions are securely managed with Stripe.</small>
         </div>
         <div class="form-group">
             <label class="form-label" for="business_hours">Business Hours (JSON or text)</label>
@@ -147,11 +159,6 @@
         <div class="form-group">
             <label class="form-label" for="payment_settings">Payment Settings (JSON or text)</label>
             <textarea class="form-input" id="payment_settings" name="payment_settings" rows="2">{{ store.payment_settings or '' }}</textarea>
-        </div>
-        <div class="form-group">
-            <label class="form-label" for="is_archived">Archive Store</label>
-            <input type="checkbox" id="is_archived" name="is_archived" value="1" {% if store.is_archived %}checked{% endif %}>
-            <span style="color:#888;">(Archived stores are hidden but not deleted.)</span>
         </div>
         <div class="form-actions">
             <button type="submit" class="button button-primary">Save Changes</button>

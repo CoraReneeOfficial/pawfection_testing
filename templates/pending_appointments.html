@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block title %}Pending Appointment Requests{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">Pending Appointment Requests</h1>
+            {% if public_page_url %}
+            <p class="mt-1 text-sm text-gray-600">
+                Customer-facing page: <a href="{{ public_page_url }}" target="_blank" class="text-blue-600 hover:underline">{{ public_page_url }}</a>
+            </p>
+            {% endif %}
+        </div>
+        <div class="relative">
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                {{ requests|length }} Pending
+            </span>
+        </div>
+    </div>
+
+    {% if requests %}
+    <div class="bg-white shadow-md rounded-lg overflow-hidden">
+        <div class="overflow-x-auto">
+            <table style="border-collapse: collapse; width: 100%; border: 2px solid #000; margin: 0; padding: 0; background-color: white;">
+                <thead style="background-color: #f9fafb; border-bottom: 2px solid #000;">
+                    <tr>
+                        <th style="padding: 0.75rem 1.5rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.05em; border-right: 1px solid #000; border-bottom: 2px solid #000;">Submitted</th>
+                        <th style="padding: 0.75rem 1.5rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.05em; border-right: 1px solid #000; border-bottom: 2px solid #000;">Customer</th>
+                        <th style="padding: 0.75rem 1.5rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.05em; border-right: 1px solid #000; border-bottom: 2px solid #000;">Phone</th>
+                        <th style="padding: 0.75rem 1.5rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.05em; border-right: 1px solid #000; border-bottom: 2px solid #000;">Dog</th>
+                        <th style="padding: 0.75rem 1.5rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.05em; border-right: 1px solid #000; border-bottom: 2px solid #000;">Preferred Time</th>
+                        <th style="padding: 0.75rem 1.5rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.05em; border-right: 1px solid #000; border-bottom: 2px solid #000;">Notes</th>
+                        <th style="padding: 0.75rem 1.5rem; text-align: right; font-size: 0.75rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.05em; border-right: 1px solid #000; border-bottom: 2px solid #000;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for r in requests %}
+                    <tr style="border-bottom: 1px solid #000; transition: background-color 0.15s ease-in-out;" onmouseover="this.style.backgroundColor='#f9fafb';" onmouseout="this.style.backgroundColor='#ffffff';">
+                        <td style="padding: 1rem 1.5rem; white-space: nowrap; font-size: 0.875rem; color: #111827; border-right: 1px solid #000; border-bottom: 1px solid #000; vertical-align: top;">
+                            <div style="font-weight: 500;">{{ r.created_at.strftime('%b %d, %Y') }}</div>
+                            <div style="color: #6b7280; font-size: 0.75rem;">{{ r.created_at.strftime('%I:%M %p') }}</div>
+                        </td>
+                        <td style="padding: 1rem 1.5rem; white-space: nowrap; font-size: 0.875rem; color: #111827; border-right: 1px solid #000; border-bottom: 1px solid #000; vertical-align: top;">
+                            <div style="font-weight: 500;">{{ r.customer_name }}</div>
+                        </td>
+                        <td style="padding: 1rem 1.5rem; white-space: nowrap; border-right: 1px solid #000; border-bottom: 1px solid #000; vertical-align: top;">
+                            <a href="tel:{{ r.phone }}" style="font-size: 0.875rem; color: #2563eb; text-decoration: none;" onmouseover="this.style.textDecoration='underline';" onmouseout="this.style.textDecoration='none';">{{ r.phone }}</a>
+                        </td>
+                        <td style="padding: 1rem 1.5rem; white-space: nowrap; font-size: 0.875rem; color: #111827; border-right: 1px solid #000; border-bottom: 1px solid #000; vertical-align: top;">
+                            <div>{{ r.dog_name }}</div>
+                        </td>
+                        <td style="padding: 1rem 1.5rem; white-space: nowrap; border-right: 1px solid #000; border-bottom: 1px solid #000; vertical-align: top;">
+                            {% if r.preferred_datetime is string %}
+                                <div style="font-size: 0.875rem;">{{ r.preferred_datetime }}</div>
+                            {% else %}
+                                <div style="font-size: 0.875rem;">{{ r.preferred_datetime.strftime('%b %d, %Y') }}</div>
+                                <div style="color: #6b7280; font-size: 0.75rem;">{{ r.preferred_datetime.strftime('%I:%M %p') }}</div>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1rem 1.5rem; border-right: 1px solid #000; vertical-align: top;">
+                            <div style="font-size: 0.875rem; color: #111827; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ r.notes }}">{{ r.notes or 'No notes' }}</div>
+                        </td>
+                        <td style="padding: 1rem 1.5rem; white-space: nowrap; text-align: right; font-size: 0.875rem; font-weight: 500; border-right: 1px solid #000; vertical-align: top;">
+                            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem;">
+                                <a href="{{ url_for('management.edit_appointment_request', req_id=r.id) }}" 
+                                   style="padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: 500; color: #4f46e5; text-decoration: none; border-radius: 0.25rem;"
+                                   onmouseover="this.style.backgroundColor='#eef2ff';"
+                                   onmouseout="this.style.backgroundColor='transparent';">
+                                    Edit
+                                </a>
+                                <form action="{{ url_for('management.approve_appointment_request', req_id=r.id) }}" method="POST" class="inline">
+                                    <button type="submit" 
+                                            style="padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: 500; color: white; background-color: #059669; border: none; border-radius: 0.25rem; cursor: pointer;"
+                                            onmouseover="this.style.backgroundColor='#047857';"
+                                            onmouseout="this.style.backgroundColor='#059669';">
+                                        Approve
+                                    </button>
+                                </form>
+                                <form action="{{ url_for('management.reject_appointment_request', req_id=r.id) }}" method="POST" class="inline">
+                                    <button type="submit" 
+                                            style="padding: 0.25rem 0.5rem; font-size: 0.75rem; font-weight: 500; color: white; background-color: #dc2626; border: none; border-radius: 0.25rem; cursor: pointer;"
+                                            onmouseover="this.style.backgroundColor='#b91c1c';"
+                                            onmouseout="this.style.backgroundColor='#dc2626';">
+                                        Reject
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-12 bg-white rounded-lg shadow">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        </svg>
+        <h3 class="mt-2 text-lg font-medium text-gray-900">No pending requests</h3>
+        <p class="mt-1 text-sm text-gray-500">All caught up! Check back later for new appointment requests.</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    [data-tooltip] {
+        position: relative;
+        cursor: pointer;
+    }
+    [data-tooltip]:hover::before {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 0.25rem 0.5rem;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.2s ease;
+    }
+    [data-tooltip]:hover::before {
+        opacity: 1;
+        visibility: visible;
+        bottom: calc(100% + 5px);
+    }
+</style>
+{% endblock %}

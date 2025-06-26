@@ -78,6 +78,11 @@
 {% block content %} {# Defines the main content area for this page #}
 <div class="content-card"> 
     <h1>Application Management</h1>
+    {% if public_page_url %}
+    <p style="margin-top:0.3rem; font-size:0.95rem;">
+        Customer-facing page: <a href="{{ public_page_url }}" target="_blank">{{ public_page_url }}</a>
+    </p>
+    {% endif %}
     <p>Use the options below to manage users, services, reports, notifications, and integrations.</p>
 
     <div class="management-grid">
@@ -112,6 +117,12 @@
             <div>
                 <h3><span class="icon">🏢</span> Edit Store Information</h3>
                 <p>Update your business name, address, contact info, and timezone.</p>
+            </div>
+        </a>
+        <a href="{{ url_for('management.view_logs') }}" class="management-card">
+            <div>
+                <h3><span class="icon">📜</span> Activity Log</h3>
+                <p>Review recent actions in the application.</p>
             </div>
         </a>
 

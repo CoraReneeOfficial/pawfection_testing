@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}All Appointments Overview{% endblock %}
+
+{% block content %}
+<div class="content-card">
+    <div class="content-header">
+        <h1>All Appointments (Overview)</h1>
+        <a href="{{ url_for('appointments.add_appointment') }}" class="button button-primary">Add New Appointment</a>
+    </div>
+
+    {% for status, appts in appointments_by_status.items() %}
+        <div class="local-appointments-section" style="margin-top:1rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
+                <h2 style="margin:0;">{{ status }} (first 5)</h2>
+                <a href="{{ url_for('appointments.view_appointments_by_status', status=status.lower()) }}" class="button button-secondary">View All {{ status }}</a>
+            </div>
+            {% if appts %}
+                <ul class="appointment-list">
+                {% for appointment in appts %}
+                    {# Re-use similar markup from calendar.html but condensed #}
+                    <li class="appointment-item">
+                        <div class="appointment-info">
+                            {% set local_appt_time = appointment.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(STORE_TIMEZONE) if STORE_TIMEZONE else appointment.appointment_datetime %}
+                            <span class="appointment-datetime">{{ local_appt_time.strftime('%a, %b %d, %Y @ %I:%M %p') }}</span>
+                            <br>
+                            <strong>{{ appointment.dog.name }}</strong> &mdash; Owner: {{ appointment.dog.owner.name }}
+                        </div>
+                    </li>
+                {% endfor %}
+                </ul>
+            {% else %}
+                <p class="no-appointments">No {{ status }} appointments found.</p>
+            {% endif %}
+        </div>
+    {% endfor %}
+
+    <div class="calendar-actions-header" style="margin-top:2rem;">
+        <a href="{{ url_for('appointments.calendar_view') }}" class="button button-secondary">Back to Calendar</a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends 'public_base.html' %}
+
+{% block title %}{{ store.name }} | Book Appointment{% endblock %}
+
+{% block head %}
+<style>
+    .store-hero { text-align:center; margin-bottom:2rem; }
+    .store-hero img { max-width:120px; margin-bottom:1rem; }
+    .booking-form { max-width:500px; margin:0 auto; padding:2rem; background:#fff; box-shadow:var(--box-shadow); border-radius:var(--border-radius); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="store-hero" style="margin-top:1rem;">
+    {% if store.logo_filename %}
+        <img src="{{ url_for('uploaded_persistent_file', filename=store.logo_filename) }}" alt="{{ store.name }} logo">
+    {% endif %}
+    <h1>{{ store.name }}</h1>
+    <p>{{ store.description }}</p>
+    {% if store.address %}<p><strong>Address:</strong> {{ store.address }}</p>{% endif %}
+    {% if store.phone %}<p><strong>Phone:</strong> {{ store.phone }}</p>{% endif %}
+    {% if store.business_hours %}<p><strong>Hours:</strong> {{ store.business_hours }}</p>{% endif %}
+</div>
+
+<div class="booking-form">
+    <h2>Request an Appointment</h2>
+    <form method="POST">
+        <div class="form-group">
+            <label>Name *</label>
+            <input class="form-input" type="text" name="customer_name" required>
+        </div>
+        <div class="form-group">
+            <label>Phone *</label>
+            <input class="form-input" type="text" name="phone" required>
+        </div>
+        <div class="form-group">
+            <label>Email</label>
+            <input class="form-input" type="email" name="email">
+        </div>
+        <div class="form-group">
+            <label>Dog Name</label>
+            <input class="form-input" type="text" name="dog_name">
+        </div>
+        <div class="form-group">
+            <label>Preferred Date</label>
+            <input class="form-input" type="date" name="preferred_date">
+        </div>
+        <div class="form-group">
+            <label>Preferred Time</label>
+            <input class="form-input" type="time" name="preferred_time" step="900">
+        </div>
+        <div class="form-group">
+            <label>Notes</label>
+            <textarea class="form-input" name="notes" rows="3"></textarea>
+        </div>
+        <button type="submit" class="button button-primary">Submit Request</button>
+    </form>
+</div>
+{% endblock %}

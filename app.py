@@ -10,6 +10,7 @@ from owners import owners_bp
 from dogs import dogs_bp
 from appointments import appointments_bp
 from management import management_bp
+from public import public_bp
 from functools import wraps
 from werkzeug.middleware.proxy_fix import ProxyFix
 import logging
@@ -22,8 +23,42 @@ from flask import request, jsonify, render_template
 # Removed import for datetime as it's not directly used at top level of app.py anymore
 # Removed log_activity definition as it's now in utils.py
 
-# Configure basic logging for the application.
-logging.basicConfig(level=logging.INFO)
+# Configure logging for the application
+def configure_logging(app):
+    """Configure application logging."""
+    # Create logs directory if it doesn't exist
+    logs_dir = os.path.join(app.root_path, 'logs')
+    os.makedirs(logs_dir, exist_ok=True)
+    
+    # Set log levels for different loggers
+    app.logger.setLevel(logging.DEBUG)
+    
+    # Create file handler which logs even debug messages
+    file_handler = logging.FileHandler(os.path.join(logs_dir, 'app.log'))
+    file_handler.setLevel(logging.DEBUG)
+    
+    # Create console handler with a higher log level
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    
+    # Create formatter and add it to the handlers
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
+    
+    # Add the handlers to the logger
+    app.logger.addHandler(file_handler)
+    app.logger.addHandler(console_handler)
+    
+    # Set specific log levels for noisy libraries
+    logging.getLogger('urllib3').setLevel(logging.WARNING)
+    logging.getLogger('googleapiclient').setLevel(logging.WARNING)
+    logging.getLogger('sqlalchemy').setLevel(logging.WARNING)
+    
+    # Enable debug logging for our email module
+    logging.getLogger('app.email').setLevel(logging.DEBUG)
+    
+    app.logger.info('Logging configured successfully')
 
 def create_app():
     """
@@ -31,6 +66,9 @@ def create_app():
     This function acts as the application factory.
     """
     app = Flask(__name__)
+    
+    # Configure logging
+    configure_logging(app)
 
     # --- Initialize Flask-Login ---
     from flask_login import LoginManager
@@ -115,6 +153,7 @@ def create_app():
     app.register_blueprint(dogs_bp)
     app.register_blueprint(appointments_bp)
     app.register_blueprint(management_bp)
+    app.register_blueprint(public_bp)
 
     # Register Google Calendar webhook blueprint
     from appointments.google_calendar_webhook import webhook_bp as google_calendar_webhook_bp
@@ -125,7 +164,10 @@ def create_app():
     def load_logged_in_user():
         """
         Loads the logged-in user into Flask's global 'g' object before each request.
+        Also ensures session['store_id'] is managed correctly for superadmin and non-superadmin users.
+        Logs the session contents for debugging.
         """
+        app.logger.debug(f"[SESSION DEBUG] Session at start of request: {dict(session)}")
         user_id = session.get('user_id')
         if user_id is None:
             g.user = None
@@ -134,6 +176,21 @@ def create_app():
             g.user = db.session.get(User, user_id)
             if g.user:
                 app.logger.debug(f"Loaded user {g.user.username} (ID: {g.user.id}, Store ID: {g.user.store_id}) from session.")
+                # --- IMPERSONATION/STORE CONTEXT MANAGEMENT ---
+                is_superadmin = getattr(g.user, 'role', None) == 'superadmin' and g.user.store_id is None
+                impersonating = session.get('impersonating', False)
+                if is_superadmin:
+                    if not impersonating:
+                        # If superadmin is NOT impersonating, remove store_id from session
+                        if session.get('store_id') is not None:
+                            session.pop('store_id', None)
+                            app.logger.debug("Superadmin is not impersonating. Removed store_id from session.")
+                    # else: if impersonating, leave store_id as is
+                else:
+                    # Not a superadmin: ensure session['store_id'] matches user's store_id
+                    if g.user.store_id is not None and session.get('store_id') != g.user.store_id:
+                        session['store_id'] = g.user.store_id
+                        app.logger.debug(f"Session store_id updated to match user's store_id: {g.user.store_id}")
             else:
                 app.logger.warning(f"User with ID {user_id} found in session but not in database. Clearing session user_id.")
                 session.pop('user_id', None)
@@ -157,6 +214,64 @@ def create_app():
     def home():
         from flask import render_template
         return render_template('home_page.html')
+
+    # Stripe Billing Routes
+    from flask import abort
+    @app.route('/billing/stripe_checkout')
+    @login_required
+    def stripe_checkout():
+        store_id = session.get('store_id')
+        if not store_id:
+            flash('No store found for your user.', 'danger')
+            return redirect(url_for('dashboard'))
+        store = db.session.get(Store, store_id)
+        if not store:
+            flash('Store not found.', 'danger')
+            return redirect(url_for('dashboard'))
+        if not store.stripe_customer_id:
+            # Create a customer in Stripe if not present
+            customer = stripe.Customer.create(email=store.email, name=store.name)
+            store.stripe_customer_id = customer.id
+            db.session.commit()
+        try:
+            checkout_session = stripe.checkout.Session.create(
+                customer=store.stripe_customer_id,
+                payment_method_types=['card'],
+                line_items=[{
+                    'price': app.config['STRIPE_PRICE_ID'],
+                    'quantity': 1,
+                }],
+                mode='subscription',
+                success_url=url_for('dashboard', _external=True) + '?subscription=success',
+                cancel_url=url_for('dashboard', _external=True) + '?subscription=cancel',
+            )
+            return redirect(checkout_session.url)
+        except Exception as e:
+            app.logger.error(f"Stripe Checkout error: {e}")
+            flash('There was an error starting your subscription. Please try again.', 'danger')
+            return redirect(url_for('dashboard'))
+
+    @app.route('/billing/stripe_portal')
+    @login_required
+    def stripe_portal():
+        store_id = session.get('store_id')
+        if not store_id:
+            flash('No store found for your user.', 'danger')
+            return redirect(url_for('dashboard'))
+        store = db.session.get(Store, store_id)
+        if not store or not store.stripe_customer_id:
+            flash('No Stripe customer found for your store. Please subscribe first.', 'danger')
+            return redirect(url_for('dashboard'))
+        try:
+            portal_session = stripe.billing_portal.Session.create(
+                customer=store.stripe_customer_id,
+                return_url=url_for('dashboard', _external=True)
+            )
+            return redirect(portal_session.url)
+        except Exception as e:
+            app.logger.error(f"Stripe Portal error: {e}")
+            flash('There was an error accessing your billing portal. Please try again.', 'danger')
+            return redirect(url_for('dashboard'))
 
     # Legal pages routes
     @app.route('/user-agreement')
@@ -443,6 +558,7 @@ def create_app():
 
     # Superadmin stop impersonation
     @app.route('/superadmin/stop_impersonation')
+    @login_required
     def superadmin_stop_impersonation():
         """
         Allows a superadmin to stop impersonating a store.
