@@ -25,6 +25,7 @@ class Store(db.Model):
 
     # --- New fields for advanced store management ---
     logo_filename = db.Column(db.String(200), nullable=True)  # Logo or profile image filename
+    gallery_images = db.Column(db.Text, nullable=True)  # JSON list of gallery image filenames
     status = db.Column(db.String(20), default='active', nullable=False)  # Store status: active/inactive
     business_hours = db.Column(db.Text, nullable=True)  # JSON/text for business hours
     description = db.Column(db.Text, nullable=True)  # Store description/about

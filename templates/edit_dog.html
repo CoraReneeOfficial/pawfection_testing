@@ -118,7 +118,7 @@
                     <div class="current-picture-container">
                         <span>Current picture:</span>
                         {# MODIFIED: Use the new route for uploaded files from persistent volume #}
-                        <img src="{{ url_for('uploaded_persistent_file', filename=dog.picture_filename) }}" alt="Current picture of {{ dog.name }}">
+                        <img src="{{ url_for('uploaded_file', filename='dog_pics/' ~ dog.picture_filename) }}" alt="Current picture of {{ dog.name }}">
                     </div>
                 {% endif %}
             </div>

@@ -50,7 +50,7 @@
                         <td>
                             {% if user_account.picture_filename %}
                                 {# MODIFIED: Use the new route for uploaded files #}
-                                <img src="{{ url_for('uploaded_persistent_file', filename=user_account.picture_filename) }}" alt="Pic" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 8px; vertical-align: middle;">
+                                <img src="{{ url_for('uploaded_file', filename='user_pics/' ~ user_account.picture_filename) }}" alt="Pic" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 8px; vertical-align: middle;">
                             {% else %}
                                 <span style="display: inline-block; width: 24px; height: 24px; border-radius: 50%; background-color: #eee; margin-right: 8px; vertical-align: middle; text-align: center; line-height: 24px; font-size:12px;">👤</span>
                             {% endif %}

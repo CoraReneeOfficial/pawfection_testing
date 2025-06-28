@@ -20,6 +20,7 @@ from auth.routes import oauth
 import stripe
 from utils import is_user_subscribed
 from flask import request, jsonify, render_template
+from secure_headers import init_secure_headers  # Import secure headers
 # Removed import for datetime as it's not directly used at top level of app.py anymore
 # Removed log_activity definition as it's now in utils.py
 
@@ -66,6 +67,8 @@ def create_app():
     This function acts as the application factory.
     """
     app = Flask(__name__)
+    # Set security headers (HSTS, CSP, etc.)
+    init_secure_headers(app)
     
     # Configure logging
     configure_logging(app)
@@ -97,6 +100,17 @@ def create_app():
 
     # Configure Flask application settings.
     app.config['SECRET_KEY'] = os.environ.get("FLASK_SECRET_KEY", os.urandom(32))
+    # Security: Set secure cookie flags
+    app.config['SESSION_COOKIE_SECURE'] = True  # Only send cookies over HTTPS
+    app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevent JavaScript access to cookies
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Or 'Strict' if you want to be more restrictive
+    # Optionally, set REMEMBER_COOKIE_SECURE/HTTPONLY/SAMESITE if using Flask-Login remember me
+    app.config['REMEMBER_COOKIE_SECURE'] = True
+    app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+    app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
+    # Set session timeout to 30 minutes for permanent sessions
+    from datetime import timedelta
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
     
     # Configure SQLAlchemy to use PostgreSQL if DATABASE_URL is set, otherwise use SQLite.
     database_url = os.environ.get('DATABASE_URL')
@@ -137,11 +151,16 @@ def create_app():
 
     # Route to serve uploaded files
     @app.route('/uploads/<path:filename>')
-    def uploaded_persistent_file(filename):
+    def uploaded_file(filename):
         """
-        Serves static files from the configured UPLOAD_FOLDER.
+        Serves uploaded files from the configured UPLOAD_FOLDER.
         """
         return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+    # Keep the default static route for other static assets (CSS, JS, etc.)
+    @app.route('/static/<path:filename>')
+    def serve_static(filename):
+        return send_from_directory(app.static_folder, filename)
 
     # Ensure all database tables are created on application startup.
     with app.app_context():
@@ -735,4 +754,8 @@ def create_app():
 
 if __name__ == '__main__':
     app = create_app()
-    app.run(debug=True)
+    # SECURITY WARNING: Never run with debug=True in production!
+    debug_mode = os.environ.get('FLASK_ENV', '').lower() == 'development' or os.environ.get('FLASK_DEBUG', '') == '1'
+    if debug_mode:
+        print("[SECURITY WARNING] Debug mode is enabled. DO NOT use debug=True in production!")
+    app.run(debug=debug_mode)

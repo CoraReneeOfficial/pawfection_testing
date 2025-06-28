@@ -71,7 +71,7 @@
         <div class="form-group">
             <label class="form-label" for="logo">Store Logo</label>
             {% if store.logo_filename %}
-                <img src="{{ url_for('static', filename='uploads/store_logos/' ~ store.logo_filename) }}" alt="Store Logo" style="max-width:120px;display:block;margin-bottom:0.5rem;">
+                <img src="{{ url_for('uploaded_file', filename='store_logos/' ~ store.logo_filename) }}" alt="Store Logo" style="max-width:120px;display:block;margin-bottom:0.5rem;">
             {% endif %}
             <input class="form-input" type="file" id="logo" name="logo">
         </div>
@@ -160,10 +160,37 @@
             <label class="form-label" for="payment_settings">Payment Settings (JSON or text)</label>
             <textarea class="form-input" id="payment_settings" name="payment_settings" rows="2">{{ store.payment_settings or '' }}</textarea>
         </div>
+        
+        <div class="gallery-upload">
+            <h3 class="gallery-upload-title">Photo Gallery</h3>
+            <p>Upload images to showcase your store's work on your public page</p>
+            <div class="form-group">
+                <input class="form-input" type="file" id="gallery_images" name="gallery_images" multiple accept="image/*">
+                <small style="color: #888;">Select multiple images to upload (JPG, PNG, GIF)</small>
+            </div>
+            
+            {% if store.gallery_images_list %}
+                <h4>Current Gallery Images</h4>
+                <div class="gallery-preview">
+                    {% for image in store.gallery_images_list %}
+                        <div class="gallery-item">
+                            <img src="{{ url_for('uploaded_file', filename='gallery/' ~ image) }}" alt="Gallery image">
+                            <input type="hidden" name="existing_gallery_images" value="{{ image }}">
+                            <div class="remove-image" data-filename="{{ image }}">Remove</div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        
         <div class="form-actions">
             <button type="submit" class="button button-primary">Save Changes</button>
             <a href="{{ url_for('management.management') }}" class="button button-secondary">Cancel</a>
         </div>
     </form>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='gallery.js') }}"></script>
 {% endblock %}

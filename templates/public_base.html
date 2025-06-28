@@ -5,12 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ store.name }}{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='gallery.css') }}">
     {% block head %}{% endblock %}
 </head>
 <body>
-    <header style="text-align:center; padding:1.5rem 0;">
-        <h1 style="margin:0; font-size:2rem;">{{ store.name }}</h1>
-    </header>
+
     <main class="main-content container" style="max-width:960px; margin:0 auto;">
         {% block content %}{% endblock %}
     </main>

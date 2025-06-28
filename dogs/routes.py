@@ -23,12 +23,23 @@ def _handle_dog_picture_upload(dog_instance, request_files):
     if 'dog_picture' not in request_files:
         return None
     file = request_files['dog_picture']
+    import imghdr
     if file and file.filename != '' and allowed_file(file.filename):
         ext = file.filename.rsplit('.', 1)[1].lower()
         # Generate a unique filename using UUID to prevent collisions
         new_filename = secure_filename(f"dog_{dog_instance.id or 'temp'}_{uuid.uuid4().hex[:8]}.{ext}")
         file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], new_filename)
         os.makedirs(current_app.config['UPLOAD_FOLDER'], exist_ok=True) # Ensure upload directory exists
+
+        # Check MIME type using imghdr BEFORE saving
+        file.stream.seek(0)
+        header_bytes = file.read(512)
+        file.stream.seek(0)
+        detected_type = imghdr.what(None, h=header_bytes)
+        if detected_type not in {'jpeg', 'png', 'gif', 'webp'}:
+            flash("Uploaded file is not a valid image type.", "danger")
+            current_app.logger.warning(f"Rejected dog picture upload: invalid MIME type {detected_type}")
+            return None
 
         # If there's an old picture, delete it
         if dog_instance.picture_filename and dog_instance.picture_filename != new_filename:
@@ -48,6 +59,7 @@ def _handle_dog_picture_upload(dog_instance, request_files):
             current_app.logger.error(f"Failed to save dog pic {file_path}: {e_save}", exc_info=True)
     elif file and file.filename != '':
         flash("Invalid file type for dog picture.", "warning")
+        current_app.logger.warning(f"Rejected dog picture upload: disallowed extension for file {file.filename}")
     return None
 
 @dogs_bp.route('/owner/<int:owner_id>/add_dog', methods=['GET', 'POST'])

@@ -71,13 +71,28 @@ def _handle_user_picture_upload(user_instance, request_files):
     Handles the upload of a user's profile picture.
     Generates a unique filename and deletes the old picture if a new one is uploaded.
     """
-    if 'user_picture' not in request_files: return None
+    if 'user_picture' not in request_files:
+        return None
     file = request_files['user_picture']
-    if file and file.filename != '' and '.' in file.filename:
+    import imghdr
+    from werkzeug.utils import secure_filename
+    from utils import allowed_file
+    if file and file.filename != '' and allowed_file(file.filename):
         ext = file.filename.rsplit('.', 1)[1].lower()
-        new_filename = f"user_{user_instance.id or 'temp'}_{uuid.uuid4().hex[:8]}.{ext}"
+        # Generate a unique, secure filename
+        new_filename = secure_filename(f"user_{user_instance.id or 'temp'}_{uuid.uuid4().hex[:8]}.{ext}")
         file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], new_filename)
-        os.makedirs(current_app.config['UPLOAD_FOLDER'], exist_ok=True) # Ensure upload directory exists
+        os.makedirs(current_app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+        # Check MIME type using imghdr BEFORE saving
+        file.stream.seek(0)
+        header_bytes = file.read(512)
+        file.stream.seek(0)
+        detected_type = imghdr.what(None, h=header_bytes)
+        if detected_type not in {'jpeg', 'png', 'gif', 'webp'}:
+            flash("Uploaded file is not a valid image type.", "danger")
+            current_app.logger.warning(f"Rejected user picture upload: invalid MIME type {detected_type}")
+            return None
 
         # If there's an old picture, delete it to avoid orphaned files
         if user_instance.picture_filename and user_instance.picture_filename != new_filename:
@@ -97,6 +112,7 @@ def _handle_user_picture_upload(user_instance, request_files):
             current_app.logger.error(f"Failed to save user pic {file_path}: {e_save}", exc_info=True)
     elif file and file.filename != '':
         flash("Invalid file type for user picture.", "warning")
+        current_app.logger.warning(f"Rejected user picture upload: disallowed extension for file {file.filename}")
     return None
 
 def get_date_range(range_type, start_date_str=None, end_date_str=None):
@@ -1092,6 +1108,7 @@ def edit_store():
 
     import re
     import shutil
+    import json
     from werkzeug.utils import secure_filename
     
     if request.method == 'POST':
@@ -1110,7 +1127,7 @@ def edit_store():
         logo_file = request.files.get('logo')
         if logo_file and logo_file.filename:
             filename = secure_filename(logo_file.filename)
-            upload_folder = os.path.join(current_app.static_folder, 'uploads', 'store_logos')
+            upload_folder = current_app.config['UPLOAD_FOLDER']
             os.makedirs(upload_folder, exist_ok=True)
             file_path = os.path.join(upload_folder, filename)
             logo_file.save(file_path)
@@ -1123,7 +1140,49 @@ def edit_store():
                 except Exception:
                     pass
             store.logo_filename = filename
-        # Password logic
+            
+        # Handle gallery image uploads
+        gallery_images = request.files.getlist('gallery_images')
+        gallery_upload_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], 'gallery')
+        os.makedirs(gallery_upload_folder, exist_ok=True)
+
+        # Initialize or load existing gallery images
+        current_gallery_images = json.loads(store.gallery_images) if store.gallery_images else []
+
+        # Save new uploads
+        new_images = []
+        for gallery_image in gallery_images:
+            if gallery_image and gallery_image.filename:
+                filename = secure_filename(gallery_image.filename)
+                file_path = os.path.join(gallery_upload_folder, filename)
+                gallery_image.save(file_path)
+                new_images.append(filename)
+
+        # Handle removal of existing images and combine with new images
+        existing_images_to_keep = request.form.getlist('existing_gallery_images')
+        images_to_keep_final = existing_images_to_keep + new_images  # Combine both
+
+        # Remove deleted images from filesystem
+        for image in current_gallery_images:
+            if image not in images_to_keep_final:
+                try:
+                    file_to_remove = os.path.join(gallery_upload_folder, image)
+                    if os.path.exists(file_to_remove):
+                        os.remove(file_to_remove)
+                        current_app.logger.info(f"Removed gallery image: {image}")
+                except Exception as e:
+                    current_app.logger.error(f"Failed to remove gallery image {image}: {e}")
+
+        # Update the store with the final list of gallery images
+        store.gallery_images = json.dumps(images_to_keep_final)
+
+    # Ensure gallery_images_list is always available for the template
+    try:
+        store.gallery_images_list = json.loads(store.gallery_images) if store.gallery_images else []
+    except Exception:
+        store.gallery_images_list = []
+
+    # Password logic
         password = request.form.get('password', '')
         if password:
             if len(password) < 8:

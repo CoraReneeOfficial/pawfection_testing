@@ -122,7 +122,7 @@
     <div class="profile-image-container">
         {% if dog.picture_filename %}
             {# MODIFIED: Use the new route for uploaded files #}
-            <img src="{{ url_for('uploaded_persistent_file', filename=dog.picture_filename) }}" alt="Picture of {{ dog.name }}">
+            <img src="{{ url_for('uploaded_file', filename='dog_pics/' ~ dog.picture_filename) }}" alt="Picture of {{ dog.name }}">
         {% else %}
             <span>No Image</span>
         {% endif %}

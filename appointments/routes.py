@@ -10,6 +10,7 @@ from dateutil import tz, parser as dateutil_parser
 from utils import allowed_file # Keep allowed_file from utils
 from utils import log_activity   # IMPORT log_activity from utils.py
 from utils import subscription_required  # Import subscription_required decorator
+from input_sanitization import sanitize_text_input  # Import sanitization
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 import json
@@ -253,8 +254,8 @@ def add_appointment():
         dog_id_str = request.form.get('dog_id')
         date_str = request.form.get('appointment_date')
         time_str = request.form.get('appointment_time')
-        services_text = request.form.get('services_text', '').strip()
-        notes = request.form.get('notes', '').strip()
+        services_text = sanitize_text_input(request.form.get('services_text', '').strip())
+        notes = sanitize_text_input(request.form.get('notes', '').strip())
         groomer_id_str = request.form.get('groomer_id')
         
         errors = {}
@@ -400,8 +401,8 @@ def edit_appointment(appointment_id):
         dog_id_str = request.form.get('dog_id')
         date_str = request.form.get('appointment_date')
         time_str = request.form.get('appointment_time')
-        services_text = request.form.get('services_text', '').strip()
-        notes = request.form.get('notes', '').strip()
+        services_text = sanitize_text_input(request.form.get('services_text', '').strip())
+        notes = sanitize_text_input(request.form.get('notes', '').strip())
         status = request.form.get('status', 'Scheduled').strip()
         groomer_id_str = request.form.get('groomer_id')
         
