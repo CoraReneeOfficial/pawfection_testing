@@ -9,7 +9,7 @@
 {% block content %}
 <section class="store-hero enhanced-store-hero">
     {% if store.logo_filename %}
-        <img src="{{ url_for('uploaded_file', filename='store_logos/' ~ store.logo_filename) }}" alt="{{ store.name }} logo" class="store-logo">
+        <img src="{{ url_for('static', filename='uploads/store_logos/' ~ store.logo_filename) }}" alt="{{ store.name }} logo" class="store-logo">
     {% endif %}
     <h1 class="store-title">{{ store.name }}</h1>
     <p class="store-description">{{ store.description }}</p>
@@ -17,27 +17,21 @@
         {% if store.address %}
             <div class="store-detail"><span class="detail-label">Address:</span> <span class="detail-value">{{ store.address }}</span></div>
         {% endif %}
-        {% if store.phone %}
-            <div class="store-detail"><span class="detail-label">Phone:</span> <span class="detail-value">{{ store.phone }}</span></div>
+        {% if store.phone or store.email %}
+            <div class="store-detail">
+                {% if store.phone %}
+                    <div class="detail-item"><span class="detail-label">Phone:</span> <span class="detail-value">{{ store.phone }}</span></div>
+                {% endif %}
+                {% if store.email %}
+                    <div class="detail-item"><span class="detail-label">Email:</span> <span class="detail-value">{{ store.email }}</span></div>
+                {% endif %}
+            </div>
         {% endif %}
         {% if store.business_hours %}
             <div class="store-detail"><span class="detail-label">Hours:</span> <span class="detail-value" style="white-space: pre-line;">{{ store.business_hours }}</span></div>
         {% endif %}
     </div>
 </section>
-
-{% if store.gallery_images %}
-<section class="work-gallery">
-    <h2 class="section-title">Our Work</h2>
-    <div class="gallery-container">
-        {% for image in store.gallery_images_list %}
-            <div class="gallery-item">
-                <img src="{{ url_for('uploaded_file', filename='gallery/' ~ image) }}" alt="{{ store.name }} work example" class="gallery-image">
-            </div>
-        {% endfor %}
-    </div>
-</section>
-{% endif %}
 
 <section class="booking-form enhanced-booking-form">
     <h2 class="booking-title">Request an Appointment</h2>

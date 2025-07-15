@@ -126,10 +126,16 @@
             </div>
 
             <div class="form-group">
-                <label for="services_text">Services/Fees Performed</label>
-                 {# Pre-fill with existing text #}
-                <input type="text" id="services_text" name="services_text" class="form-input" value="{{ appointment_data.get('services_text', appointment_data.requested_services_text) or '' }}" placeholder="Optional: e.g., Full Groom, Bath & Brush, Matting Fee">
-                <small class="text-muted">List the main services/fees performed (will appear on calendar/history).</small>
+                <label for="services">Services/Fees Performed</label>
+                <select name="services" id="services" multiple class="form-input" style="height: auto; min-height: 100px;">
+                    {% for service in services %}
+                    <option value="{{ service.id }}" 
+                        {% if appointment_data.get('services_text') and (service.id|string in appointment_data.get('services_text').split(',')) %}selected{% endif %}>
+                        {{ service.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <small class="text-muted">Select the services/fees performed (hold Ctrl/Cmd to select multiple). These will appear on the calendar/history.</small>
             </div>
 
             <div class="form-group">

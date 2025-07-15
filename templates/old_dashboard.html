@@ -57,7 +57,7 @@
         <div class="dashboard-user-pic">
             {% if g.user.picture_filename %}
                 {# MODIFIED: Use the new route for uploaded files #}
-                <img src="{{ url_for('uploaded_file', filename='user_pics/' ~ g.user.picture_filename) }}" alt="Profile picture for {{ g.user.username }}">
+                <img src="{{ url_for('uploaded_persistent_file', filename=g.user.picture_filename) }}" alt="Profile picture for {{ g.user.username }}">
             {% else %}
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="default-user-pic-svg">
                     <path fill-rule="evenodd" d="M18.685 19.097A9.723 9.723 0 0021.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 003.065 7.097A9.716 9.716 0 0012 21.75a9.716 9.716 0 006.685-2.653zm-12.54-1.285A7.486 7.486 0 0112 15a7.486 7.486 0 015.855 2.812A8.224 8.224 0 0112 20.25a8.224 8.224 0 01-5.855-2.438zM15.75 9a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" clip-rule="evenodd" />
@@ -90,7 +90,7 @@
                     <div class="appointment-dog-pic">
                         {% if appt.dog.picture_filename %}
                             {# MODIFIED: Use the new route for uploaded files #}
-                            <img src="{{ url_for('uploaded_file', filename='dog_pics/' ~ appt.dog.picture_filename) }}" alt="Pic of {{ appt.dog.name }}">
+                            <img src="{{ url_for('uploaded_persistent_file', filename=appt.dog.picture_filename) }}" alt="Pic of {{ appt.dog.name }}">
                         {% else %}
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="default-dog-pic-svg">
                               <path d="M11.06 1.988a.75.75 0 10-1.06-.076L10 2.012l-.06.076a.75.75 0 101.06-.076ZM8.28 3.56a.75.75 0 00-1.06 1.06l1.06-1.06zM11.72 3.56a.75.75 0 111.06 1.06l-1.06-1.06zM3.75 6.75a.75.75 0 000 1.5h12.5a.75.75 0 000-1.5H3.75zM10 17.25a8.25 8.25 0 110-16.5 8.25 8.25 0 010 16.5zM9.94 2.064a6.75 6.75 0 00-6.22 8.97l-.001.002-.002.003-.003.006a7.004 7.004 0 00.018.06 7.074 7.074 0 00.11-.318l.04.106.048.124.05.116.058.124.06.115.063.111.067.108.068.102.07.098.07.092.074.088.074.082.076.078.077.073.08.069.08.064.083.06.084.055.086.05.087.046.09.041.09.037.093.032.094.028.096.024.097.02.1.015.1.011.103.007.103.003h.002a6.73 6.73 0 0011.96 0h.002l.103-.003.103-.007.1-.011.1-.015.097-.02.096-.024.094-.028.093-.032.09-.037.09-.041.087-.046.086-.05.084-.055.083-.06.08-.064.08-.069.077-.073.076-.078.074-.082.074-.088.07-.092.07-.098.068-.102.067-.108.063-.111.06-.115.058-.124.05-.116.048-.124.04-.106a6.95 6.95 0 00.11-.318 7.004 7.004 0 00.018-.06l-.003-.006-.002-.003-.001-.002a6.75 6.75 0 00-6.22-8.97z"/>
@@ -101,7 +101,7 @@
                         {% set local_appt_time = appt.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(STORE_TIMEZONE) if STORE_TIMEZONE else appt.appointment_datetime %}
                         <span class="date-time">{{ local_appt_time.strftime('%a, %b %d @ %I:%M %p') }}</span> -
                         <strong>{{ appt.dog.name }}</strong> ({{ appt.dog.owner.name }})
-                        {% if appt.requested_services_text %} - {{ appt.requested_services_text }}{% endif %}
+                        {% if appt.requested_services_text %} - {{ appt.requested_services_text|service_names_from_ids }}{% endif %}
                         {% if appt.groomer %}
                             <span class="appointment-groomer-info">Groomer: {{ appt.groomer.username }}</span>
                         {% endif %}

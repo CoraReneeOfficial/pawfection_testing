@@ -118,7 +118,7 @@
                     <div class="current-picture-container">
                         <span>Current picture:</span>
                         {# MODIFIED: Use the new route for uploaded files from persistent volume #}
-                        <img src="{{ url_for('uploaded_file', filename='dog_pics/' ~ dog.picture_filename) }}" alt="Current picture of {{ dog.name }}">
+                        <img src="{{ url_for('uploaded_persistent_file', filename=dog.picture_filename) }}" alt="Current picture of {{ dog.name }}">
                     </div>
                 {% endif %}
             </div>
@@ -145,6 +145,15 @@
              <div class="form-group">
                 <label for="other_notes">Other Notes</label>
                 <textarea id="other_notes" name="other_notes" rows="3" class="form-input" placeholder="e.g., Allergies (chicken), sensitive skin, favorite treats (peanut butter)">{{ dog.other_notes or '' }}</textarea>
+            </div>
+            
+            <hr style="margin: 1.5rem 0;">
+            
+            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;">Vaccinations</h3>
+            <div class="form-group">
+                <label for="vaccines">Vaccine Information</label>
+                <textarea id="vaccines" name="vaccines" rows="4" class="form-input" placeholder="Example: Rabies (Expires: 2026-07-01), DHPP (Expires: 2026-03-15), Bordetella (Expires: 2025-12-30)">{{ dog.vaccines or '' }}</textarea>
+                <small class="text-muted">Enter vaccine name and expiration date for each vaccination. Separate multiple vaccines with commas or line breaks.</small>
             </div>
 
              <p style="font-size: 0.8rem; color: var(--text-muted);">* Required fields</p>

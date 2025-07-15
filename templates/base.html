@@ -21,9 +21,58 @@
                 </div>
 
                 <div class="nav-user-menu-area">
+                    <!-- Notification Button -->
+                    <div class="nav-notification" x-data="{ notificationOpen: false }">
+                        <button type="button" @click.stop="notificationOpen = !notificationOpen" class="nav-notification-button" aria-label="Notifications">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="notification-icon">
+                                <path d="M5.85 3.5a.75.75 0 00-1.117-1 9.719 9.719 0 00-2.348 4.876.75.75 0 001.479.248A8.219 8.219 0 015.85 3.5zM19.267 2.5a.75.75 0 10-1.118 1 8.22 8.22 0 011.987 4.124.75.75 0 001.48-.248A9.72 9.72 0 0019.266 2.5z" />
+                                <path fill-rule="evenodd" d="M12 2.25A6.75 6.75 0 005.25 9v.75a8.217 8.217 0 01-2.119 5.52.75.75 0 00.298 1.206c1.544.57 3.16.99 4.831 1.243a3.75 3.75 0 107.48 0 24.583 24.583 0 004.83-1.244.75.75 0 00.298-1.205 8.217 8.217 0 01-2.118-5.52V9A6.75 6.75 0 0012 2.25zM9.75 18c0-.034 0-.067.002-.1a25.05 25.05 0 004.496 0l.002.1a2.25 2.25 0 11-4.5 0z" clip-rule="evenodd" />
+                            </svg>
+                            <!-- Notification Badge -->
+                            {% if unread_notifications_count > 0 %}
+                            <span class="notification-badge">{{ unread_notifications_count }}</span>
+                            {% endif %}
+                        </button>
+                        <!-- Notification Dropdown -->
+                        <div class="notification-dropdown" id="notification-dropdown" 
+                             x-show="notificationOpen" 
+                             @click.outside="notificationOpen = false"
+                             x-cloak
+                             x-transition:enter="transition ease-out duration-100 transform"
+                             x-transition:enter-start="opacity-0 scale-95"
+                             x-transition:enter-end="opacity-100 scale-100"
+                             x-transition:leave="transition ease-in duration-75 transform"
+                             x-transition:leave-start="opacity-100 scale-100"
+                             x-transition:leave-end="opacity-0 scale-95">
+                            <div class="notification-header-container">
+                                <h3 class="notification-header">Notifications</h3>
+                                {% if notifications %}
+                                <a href="{{ url_for('notification_system.mark_all_read') }}" class="mark-all-read-btn">Mark All Read</a>
+                                {% endif %}
+                            </div>
+                            {% if notifications %}
+                                <div class="notification-list">
+                                    {% for notification in notifications %}
+                                        <a href="{{ notification.link }}" class="notification-item {% if not notification.is_read %}unread{% endif %}">
+                                            <div class="notification-content">
+                                                <div class="notification-title">{{ notification.content }}</div>
+                                                <div class="notification-time">{{ notification.created_at|timeago }}</div>
+                                            </div>
+                                        </a>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="no-notifications">No new notifications</div>
+                            {% endif %}
+                            <div class="notification-footer">
+                                <a href="{{ url_for('notification_system.view_all') }}" class="see-all-link">See All</a>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="nav-user-pic">
                         {% if g.user.picture_filename %}
-                            <img src="{{ url_for('uploaded_file', filename='user_pics/' ~ g.user.picture_filename) }}" alt="User profile picture">
+                            <img src="{{ url_for('uploaded_persistent_file', filename=g.user.picture_filename) }}" alt="User profile picture">
                         {% else %}
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="default-user-pic-svg">
                                 <path fill-rule="evenodd" d="M18.685 19.097A9.723 9.723 0 0021.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 003.065 7.097A9.716 9.716 0 0012 21.75a9.716 9.716 0 006.685-2.653zm-12.54-1.285A7.486 7.486 0 0112 15a7.486 7.486 0 015.855 2.812A8.224 8.224 0 0112 20.25a8.224 8.224 0 01-5.855-2.438zM15.75 9a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" clip-rule="evenodd" />
@@ -48,7 +97,8 @@
                             <a href="{{ url_for('dashboard') }}" class="nav-dropdown-item {% if request.endpoint == 'dashboard' %}active{% endif %}">Dashboard</a>
                             <a href="{{ url_for('appointments.calendar_view') }}" class="nav-dropdown-item {% if request.endpoint == 'appointments.calendar_view' %}active{% endif %}">Calendar</a>
                             <a href="{{ url_for('owners.directory') }}" class="nav-dropdown-item {% if request.endpoint == 'owners.directory' %}active{% endif %}">Directory</a>
-                            <a href="{{ url_for('appointments.checkout') }}" class="nav-dropdown-item {% if request.endpoint == 'appointments.checkout' %}active{% endif %}">Checkout</a>
+                            <a href="{{ url_for('appointments.checkout_start') }}" class="nav-dropdown-item {% if request.endpoint == 'appointments.checkout_start' %}active{% endif %}">Checkout</a>
+                            <a href="{{ url_for('appointments.receipts_management') }}" class="nav-dropdown-item {% if request.endpoint == 'appointments.receipts_management' %}active{% endif %}">Receipts</a>
                             {% if g.user.is_admin %}
                             <a href="{{ url_for('management.management') }}" class="nav-dropdown-item {% if request.endpoint and (request.endpoint == 'management.management' or request.endpoint.startswith('management.') or request.endpoint == 'management.view_sales_reports' or request.endpoint == 'management.view_user_agreement' or request.endpoint == 'management.view_privacy_policy') %}active{% endif %}">Management</a>
                             <a href="{{ url_for('management.pending_appointments') }}" class="nav-dropdown-item {% if request.endpoint == 'management.pending_appointments' %}active{% endif %}">Pending Appointments</a>

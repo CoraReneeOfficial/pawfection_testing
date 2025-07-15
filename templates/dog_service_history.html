@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+
+{% block title %}Service History: {{ dog.name }}{% endblock %}
+
+{% block head %}
+<style>
+    /* Filtering and search components */
+    .filter-section {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: var(--border-radius);
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--border-color);
+    }
+    
+    .filter-form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: flex-end;
+    }
+    
+    .filter-group {
+        flex: 1;
+        min-width: 200px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .filter-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: var(--secondary-dark);
+    }
+    
+    .filter-group select, 
+    .filter-group input {
+        width: 100%;
+        padding: 0.5rem;
+        border-radius: var(--border-radius-sm);
+        border: 1px solid var(--border-color);
+    }
+    
+    .filter-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    /* Service history list styling */
+    .service-history-list {
+        list-style: none;
+        padding: 0;
+        margin-top: 1rem;
+    }
+    
+    .service-history-item {
+        background-color: #f9f9f9; 
+        border: 1px solid var(--border-color);
+        border-left: 3px solid var(--secondary-color); 
+        border-radius: var(--border-radius);
+        margin-bottom: 0.75rem;
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .service-history-item strong {
+        font-weight: 600;
+    }
+    
+    .service-history-item .date-time {
+        font-weight: 500;
+        color: var(--secondary-dark);
+    }
+    
+    .service-history-item .groomer-info {
+        font-size: 0.85em;
+        color: var(--secondary-dark);
+        margin-top: 0.2rem;
+        display: block; 
+    }
+    
+    .service-history-item .status {
+        font-style: italic;
+        color: var(--text-muted);
+        font-size: 0.9em;
+    }
+    
+    .pagination {
+        margin-top: 1.5rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .pagination-info {
+        margin: 0 1rem;
+        color: var(--text-muted);
+    }
+    
+    .status-badge {
+        display: inline-block; padding: 0.15em 0.5em; font-size: 0.75em;
+        font-weight: 600; line-height: 1; text-align: center;
+        white-space: nowrap; vertical-align: baseline; border-radius: 0.25rem;
+        margin-left: 0.5em; color: #fff;
+    }
+    
+    .status-Scheduled { background-color: var(--primary-color); }
+    .status-Completed { background-color: var(--success-color); }
+    .status-Cancelled { background-color: var(--secondary-color); }
+    .status-No-Show { background-color: var(--danger-color); }
+    
+    .search-results-info {
+        margin-bottom: 1rem;
+        color: var(--text-dark);
+        font-size: 0.9rem;
+    }
+    
+    .no-results {
+        padding: 2rem 0;
+        text-align: center;
+        color: var(--text-muted);
+        font-style: italic;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-card">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+        <h1>Service History: {{ dog.name }}</h1>
+        <a href="{{ url_for('dogs.view_dog', dog_id=dog.id) }}" class="button button-secondary">Back to Dog Profile</a>
+    </div>
+    
+    <p><strong>Owner:</strong> <a href="{{ url_for('owners.view_owner', owner_id=dog.owner.id) }}">{{ dog.owner.name }}</a> ({{ dog.owner.phone_number }})</p>
+    
+    <div class="filter-section">
+        <h3 style="margin-top: 0; margin-bottom: 1rem;">Search & Filter</h3>
+        <form method="GET" class="filter-form">
+            <div class="filter-group">
+                <label for="date_from">From Date</label>
+                <input type="date" id="date_from" name="date_from" class="form-input" value="{{ request.args.get('date_from', '') }}">
+            </div>
+            <div class="filter-group">
+                <label for="date_to">To Date</label>
+                <input type="date" id="date_to" name="date_to" class="form-input" value="{{ request.args.get('date_to', '') }}">
+            </div>
+            <div class="filter-group">
+                <label for="status">Status</label>
+                <select id="status" name="status" class="form-input">
+                    <option value="">All Statuses</option>
+                    <option value="Scheduled" {% if request.args.get('status') == 'Scheduled' %}selected{% endif %}>Scheduled</option>
+                    <option value="Completed" {% if request.args.get('status') == 'Completed' %}selected{% endif %}>Completed</option>
+                    <option value="Cancelled" {% if request.args.get('status') == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+                    <option value="No-Show" {% if request.args.get('status') == 'No-Show' %}selected{% endif %}>No-Show</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="service">Service</label>
+                <input type="text" id="service" name="service" class="form-input" placeholder="Search by service" value="{{ request.args.get('service', '') }}">
+            </div>
+            <div class="filter-group">
+                <label for="search">Notes Search</label>
+                <input type="text" id="search" name="search" class="form-input" placeholder="Search in notes" value="{{ request.args.get('search', '') }}">
+            </div>
+            <div class="filter-actions">
+                <button type="submit" class="button button-primary">Apply Filters</button>
+                <a href="{{ url_for('dogs.dog_service_history', dog_id=dog.id) }}" class="button button-secondary">Clear Filters</a>
+            </div>
+        </form>
+    </div>
+    
+    {% if is_filtered %}
+    <div class="search-results-info">
+        <p><strong>Filter applied.</strong> Showing {{ appointments|length }} results.</p>
+    </div>
+    {% endif %}
+
+    {% if appointments %}
+    <ul class="service-history-list">
+        {% for appt in appointments %}
+        <li class="service-history-item">
+            {% set local_appt_time = appt.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(BUSINESS_TIMEZONE) if BUSINESS_TIMEZONE else appt.appointment_datetime %}
+            <span class="date-time">{{ local_appt_time.strftime('%a, %b %d, %Y @ %I:%M %p') }}</span>
+            <span class="status-badge status-{{ appt.status }}">{{ appt.status }}</span>
+            {% if appt.details_needed %}
+                <span class="status-badge" style="background-color: #dc3545; margin-left: 0.5em;">Needs Review</span>
+            {% endif %}
+            {% if appt.groomer %}
+                <span class="groomer-info">Groomer: {{ appt.groomer.username }}</span>
+            {% else %}
+                <span class="groomer-info">Groomer: Unassigned</span>
+            {% endif %}
+            {% if appt.requested_services_text %}
+                <p style="margin-top: 0.25rem;"><strong>Services/Fees:</strong> {{ appt.requested_services_text|service_names_from_ids }}</p>
+            {% endif %}
+            {% if appt.notes %}
+                <p style="margin-top: 0.25rem;"><strong>Appointment Notes:</strong> {{ appt.notes }}</p>
+            {% endif %}
+            <div style="margin-top: 0.5rem;">
+                <a href="{{ url_for('appointments.edit_appointment', appointment_id=appt.id) }}" class="button button-sm">Edit Appointment</a>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+
+    {% if pagination %}
+    <div class="pagination">
+        {% if pagination.has_prev %}
+            <a href="{{ url_for('dogs.dog_service_history', dog_id=dog.id, page=pagination.prev_num, **request.args) }}" class="button button-sm">&laquo; Previous</a>
+        {% endif %}
+        
+        <span class="pagination-info">Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        
+        {% if pagination.has_next %}
+            <a href="{{ url_for('dogs.dog_service_history', dog_id=dog.id, page=pagination.next_num, **request.args) }}" class="button button-sm">Next &raquo;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="no-results">
+        {% if is_filtered %}
+            <p>No appointments match your search criteria.</p>
+        {% else %}
+            <p>No service history found for {{ dog.name }}.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

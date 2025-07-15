@@ -168,6 +168,7 @@ def edit_dog(dog_id):
         dog.aggression_issues = request.form.get('aggression_issues', '').strip() or None
         dog.anxiety_issues = request.form.get('anxiety_issues', '').strip() or None
         dog.other_notes = request.form.get('other_notes', '').strip() or None
+        dog.vaccines = request.form.get('vaccines', '').strip() or None
         
         try:
             uploaded_filename = _handle_dog_picture_upload(dog, request.files)
@@ -228,3 +229,75 @@ def delete_dog(dog_id):
         current_app.logger.error(f"Error deleting dog '{dog_name}': {e}", exc_info=True)
         flash(f"Error deleting '{dog_name}'.", "danger")
         return redirect(url_for('dogs.view_dog', dog_id=dog_id))
+
+@dogs_bp.route('/dog/<int:dog_id>/service-history')
+@subscription_required
+def dog_service_history(dog_id):
+    """
+    Display the complete service history for a specific dog with search and filtering options.
+    """
+    store_id = session.get('store_id')
+    
+    # Fetch dog, ensuring it belongs to the current store
+    dog = Dog.query.options(
+        db.joinedload(Dog.owner) 
+    ).filter_by(id=dog_id, store_id=store_id).first_or_404()
+    
+    # Get query parameters for filtering
+    date_from = request.args.get('date_from')
+    date_to = request.args.get('date_to')
+    status = request.args.get('status')
+    service = request.args.get('service')
+    search_query = request.args.get('search')
+    page = request.args.get('page', 1, type=int)
+    per_page = 20  # Number of appointments per page
+    
+    # Base query for dog's appointments
+    query = dog.appointments.options(db.joinedload(Appointment.groomer))
+    
+    # Apply filters if provided
+    is_filtered = False
+    if date_from:
+        is_filtered = True
+        query = query.filter(Appointment.appointment_datetime >= date_from)
+    
+    if date_to:
+        is_filtered = True
+        query = query.filter(Appointment.appointment_datetime <= date_to + ' 23:59:59')
+    
+    if status:
+        is_filtered = True
+        query = query.filter(Appointment.status == status)
+    
+    if service:
+        is_filtered = True
+        query = query.filter(Appointment.requested_services_text.ilike(f'%{service}%'))
+    
+    if search_query:
+        is_filtered = True
+        query = query.filter(Appointment.notes.ilike(f'%{search_query}%'))
+    
+    # Paginate the results
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    appointments = pagination.items
+    
+    # Fetch store and its timezone
+    store = db.session.get(Store, store_id)
+    store_tz_str = getattr(store, 'timezone', None) or 'UTC'
+    try:
+        BUSINESS_TIMEZONE = pytz.timezone(store_tz_str)
+    except Exception:
+        BUSINESS_TIMEZONE = pytz.UTC
+    
+    log_activity("Viewed Dog Service History", details=f"Dog: {dog.name}, Filtered: {is_filtered}")
+    
+    return render_template(
+        'dog_service_history.html',
+        dog=dog,
+        appointments=appointments,
+        pagination=pagination,
+        BUSINESS_TIMEZONE=BUSINESS_TIMEZONE,
+        is_filtered=is_filtered,
+        request=request,
+        tz=tz
+    )

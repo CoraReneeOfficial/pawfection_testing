@@ -25,7 +25,6 @@ class Store(db.Model):
 
     # --- New fields for advanced store management ---
     logo_filename = db.Column(db.String(200), nullable=True)  # Logo or profile image filename
-    gallery_images = db.Column(db.Text, nullable=True)  # JSON list of gallery image filenames
     status = db.Column(db.String(20), default='active', nullable=False)  # Store status: active/inactive
     business_hours = db.Column(db.Text, nullable=True)  # JSON/text for business hours
     description = db.Column(db.Text, nullable=True)  # Store description/about
@@ -38,6 +37,7 @@ class Store(db.Model):
     default_appointment_buffer = db.Column(db.Integer, nullable=True)  # Buffer time between appointments in minutes
     payment_settings = db.Column(db.Text, nullable=True)  # JSON/text for payment settings (e.g., Stripe, PayPal)
     is_archived = db.Column(db.Boolean, default=False, nullable=False)  # Soft delete/archive flag
+    tax_enabled = db.Column(db.Boolean, default=True, nullable=False)  # Enable/disable taxes for invoices/receipts
 
     # --- Stripe integration fields ---
     stripe_customer_id = db.Column(db.String(255), nullable=True)
@@ -163,6 +163,7 @@ class Dog(db.Model):
     aggression_issues = db.Column(db.Text, nullable=True)
     anxiety_issues = db.Column(db.Text, nullable=True)
     other_notes = db.Column(db.Text, nullable=True)
+    vaccines = db.Column(db.Text, nullable=True)
     picture_filename = db.Column(db.String(200), nullable=True)
     owner_id = db.Column(db.Integer, db.ForeignKey('owner.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.datetime.now(timezone.utc))
@@ -259,5 +260,45 @@ class ActivityLog(db.Model):
 
     def __repr__(self):
         return f"<ActivityLog ID: {self.id}, User ID: {self.user_id}, Action: {self.action}, Store ID: {self.store_id}>"
+
+class Receipt(db.Model):
+    """
+    Stores a finalized receipt for an appointment, including all itemized data as JSON for future viewing, printing, or emailing.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    appointment_id = db.Column(db.Integer, db.ForeignKey('appointment.id'), nullable=False)
+    store_id = db.Column(db.Integer, db.ForeignKey('store.id'), nullable=False)
+    owner_id = db.Column(db.Integer, db.ForeignKey('owner.id'), nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.datetime.now(timezone.utc), nullable=False)
+    receipt_json = db.Column(db.Text, nullable=False)  # All receipt data at time of checkout
+    filename = db.Column(db.String(255), nullable=True)  # For PDF or download
+
+    appointment = db.relationship('Appointment', backref='receipt', uselist=False)
+    store = db.relationship('Store', backref='receipts')
+    owner = db.relationship('Owner', backref='receipts')
+
+    def __repr__(self):
+        return f"<Receipt ID: {self.id}, Appt: {self.appointment_id}, Store: {self.store_id}>"
+
+class Notification(db.Model):
+    """
+    Represents a notification for users, such as appointment requests or appointments needing review.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    store_id = db.Column(db.Integer, db.ForeignKey('store.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Can be null if for all store users
+    type = db.Column(db.String(50), nullable=False)  # 'appointment_request', 'appointment_needs_review', etc.
+    content = db.Column(db.Text, nullable=False)
+    reference_id = db.Column(db.Integer, nullable=True)  # ID of related object (appointment, etc.)
+    reference_type = db.Column(db.String(50), nullable=True)  # Type of related object ('appointment', etc.)
+    is_read = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.datetime.now(timezone.utc), nullable=False)
+    
+    # Relationships
+    store = db.relationship('Store', backref='notifications')
+    user = db.relationship('User', backref='notifications')
+    
+    def __repr__(self):
+        return f"<Notification ID: {self.id}, Type: {self.type}, Read: {self.is_read}, Store: {self.store_id}>"
 
 # Models will be moved here in Phase 2

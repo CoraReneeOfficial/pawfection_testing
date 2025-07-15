@@ -249,12 +249,17 @@ def add_appointment():
     # Filter dogs and groomers by the current store
     dogs = Dog.query.options(db.joinedload(Dog.owner)).filter_by(store_id=store_id).order_by(Dog.name).all()
     groomers_for_dropdown = User.query.filter_by(is_groomer=True, store_id=store_id).order_by(User.username).all()
+    
+    # Fetch services for the dropdown
+    services = Service.query.filter_by(store_id=store_id, item_type='service').order_by(Service.name.asc()).all()
 
     if request.method == 'POST':
         dog_id_str = request.form.get('dog_id')
         date_str = request.form.get('appointment_date')
         time_str = request.form.get('appointment_time')
-        services_text = sanitize_text_input(request.form.get('services_text', '').strip())
+        # Get selected services from multi-select dropdown
+        services_selected = request.form.getlist('services')
+        services_text = ','.join(services_selected) if services_selected else ''
         notes = sanitize_text_input(request.form.get('notes', '').strip())
         groomer_id_str = request.form.get('groomer_id')
         
@@ -285,7 +290,7 @@ def add_appointment():
 
         if errors:
             for _, msg in errors.items(): flash(msg, "danger")
-            return render_template('add_appointment.html', dogs=dogs, users=groomers_for_dropdown, appointment_data=request.form.to_dict()), 400
+            return render_template('add_appointment.html', dogs=dogs, users=groomers_for_dropdown, services=services, appointment_data=request.form.to_dict()), 400
         
         # Determine if details are needed
         details_needed = appointment_needs_details(selected_dog, selected_groomer, services_text)
@@ -312,21 +317,19 @@ def add_appointment():
             store = db.session.get(Store, g.user.store_id)
             if store and store.google_token_json:
                 try:
-                    token_data = json.loads(store.google_token_json)
-                    credentials = Credentials(
-                        token=token_data.get('token') or token_data.get('access_token'),
-                        refresh_token=token_data.get('refresh_token'),
-                        token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
-                        client_id=token_data.get('client_id') or os.environ.get('GOOGLE_CLIENT_ID'),
-                        client_secret=token_data.get('client_secret') or os.environ.get('GOOGLE_CLIENT_SECRET'),
-                        scopes=SCOPES
-                    )
+                    # Use the improved get_google_credentials function
+                    from appointments.google_calendar_sync import get_google_credentials
+                    
+                    credentials = get_google_credentials(store)
+                    if not credentials:
+                        raise Exception("Failed to obtain valid Google credentials")
+                        
                     service = build('calendar', 'v3', credentials=credentials)
                     event = {
                         'summary': f"[{status.upper() if 'status' in locals() else 'SCHEDULED'}] ({selected_dog.name}) Appointment",
                         'description': f"Owner: {selected_dog.owner.name if selected_dog and selected_dog.owner else ''}\n" +
                                        f"Groomer: {selected_groomer.username if selected_groomer else ''}\n" +
-                                       f"Services: {services_text if services_text else ''}\n" +
+                                       f"Services: {service_names_from_ids(services_text) if services_text else ''}\n" +
                                        f"Notes: {notes if notes else ''}\n" +
                                        f"Status: {status if 'status' in locals() else 'Scheduled'}",
                         'start': {'dateTime': utc_dt.isoformat(), 'timeZone': 'UTC'},
@@ -361,10 +364,10 @@ def add_appointment():
             db.session.rollback()
             current_app.logger.error(f"Error adding appt: {e}", exc_info=True)
             flash("Error adding appointment.", "danger")
-            return render_template('add_appointment.html', dogs=dogs, users=groomers_for_dropdown, appointment_data=request.form.to_dict()), 500
+            return render_template('add_appointment.html', dogs=dogs, users=groomers_for_dropdown, services=services, appointment_data=request.form.to_dict()), 500
     
     log_activity("Viewed Add Appointment page")
-    return render_template('add_appointment.html', dogs=dogs, users=groomers_for_dropdown, appointment_data={})
+    return render_template('add_appointment.html', dogs=dogs, users=groomers_for_dropdown, services=services, appointment_data={})
 
 @appointments_bp.route('/appointment/<int:appointment_id>/edit', methods=['GET', 'POST'])
 @subscription_required
@@ -376,6 +379,9 @@ def edit_appointment(appointment_id):
     current_app.logger.info(f"Starting edit_appointment for appointment_id: {appointment_id}")
     store_id = session.get('store_id')
     current_app.logger.info(f"Current store_id from session: {store_id}")
+    
+    # Fetch services for the dropdown - do this early to ensure it's available for all render_template calls
+    services = Service.query.filter_by(store_id=store_id, item_type='service').order_by(Service.name.asc()).all()
     
     appt = Appointment.query.options(
         db.joinedload(Appointment.dog).joinedload(Dog.owner),
@@ -401,7 +407,9 @@ def edit_appointment(appointment_id):
         dog_id_str = request.form.get('dog_id')
         date_str = request.form.get('appointment_date')
         time_str = request.form.get('appointment_time')
-        services_text = sanitize_text_input(request.form.get('services_text', '').strip())
+        # Get selected services from multi-select dropdown
+        services_selected = request.form.getlist('services')
+        services_text = ','.join(services_selected) if services_selected else ''
         notes = sanitize_text_input(request.form.get('notes', '').strip())
         status = request.form.get('status', 'Scheduled').strip()
         groomer_id_str = request.form.get('groomer_id')
@@ -435,7 +443,7 @@ def edit_appointment(appointment_id):
             for _, msg in errors.items(): flash(msg, "danger")
             form_data = request.form.to_dict()
             form_data.update({'id': appointment_id, 'dog': appt.dog, 'groomer': appt.groomer})
-            return render_template('edit_appointment.html', dogs=dogs, users=groomers_for_dropdown, appointment_data=form_data, appointment_id=appointment_id), 400
+            return render_template('edit_appointment.html', dogs=dogs, users=groomers_for_dropdown, services=services, appointment_data=form_data, appointment_id=appointment_id), 400
         
         # Update the appointment object with form data
         if selected_dog:
@@ -499,55 +507,51 @@ def edit_appointment(appointment_id):
             store = db.session.get(Store, store_id)
             if store and store.google_token_json:
                 try:
-                    # Create a new session for Google Calendar operations
-                    with db.session.no_autoflush:
-                        token_data = json.loads(store.google_token_json)
-                        credentials = Credentials(
-                            token=token_data.get('token') or token_data.get('access_token'),
-                            refresh_token=token_data.get('refresh_token'),
-                            token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
-                            client_id=token_data.get('client_id') or os.environ.get('GOOGLE_CLIENT_ID'),
-                            client_secret=token_data.get('client_secret') or os.environ.get('GOOGLE_CLIENT_SECRET'),
-                            scopes=SCOPES
-                        )
-                        service = build('calendar', 'v3', credentials=credentials)
-                        event = {
-                            'summary': f"[{status.upper() if 'status' in locals() else 'SCHEDULED'}] ({selected_dog.name}) Appointment",
-                            'description': f"Owner: {selected_dog.owner.name if selected_dog and selected_dog.owner else ''}\n" +
-                                           f"Groomer: {selected_groomer.username if selected_groomer else ''}\n" +
-                                           f"Services: {services_text if services_text else ''}\n" +
-                                           f"Notes: {notes if notes else ''}\n" +
-                                           f"Status: {status}",
-                            'start': {'dateTime': utc_dt.isoformat(), 'timeZone': 'UTC'},
-                            'end': {'dateTime': (utc_dt + datetime.timedelta(hours=1)).isoformat(), 'timeZone': 'UTC'},
-                        }
-                        calendar_id = store.google_calendar_id if store.google_calendar_id else 'primary'
+                    # Use the improved get_google_credentials function
+                    from appointments.google_calendar_sync import get_google_credentials
+                    
+                    credentials = get_google_credentials(store)
+                    if not credentials:
+                        raise Exception("Failed to obtain valid Google credentials")
                         
-                        # Execute Google Calendar operation in a separate try-except
-                        try:
-                            if appt.google_event_id:
-                                service.events().update(
-                                    calendarId=calendar_id, 
-                                    eventId=appt.google_event_id, 
-                                    body=event
-                                ).execute()
-                            else:
-                                created_event = service.events().insert(
-                                    calendarId=calendar_id, 
-                                    body=event
-                                ).execute()
-                                # Update the Google event ID in a separate transaction
-                                try:
-                                    appt.google_event_id = created_event.get('id')
-                                    db.session.commit()
-                                except Exception as e:
-                                    current_app.logger.error(f"Failed to update Google event ID: {e}", exc_info=True)
-                                    google_sync_success = False
-                                    
-                        except Exception as e:
-                            current_app.logger.error(f"Google Calendar API error: {e}", exc_info=True)
-                            google_sync_success = False
-                            
+                    service = build('calendar', 'v3', credentials=credentials)
+                    event = {
+                        'summary': f"[{status.upper() if 'status' in locals() else 'SCHEDULED'}] ({selected_dog.name}) Appointment",
+                        'description': f"Owner: {selected_dog.owner.name if selected_dog and selected_dog.owner else ''}\n" +
+                                       f"Groomer: {selected_groomer.username if selected_groomer else ''}\n" +
+                                       f"Services: {services_text if services_text else ''}\n" +
+                                       f"Notes: {notes if notes else ''}\n" +
+                                       f"Status: {status}",
+                        'start': {'dateTime': utc_dt.isoformat(), 'timeZone': 'UTC'},
+                        'end': {'dateTime': (utc_dt + datetime.timedelta(hours=1)).isoformat(), 'timeZone': 'UTC'},
+                    }
+                    calendar_id = store.google_calendar_id if store.google_calendar_id else 'primary'
+                    
+                    # Execute Google Calendar operation in a separate try-except
+                    try:
+                        if appt.google_event_id:
+                            service.events().update(
+                                calendarId=calendar_id, 
+                                eventId=appt.google_event_id, 
+                                body=event
+                            ).execute()
+                            current_app.logger.info(f"[GCAL SYNC] Successfully updated Google event {appt.google_event_id} for appointment {appt.id}")
+                        else:
+                            created_event = service.events().insert(
+                                calendarId=calendar_id, 
+                                body=event
+                            ).execute()
+                            current_app.logger.info(f"[GCAL SYNC] Successfully created new Google event for appointment {appt.id}")
+                            # Update the Google event ID in a separate transaction
+                            try:
+                                appt.google_event_id = created_event.get('id')
+                                db.session.commit()
+                            except Exception as e:
+                                current_app.logger.error(f"Failed to update Google event ID: {e}", exc_info=True)
+                                google_sync_success = False
+                    except Exception as e:
+                        current_app.logger.error(f"Google Calendar API error: {e}", exc_info=True)
+                        google_sync_success = False
                 except Exception as e:
                     current_app.logger.error(f"Google Calendar setup failed: {e}", exc_info=True)
                     google_sync_success = False
@@ -715,7 +719,7 @@ def edit_appointment(appointment_id):
         'groomer': appt.groomer
     }
     log_activity("Viewed Edit Appointment page", details=f"Appt ID: {appointment_id}")
-    return render_template('edit_appointment.html', dogs=dogs, users=groomers_for_dropdown, appointment_data=form_data, appointment_id=appointment_id)
+    return render_template('edit_appointment.html', dogs=dogs, users=groomers_for_dropdown, services=services, appointment_data=form_data, appointment_id=appointment_id)
 
 @appointments_bp.route('/appointment/<int:appointment_id>/delete', methods=['POST'])
 @subscription_required
@@ -899,123 +903,484 @@ def view_appointments_by_status(status):
 from appointments.google_calendar_webhook import webhook_bp as google_calendar_webhook_bp
 
 
-@appointments_bp.route('/checkout', methods=['GET', 'POST'])
+# --- NEW CHECKOUT FLOW ---
+
+from flask import session as flask_session
+import json
+
+@appointments_bp.route('/checkout', methods=['GET'])
 @subscription_required
-def checkout():
+def checkout_start():
     """
-    Handles the checkout process for appointments.
+    Step 1: Show invoice builder for a selected appointment.
     """
     store_id = session.get('store_id')
-    scheduled_appointments = Appointment.query.options(
+    appointments = Appointment.query.options(
         db.joinedload(Appointment.dog).joinedload(Dog.owner),
         db.joinedload(Appointment.groomer)
-    ).filter(
-        Appointment.status == 'Scheduled',
-        Appointment.store_id == store_id
-    ).order_by(Appointment.appointment_datetime.asc()).all()
+    ).filter(Appointment.status == 'Scheduled', Appointment.store_id == store_id).order_by(Appointment.appointment_datetime.asc()).all()
+    common_addons = Service.query.filter_by(store_id=store_id, item_type='addon').all()
+    # For demo: fallback if no add-ons
+    if not common_addons:
+        common_addons = [Service(name='Nail Grinding', base_price=15.0), Service(name='Teeth Brushing', base_price=10.0)]
+    # If no appointment_id is specified, show a selection screen
+    return render_template('select_checkout_appointment.html', appointments=appointments)
 
-    all_items = Service.query.filter_by(store_id=store_id).order_by(Service.item_type, Service.name).all()
-    all_services = [item for item in all_items if item.item_type == 'service']
-    all_fees = [item for item in all_items if item.item_type == 'fee']
-
-    selected_appointment_id = None
-    selected_item_ids = []
-    calculated_data = None
-
+@appointments_bp.route('/checkout/invoice/<int:appointment_id>', methods=['GET', 'POST'])
+@subscription_required
+def invoice_checkout(appointment_id):
+    """
+    Step 1: Invoice builder for a specific appointment. POST submits invoice data and redirects to tip modal.
+    """
+    store_id = session.get('store_id')
+    appt = Appointment.query.options(db.joinedload(Appointment.dog).joinedload(Dog.owner)).filter_by(id=appointment_id, store_id=store_id).first_or_404()
+    owner = appt.dog.owner if appt.dog else None
+    customer_name = owner.name if owner else ''
+    pet_name = appt.dog.name if appt.dog else ''
+    # Load all services and fees for this store
+    services = Service.query.filter_by(store_id=store_id, item_type='service').all()
+    fees = Service.query.filter_by(store_id=store_id, item_type='fee').all()
     if request.method == 'POST':
-        action = request.form.get('action')
-        selected_appointment_id = request.form.get('appointment_id', type=int)
-        service_ids = request.form.getlist('service_ids')
-        fee_ids = request.form.getlist('fee_ids')
-        selected_item_ids = [int(i) for i in service_ids + fee_ids if i.isdigit()]
-
-        appointment = None
-        for appt in scheduled_appointments:
-            if appt.id == selected_appointment_id:
-                appointment = appt
-                break
-
-        billed_items = []
-        subtotal = 0.0
-        for s in all_services:
-            if s.id in selected_item_ids:
-                billed_items.append(s)
-                subtotal += s.base_price
-        for f in all_fees:
-            if f.id in selected_item_ids:
-                billed_items.append(f)
-                subtotal += f.base_price
-        total = subtotal
-
-        if action == 'calculate_total':
-            if appointment:
-                calculated_data = {
-                    'appointment': appointment,
-                    'dog': appointment.dog,
-                    'owner': appointment.dog.owner,
-                    'billed_items': billed_items,
-                    'subtotal': subtotal,
-                    'total': total
-                }
-        elif action == 'complete_checkout':
-            if appointment:
-                appointment.status = 'Completed'
-                appointment.checkout_total_amount = total
-                db.session.commit()
-
-                store = db.session.get(Store, g.user.store_id)
-                if store and store.google_token_json and appointment.google_event_id:
-                    try:
-                        try:
-                            token_info = json.loads(store.google_token_json)
-                            creds = Credentials.from_authorized_user_info(token_info, SCOPES)
-                            service = build('calendar', 'v3', credentials=creds)
-
-                            # Fetch current event
-                            event = service.events().get(calendarId=store.google_calendar_id, eventId=appointment.google_event_id).execute()
-                            # Prepend COMPLETED to title if not already
-                            summary = event.get('summary', '')
-                            if not summary.lower().startswith('completed'):
-                                event['summary'] = f"COMPLETED - {summary}"
-
-                            # Update description with status marker
-                            desc = event.get('description', '') or ''
-                            if 'Status: Completed' not in desc:
-                                desc = desc + ("\n" if desc else "") + "Status: Completed"
-                            event['description'] = desc
-
-                            updated_event = service.events().update(calendarId=store.google_calendar_id, eventId=appointment.google_event_id, body=event).execute()
-                            current_app.logger.info(f"Google Calendar event updated to completed for appointment {appointment.id}: {updated_event.get('id')}")
-                        except Exception as gc_e:
-                            current_app.logger.error(f"Failed to mark Google Calendar event completed: {gc_e}", exc_info=True)
-                            flash("Appointment completed, but failed to update Google Calendar event.", "warning")
-                        flash("Appointment synced to Google Calendar.", "success")
-                    except Exception as e:
-                        current_app.logger.error(f"Google Calendar sync failed: {e}", exc_info=True)
-                        flash("Appointment completed, but failed to sync with Google Calendar.", "warning")
-                else:
-                    flash("Appointment completed, but Google Calendar is not connected for this store.", "info")
-
-                calculated_data = {
-                    'appointment': appointment,
-                    'dog': appointment.dog,
-                    'owner': appointment.dog.owner,
-                    'billed_items': billed_items,
-                    'subtotal': subtotal,
-                    'total': total
-                }
-                flash('Checkout completed and appointment marked as completed.', 'success')
-                return redirect(url_for('appointments.checkout'))
-
-    return render_template(
-        'checkout.html',
-        scheduled_appointments=scheduled_appointments,
-        all_services=all_services,
-        all_fees=all_fees,
-        selected_appointment_id=selected_appointment_id,
-        selected_item_ids=selected_item_ids,
-        calculated_data=calculated_data
+        # Receive invoice line items from form (as JSON string)
+        line_items_json = request.form.get('line_items')
+        try:
+            line_items = json.loads(line_items_json) if line_items_json else []
+        except Exception:
+            line_items = []
+        db.session.expire_all()  # Force reload of all ORM objects from DB
+        store = Store.query.get(store_id)
+        tax_enabled = getattr(store, 'tax_enabled', True)
+        current_app.logger.info(f"[CHECKOUT] Store {store_id} tax_enabled={tax_enabled}")
+        subtotal = sum(float(item['price']) for item in line_items)
+        taxes = round(subtotal * 0.07, 2) if tax_enabled else 0.0
+        total = round(subtotal + taxes, 2)
+        # Save invoice data to session for next step
+        flask_session['checkout_invoice'] = {
+            'appointment_id': appointment_id,
+            'customer_name': customer_name,
+            'pet_name': pet_name,
+            'line_items': line_items,
+            'subtotal': subtotal,
+            'taxes': taxes,
+            'total': total,
+            'tax_enabled': tax_enabled
+        }
+        # After processing the invoice, redirect to the tip modal
+        return redirect(url_for('appointments.tip_modal', appointment_id=appointment_id))
+    # GET: show invoice builder
+    store = Store.query.get(store_id)
+    tax_enabled = getattr(store, 'tax_enabled', True)
+    subtotal = 0
+    taxes = round(subtotal * 0.07, 2) if tax_enabled else 0.0
+    total = round(subtotal + taxes, 2)
+    return render_template('invoice_screen.html',
+        appointment_id=appointment_id,
+        customer_name=customer_name,
+        pet_name=pet_name,
+        line_items=[],
+        subtotal=subtotal,
+        taxes=taxes,
+        total=total,
+        tax_rate=0.07,
+        services=services,
+        fees=fees,
+        tax_enabled=tax_enabled
     )
+
+@appointments_bp.route('/checkout/tip/<int:appointment_id>', methods=['GET', 'POST'])
+@subscription_required
+def tip_modal(appointment_id):
+    """
+    Step 2: Customer tip modal. POST submits tip and redirects to payment selection.
+    """
+    invoice = flask_session.get('checkout_invoice')
+    if not invoice or invoice.get('appointment_id') != appointment_id:
+        flash('Missing invoice data. Please start checkout again.', 'danger')
+        return redirect(url_for('appointments.invoice_checkout', appointment_id=appointment_id))
+    initial_total = invoice['total']
+    tax_enabled = invoice.get('tax_enabled', True)
+    if request.method == 'POST':
+        tip_amount = float(request.form.get('tip_amount', 0))
+        final_total = float(request.form.get('final_total', initial_total))
+        flask_session['checkout_tip'] = {
+            'tip_amount': tip_amount,
+            'final_total': final_total
+        }
+        return redirect(url_for('appointments.payment_selection', appointment_id=appointment_id))
+    subtotal = invoice.get('subtotal', initial_total)
+    taxes = invoice.get('taxes', 0)
+    return render_template('customer_tip_modal.html',
+        appointment_id=appointment_id,
+        initial_total=initial_total,
+        tax_enabled=tax_enabled,
+        subtotal=subtotal,
+        taxes=taxes
+    )
+
+@appointments_bp.route('/checkout/payment/<int:appointment_id>', methods=['GET', 'POST'])
+@subscription_required
+def payment_selection(appointment_id):
+    """
+    Step 3: Payment selection. POST records payment method and redirects to preview receipt.
+    """
+    invoice = flask_session.get('checkout_invoice')
+    tip = flask_session.get('checkout_tip')
+    if not invoice or not tip or invoice.get('appointment_id') != appointment_id:
+        flash('Missing checkout data. Please start checkout again.', 'danger')
+        return redirect(url_for('appointments.invoice_checkout', appointment_id=appointment_id))
+    final_total = tip['final_total']
+    tip_amount = tip['tip_amount']
+    if request.method == 'POST':
+        payment_method = request.form.get('payment_method')
+        flask_session['checkout_payment'] = {
+            'payment_method': payment_method
+        }
+        return redirect(url_for('appointments.preview_receipt', appointment_id=appointment_id))
+    return render_template('payment_selection_screen.html',
+        appointment_id=appointment_id,
+        final_total=final_total,
+        tip_amount=tip_amount
+    )
+
+@appointments_bp.route('/checkout/preview_receipt/<int:appointment_id>', methods=['GET'])
+@subscription_required
+def preview_receipt(appointment_id):
+    """
+    Step 4: Show preview receipt with print/email/finalize options.
+    """
+    appt = Appointment.query.options(db.joinedload(Appointment.dog).joinedload(Dog.owner)).get_or_404(appointment_id)
+    owner = appt.dog.owner if appt.dog else None
+    customer_email = owner.email if owner else ''
+    customer_phone = owner.phone_number if owner else ''
+    # Gather receipt context from session
+    invoice = flask_session.get('checkout_invoice', {})
+    tip = flask_session.get('checkout_tip', {})
+    store = Store.query.get(appt.store_id)
+    receipt_context = dict(
+        appointment_id=appointment_id,
+        customer_email=customer_email,
+        customer_phone=customer_phone,
+        store_name=store.name if store else '',
+        store_email=getattr(store, 'email', ''),
+        store_phone=getattr(store, 'phone_number', ''),
+        date=appt.appointment_datetime.strftime('%B %d, %Y') if appt.appointment_datetime else '',
+        customer_name=owner.name if owner else '',
+        pet_name=appt.dog.name if appt.dog else '',
+        line_items=invoice.get('line_items', []),
+        subtotal=invoice.get('subtotal', 0),
+        taxes=invoice.get('taxes', 0),
+        tip=tip.get('tip_amount', 0),
+        total=tip.get('final_total', invoice.get('total', 0))
+    )
+    response = render_template('receipt_screen.html', **receipt_context)
+    # Do NOT clear session here; only clear after finalization.
+    return response
+
+@appointments_bp.route('/checkout/printable_receipt/<int:appointment_id>', methods=['GET'])
+@subscription_required
+def printable_receipt(appointment_id):
+    """
+    Renders the HTML printable receipt (same as the email version) for printing.
+    """
+    appt = Appointment.query.options(db.joinedload(Appointment.dog).joinedload(Dog.owner)).get_or_404(appointment_id)
+    owner = appt.dog.owner if appt.dog else None
+    store = Store.query.get(appt.store_id)
+    invoice = flask_session.get('checkout_invoice', {})
+    tip = flask_session.get('checkout_tip', {})
+    context = {
+        'store_name': store.name if store else '',
+        'date': appt.appointment_datetime.strftime('%B %d, %Y') if appt.appointment_datetime else '',
+        'customer_name': owner.name if owner else '',
+        'pet_name': appt.dog.name if appt.dog else '',
+        'line_items': invoice.get('line_items', []),
+        'subtotal': invoice.get('subtotal', 0),
+        'taxes': invoice.get('taxes', 0),
+        'total': invoice.get('total', 0),
+        'tip_amount': tip.get('tip_amount', 0),
+        'tip': tip.get('tip_amount', 0),
+        'final_total': tip.get('final_total', invoice.get('total', 0)),
+        'store_email': store.email if store and hasattr(store, 'email') else '',
+        'store_phone': store.phone_number if store and hasattr(store, 'phone_number') else ''
+    }
+    return render_template('printable_receipt.html', **context)
+
+@appointments_bp.route('/checkout/finalize/<int:appointment_id>', methods=['POST'])
+@subscription_required
+def finalize_checkout(appointment_id):
+    """
+    Finalizes the checkout: marks appointment as completed, saves receipt, clears session.
+    """
+    invoice = flask_session.get('checkout_invoice')
+    tip = flask_session.get('checkout_tip')
+    payment = flask_session.get('checkout_payment')
+    store_id = flask_session.get('store_id')
+    user_id = flask_session.get('user_id')
+    if not invoice or not tip or not payment or not store_id or not user_id:
+        flash('Checkout session expired or incomplete. Please try again.', 'danger')
+        return redirect(url_for('dashboard'))
+    appt = Appointment.query.get_or_404(appointment_id)
+    appt.status = 'Completed'
+    db.session.commit()
+    # Save receipt
+    store = Store.query.get(store_id)
+    receipt_data = {
+        'appointment_id': appointment_id,
+        'store_id': store_id,
+        'user_id': user_id,
+        'customer_name': invoice.get('customer_name', ''),
+        'pet_name': invoice.get('pet_name', ''),
+        'date': appt.appointment_datetime.strftime('%B %d, %Y') if appt.appointment_datetime else '',
+        'line_items': invoice.get('line_items', []),
+        'subtotal': invoice.get('subtotal', 0),
+        'taxes': invoice.get('taxes', 0),
+        'tip': tip.get('tip_amount', 0),
+        'final_total': tip.get('final_total', invoice.get('total', 0)),
+        'store_name': store.name if store else '',
+        'store_email': getattr(store, 'email', ''),
+        'store_phone': getattr(store, 'phone_number', '')
+    }
+    new_receipt = Receipt(
+        appointment_id=appointment_id,
+        store_id=store_id,
+        owner_id=user_id,
+        receipt_json=json.dumps(receipt_data)
+    )
+    db.session.add(new_receipt)
+    db.session.commit()
+    # Clear session
+    flask_session.pop('checkout_invoice', None)
+    flask_session.pop('checkout_tip', None)
+    flask_session.pop('checkout_payment', None)
+    flash('Checkout completed and receipt saved!', 'success')
+    return redirect(url_for('dashboard'))
+
+# --- END NEW CHECKOUT FLOW ---
+
+from models import Receipt
+import json
+from flask import send_file, make_response
+
+@appointments_bp.route('/receipts', methods=['GET'])
+@subscription_required
+def receipts_management():
+    """
+    Receipts management page with search and advanced filters.
+    """
+    q = request.args.get('q', '').strip().lower()
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    min_total = request.args.get('min_total')
+    max_total = request.args.get('max_total')
+    store_id = session.get('store_id')
+    query = Receipt.query.filter_by(store_id=store_id)
+    receipts = []
+    for r in query.order_by(Receipt.created_at.desc()).all():
+        data = json.loads(r.receipt_json)
+        # Advanced search
+        if q:
+            if not (q in data.get('customer_name', '').lower() or
+                    q in data.get('pet_name', '').lower() or
+                    q in data.get('date', '').lower() or
+                    q in str(data.get('final_total', '')).lower()):
+                continue
+        # Date filter
+        if start_date and data.get('date'):
+            if data['date'] < start_date:
+                continue
+        if end_date and data.get('date'):
+            if data['date'] > end_date:
+                continue
+        # Amount filter
+        if min_total:
+            try:
+                if float(data.get('final_total', 0)) < float(min_total):
+                    continue
+            except Exception:
+                pass
+        if max_total:
+            try:
+                if float(data.get('final_total', 0)) > float(max_total):
+                    continue
+            except Exception:
+                pass
+        data['id'] = r.id
+        receipts.append(data)
+    return render_template('receipts_management.html', receipts=receipts)
+
+@appointments_bp.route('/receipts/email/<int:receipt_id>', methods=['POST'])
+@subscription_required
+def email_receipt_by_id(receipt_id):
+    """
+    Sends a historical receipt to the specified email using Google API, using receipt data from DB.
+    """
+    r = Receipt.query.get_or_404(receipt_id)
+    data = json.loads(r.receipt_json)
+    email = request.form.get('email')
+    if not email:
+        flash('Email address is required.', 'danger')
+        return redirect(url_for('appointments.receipts_management'))
+    # Get store for Google credentials
+    store = Store.query.get(r.store_id)
+    if not store or not getattr(store, 'google_token_json', None):
+        flash('Google account not connected for this store. Cannot send email.', 'danger')
+        return redirect(url_for('appointments.receipts_management'))
+    try:
+        token_data = json.loads(store.google_token_json)
+        creds = Credentials.from_authorized_user_info(token_data)
+        service = build('gmail', 'v1', credentials=creds)
+        # Render HTML body using receipt_email.html
+        html_body = render_template(
+            'email/receipt_email.html',
+            store_name=data.get('store_name', store.name if store else ''),
+            store_email=data.get('store_email', getattr(store, 'email', '')),
+            store_phone=data.get('store_phone', getattr(store, 'phone_number', '')),
+            date=data.get('date', ''),
+            customer_name=data.get('customer_name', ''),
+            pet_name=data.get('pet_name', ''),
+            line_items=data.get('line_items', []),
+            subtotal=data.get('subtotal', 0),
+            taxes=data.get('taxes', 0),
+            tip=data.get('tip', data.get('tip_amount', 0)),
+            total=data.get('final_total', data.get('total', 0))
+        )
+        message = MIMEText(html_body, 'html')
+        message['to'] = email
+        message['from'] = data.get('store_email', getattr(store, 'email', 'me'))
+        message['subject'] = f"Receipt from {data.get('store_name', store.name if store else 'Pawfection')}"
+        raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+        service.users().messages().send(userId='me', body={'raw': raw_message}).execute()
+        flash(f'Receipt sent to {email}!', 'success')
+    except Exception as e:
+        current_app.logger.error(f"Failed to send historical receipt email: {e}")
+        flash('Failed to email receipt. Please try again.', 'danger')
+    return redirect(url_for('appointments.receipts_management'))
+
+@appointments_bp.route('/receipts/export_pdf/<int:receipt_id>', methods=['GET'])
+@subscription_required
+def export_receipt_pdf(receipt_id):
+    # Placeholder: In production, use a library like WeasyPrint or xhtml2pdf
+    # For now, just return a message
+    flash('PDF export coming soon!', 'info')
+    return redirect(url_for('appointments.receipts_management'))
+
+@appointments_bp.route('/receipts/view/<int:receipt_id>', methods=['GET'])
+@subscription_required
+def view_receipt(receipt_id):
+    r = Receipt.query.get_or_404(receipt_id)
+    data = json.loads(r.receipt_json)
+    
+    # Ensure 'total' is available in the template context
+    # If total doesn't exist in data but final_total does, use that
+    if 'total' not in data and 'final_total' in data:
+        data['total'] = data['final_total']
+    # If neither exists but we have subtotal, taxes, and tip, calculate total
+    elif 'total' not in data:
+        subtotal = float(data.get('subtotal', 0))
+        taxes = float(data.get('taxes', 0))
+        tip = float(data.get('tip', 0))
+        data['total'] = subtotal + taxes + tip
+    
+    return render_template('preview_receipt_screen.html', **data)
+
+@appointments_bp.route('/receipts/print/<int:receipt_id>', methods=['GET'])
+@subscription_required
+def print_receipt(receipt_id):
+    r = Receipt.query.get_or_404(receipt_id)
+    data = json.loads(r.receipt_json)
+    
+    # Ensure 'total' is available in the template context
+    # If total doesn't exist in data but final_total does, use that
+    if 'total' not in data and 'final_total' in data:
+        data['total'] = data['final_total']
+    # If neither exists but we have subtotal, taxes, and tip, calculate total
+    elif 'total' not in data:
+        subtotal = float(data.get('subtotal', 0))
+        taxes = float(data.get('taxes', 0))
+        tip = float(data.get('tip', 0))
+        data['total'] = subtotal + taxes + tip
+    
+    return render_template('printable_receipt.html', **data)
+
+
+@appointments_bp.route('/receipts/download/<int:receipt_id>', methods=['GET'])
+@subscription_required
+def download_receipt(receipt_id):
+    r = Receipt.query.get_or_404(receipt_id)
+    data = json.loads(r.receipt_json)
+    # Download as JSON for now; can be extended to PDF
+    response = make_response(json.dumps(data, indent=2))
+    response.headers['Content-Disposition'] = f'attachment; filename=receipt_{receipt_id}.json'
+    response.mimetype = 'application/json'
+    return response
+
+
+@appointments_bp.route('/checkout/email_receipt/<int:appointment_id>', methods=['POST'])
+@subscription_required
+def email_receipt(appointment_id):
+    """
+    Sends an HTML receipt for the appointment using the connected Google account.
+    """
+    # Get appointment and related info
+    appt = Appointment.query.options(
+        db.joinedload(Appointment.dog).joinedload(Dog.owner),
+        db.joinedload(Appointment.groomer),
+        db.joinedload(Appointment.store)
+    ).get(appointment_id)
+    if not appt:
+        flash('Appointment not found.', 'danger')
+        return redirect(url_for('dashboard'))
+    store = appt.store
+    dog = appt.dog
+    owner = dog.owner if dog else None
+    # Get receipt info from session (should be set during checkout flow)
+    invoice = session.get('checkout_invoice')
+    tip = session.get('checkout_tip')
+    if not invoice or not tip:
+        flash('Checkout session expired. Cannot send receipt.', 'danger')
+        return redirect(url_for('appointments.receipt_screen', appointment_id=appointment_id))
+    # Compose HTML receipt
+    html_body = render_template(
+        'email/receipt_email.html',
+        store_name=store.name if store else 'Pawfection',
+        store_email=store.email if store else '',
+        store_phone=store.phone if store else '',
+        date=appt.appointment_datetime.strftime('%b %d, %Y @ %I:%M %p'),
+        customer_name=owner.name if owner else '',
+        pet_name=dog.name if dog else '',
+        line_items=invoice.get('line_items', []),
+        subtotal=invoice.get('subtotal', 0),
+        taxes=invoice.get('taxes', 0),
+        tip=tip.get('tip_amount', 0),
+        total=tip.get('final_total', invoice.get('total', 0))
+    )
+    # Get recipient email
+    customer_email = request.form.get('customer_email') or (owner.email if owner else None)
+    if not customer_email:
+        flash('No customer email provided.', 'danger')
+        return redirect(url_for('appointments.preview_receipt', appointment_id=appointment_id))
+    # Google credentials
+    if not store or not store.google_token_json:
+        flash('Google account not connected for this store. Cannot send email.', 'danger')
+        return redirect(url_for('appointments.preview_receipt', appointment_id=appointment_id))
+    
+    # Get credentials from store model
+    creds_dict = json.loads(store.google_token_json)
+    creds = Credentials.from_authorized_user_info(info=creds_dict, scopes=SCOPES)
+    service = build('gmail', 'v1', credentials=creds)
+    # Prepare MIME message
+    message = MIMEText(html_body, 'html')
+    message['to'] = customer_email
+    message['from'] = store.email if store and store.email else 'me'
+    message['subject'] = f"Receipt from {store.name if store else 'Pawfection'}"
+    raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+    try:
+        service.users().messages().send(userId='me', body={'raw': raw_message}).execute()
+        flash('Receipt emailed successfully!', 'success')
+    except Exception as e:
+        current_app.logger.error(f"Failed to send receipt email: {e}")
+        flash('Failed to email receipt. Please try again.', 'danger')
+    return redirect(url_for('appointments.preview_receipt', appointment_id=appointment_id))
+
 
 @appointments_bp.route('/appointments/debug_list')
 @subscription_required

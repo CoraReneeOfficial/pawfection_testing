@@ -148,19 +148,81 @@ def create_app():
     # Initialize Flask-Migrate for database migrations
     from flask_migrate import Migrate
     migrate = Migrate(app, db)
+    
+    # Register CLI commands
+    from commands import register_commands
+    register_commands(app)
+    
+    # Register custom Jinja2 filters
+    @app.template_filter('service_names_from_ids')
+    def service_names_from_ids(service_ids_text):
+        """Convert a comma-separated list of service IDs to a comma-separated list of service names."""
+        if not service_ids_text:
+            return ''
+            
+        # Import models here to avoid circular imports
+        from models import Service
+        
+        # Split the comma-separated IDs
+        service_ids = [int(sid) for sid in service_ids_text.split(',') if sid.strip().isdigit()]
+        
+        # If no valid IDs, return empty string
+        if not service_ids:
+            return ''
+            
+        # Get all services in one query
+        services = Service.query.filter(Service.id.in_(service_ids)).all()
+        
+        # Map IDs to names
+        id_to_name = {service.id: service.name for service in services}
+        
+        # Build names list in same order as IDs
+        service_names = [id_to_name.get(sid, f"Unknown ({sid})") for sid in service_ids]
+        
+        # Join with commas
+        return ', '.join(service_names)
+    
+    @app.template_filter('timeago')
+    def timeago_filter(dt):
+        """Format a timestamp into a human-readable relative time (e.g., '2 hours ago')."""
+        if not dt:
+            return ''
+        
+        import datetime
+        now = datetime.datetime.now(dt.tzinfo) if dt.tzinfo else datetime.datetime.utcnow()
+        diff = now - dt
+        
+        # Calculate the time difference
+        seconds = diff.total_seconds()
+        minutes = seconds / 60
+        hours = minutes / 60
+        days = diff.days
+        
+        if seconds < 60:
+            return 'just now'
+        elif minutes < 60:
+            return f'{int(minutes)} minute{"s" if minutes > 1 else ""} ago'
+        elif hours < 24:
+            return f'{int(hours)} hour{"s" if hours > 1 else ""} ago'
+        elif days < 7:
+            return f'{days} day{"s" if days > 1 else ""} ago'
+        elif days < 30:
+            weeks = days // 7
+            return f'{weeks} week{"s" if weeks > 1 else ""} ago'
+        elif days < 365:
+            months = days // 30
+            return f'{months} month{"s" if months > 1 else ""} ago'
+        else:
+            years = days // 365
+            return f'{years} year{"s" if years > 1 else ""} ago'
 
     # Route to serve uploaded files
     @app.route('/uploads/<path:filename>')
-    def uploaded_file(filename):
+    def uploaded_persistent_file(filename):
         """
-        Serves uploaded files from the configured UPLOAD_FOLDER.
+        Serves static files from the configured UPLOAD_FOLDER.
         """
         return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
-    # Keep the default static route for other static assets (CSS, JS, etc.)
-    @app.route('/static/<path:filename>')
-    def serve_static(filename):
-        return send_from_directory(app.static_folder, filename)
 
     # Ensure all database tables are created on application startup.
     with app.app_context():
@@ -177,6 +239,41 @@ def create_app():
     # Register Google Calendar webhook blueprint
     from appointments.google_calendar_webhook import webhook_bp as google_calendar_webhook_bp
     app.register_blueprint(google_calendar_webhook_bp)
+    
+    # Register notifications blueprint
+    from notification_system import bp as notification_system_bp
+    app.register_blueprint(notification_system_bp)
+    
+    # Context processor to make notification data available to all templates
+    @app.context_processor
+    def inject_notifications():
+        """Add notification data to all template contexts."""
+        from models import Notification
+        from flask import g
+        
+        if not hasattr(g, 'user') or g.user is None or not hasattr(g, 'user') or not g.user.store_id:
+            return {'notifications': [], 'unread_notifications_count': 0}
+        
+        # Get the latest 5 unread notifications
+        notifications = Notification.query.filter_by(
+            store_id=g.user.store_id,
+            is_read=False
+        ).order_by(Notification.created_at.desc()).limit(5).all()
+        
+        # Get the total count of unread notifications
+        unread_count = Notification.query.filter_by(
+            store_id=g.user.store_id,
+            is_read=False
+        ).count()
+        
+        # Import the function to generate notification links
+        from notification_system import get_notification_link
+        
+        # Add the link to each notification
+        for notification in notifications:
+            notification.link = get_notification_link(notification)
+        
+        return {'notifications': notifications, 'unread_notifications_count': unread_count}
 
     # This function runs before every request to load the logged-in user.
     @app.before_request
@@ -399,13 +496,12 @@ def create_app():
                 )
                 .filter(
                     Appointment.status == 'Scheduled',
-                    Appointment.store_id == store_id,
-                    Appointment.appointment_datetime >= now_utc
+                    Appointment.store_id == store_id
                 )
                 .order_by(Appointment.appointment_datetime.asc())
                 .limit(5)
                 .all()
-            )
+)
 
         return render_template(
             'dashboard.html',

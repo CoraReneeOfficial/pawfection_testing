@@ -1,14 +1,25 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, g, current_app, session, abort
-from models import User, Service, Appointment, ActivityLog, Store, Dog, Owner, AppointmentRequest
+from flask import Blueprint, render_template, request, redirect, url_for, flash, g, current_app, session, abort, send_file, jsonify, send_from_directory, after_this_request
+from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileRequired, FileAllowed
+from werkzeug.utils import secure_filename
+import os
+import sqlite3
+import tempfile
+import zipfile
+import shutil
+import werkzeug
+from datetime import datetime, timedelta
+from flask import (
+    Blueprint, render_template, url_for, flash, redirect, request, 
+    session, g, current_app, send_file, after_this_request
+)
+from sqlalchemy import text
 from extensions import db
 from sqlalchemy.exc import IntegrityError
 from decimal import Decimal, InvalidOperation
 from functools import wraps
 import datetime
-from datetime import timezone, timedelta
-import calendar
-import os
-import uuid
+from models import User, Service, Appointment, ActivityLog, Store, Dog, Owner, AppointmentRequest
 from utils import allowed_file # Keep allowed_file from utils
 from utils import log_activity   # IMPORT log_activity from utils.py
 from google_auth_oauthlib.flow import Flow
@@ -20,12 +31,54 @@ import re
 from dateutil import tz
 from sqlalchemy import or_, func
 from dateutil import parser as dateutil_parser
+import shutil
+from zipfile import ZipFile, ZIP_DEFLATED
+import tempfile
+from werkzeug.utils import secure_filename
+from datetime import datetime
 from notifications.email_utils import send_appointment_confirmation_email, send_appointment_cancelled_email, send_appointment_edited_email
+from flask_wtf import FlaskForm
+from wtforms import FileField
+from wtforms.validators import DataRequired
+
+# Form for database import
+class DatabaseImportForm(FlaskForm):
+    database_file = FileField('Database File (.db)', validators=[
+        FileRequired(),
+        FileAllowed(['db'], 'SQLite database files only!')
+    ])
 
 management_bp = Blueprint('management', __name__)
 
 # --- Helpers ---
 NOTIFICATION_SETTINGS_FILE = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'notification_settings.json')
+
+def service_names_from_ids(service_ids_text):
+    """Convert a comma-separated list of service IDs to a comma-separated list of service names."""
+    if not service_ids_text:
+        return ''
+        
+    # Import models here to avoid circular imports
+    from models import Service
+    
+    # Split the comma-separated IDs
+    service_ids = [int(sid) for sid in service_ids_text.split(',') if sid.strip().isdigit()]
+    
+    # If no valid IDs, return empty string
+    if not service_ids:
+        return ''
+        
+    # Get all services in one query
+    services = Service.query.filter(Service.id.in_(service_ids)).all()
+    
+    # Map IDs to names
+    id_to_name = {service.id: service.name for service in services}
+    
+    # Build names list in same order as IDs
+    service_names = [id_to_name.get(sid, f"Unknown ({sid})") for sid in service_ids]
+    
+    # Join with commas
+    return ', '.join(service_names)
 
 # Decorator for admin routes
 def admin_required(f):
@@ -209,7 +262,7 @@ def approve_appointment_request(req_id):
             db.session.add(dog)
             db.session.flush()
         # Create appointment with placeholder datetime parse
-        preferred_dt = datetime.datetime.strptime(req.preferred_datetime, '%Y-%m-%d %H:%M') if req.preferred_datetime else datetime.datetime.utcnow()
+        preferred_dt = datetime.strptime(req.preferred_datetime, '%Y-%m-%d %H:%M') if req.preferred_datetime else datetime.utcnow()
         appt = Appointment(
             dog_id=dog.id,
             appointment_datetime=preferred_dt,
@@ -254,28 +307,29 @@ def approve_appointment_request(req_id):
             # Continue even if email fails
         
         # Sync with Google Calendar if enabled
-        if store and store.google_token_json and store.google_calendar_id:
+        if store and store.google_token_json:
             try:
-                credentials = GoogleCredentials.from_authorized_user_info(
-                    json.loads(store.google_token_json),
-                    scopes=[
-                        'https://www.googleapis.com/auth/calendar',
-                        'https://www.googleapis.com/auth/calendar.events'
-                    ]
-                )
+                # Use the improved get_google_credentials function
+                from appointments.google_calendar_sync import get_google_credentials
                 
+                credentials = get_google_credentials(store)
+                if not credentials:
+                    raise Exception("Failed to obtain valid Google credentials")
+                    
                 service = build('calendar', 'v3', credentials=credentials)
+                # Make sure we have a calendar ID
+                calendar_id = store.google_calendar_id if store.google_calendar_id else 'primary'
                 
                 # Format the event
                 event = {
-                    'summary': f"{dog.name}'s Grooming Appointment",
-                    'description': f"Owner: {owner.name}\nPhone: {owner.phone_number}\nNotes: {req.notes or 'No notes'}\nServices: {req.requested_services_text or 'Not specified'}",
+                    'summary': f"[SCHEDULED] ({dog.name}) Appointment",
+                    'description': f"Owner: {owner.name}\nPhone: {owner.phone_number}\nGroomer: {groomer.username if groomer else 'Not assigned'}\nServices: {service_names_from_ids(req.requested_services_text) if req.requested_services_text else 'Not specified'}\nNotes: {req.notes or 'No notes'}\nStatus: Scheduled",
                     'start': {
                         'dateTime': appt.appointment_datetime.isoformat(),
                         'timeZone': store.timezone if store and store.timezone else 'America/New_York',
                     },
                     'end': {
-                        'dateTime': (appt.appointment_datetime + datetime.timedelta(hours=1)).isoformat(),
+                        'dateTime': (appt.appointment_datetime + timedelta(hours=1)).isoformat(),
                         'timeZone': store.timezone if store and store.timezone else 'America/New_York',
                     },
                     'reminders': {
@@ -285,17 +339,16 @@ def approve_appointment_request(req_id):
                 
                 # Add the event to Google Calendar
                 created_event = service.events().insert(
-                    calendarId=store.google_calendar_id,
+                    calendarId=calendar_id,
                     body=event
                 ).execute()
-                
-                # Update the appointment with the Google Event ID
+                current_app.logger.info(f"[GCAL SYNC] Successfully created new Google event for appointment {appt.id}")
                 appt.google_event_id = created_event.get('id')
                 db.session.commit()
-                
+                flash('Appointment synced to Google Calendar.', 'success')
             except Exception as calendar_error:
                 current_app.logger.error(f"Error syncing with Google Calendar for appointment {appt.id}: {calendar_error}")
-                # Continue even if calendar sync fails
+                flash('Appointment approved, but failed to sync with Google Calendar.', 'warning')
         
         flash('Appointment request approved and scheduled. Confirmation email sent.', 'success')
         
@@ -627,7 +680,23 @@ def manage_services():
     all_items = Service.query.filter_by(store_id=store_id).order_by(Service.item_type, Service.name).all()
     services = [item for item in all_items if item.item_type == 'service']
     fees = [item for item in all_items if item.item_type == 'fee']
-    return render_template('manage_services.html', services=services, fees=fees)
+    store = Store.query.get(store_id)
+    tax_enabled = getattr(store, 'tax_enabled', True)
+    return render_template('manage_services.html', services=services, fees=fees, tax_enabled=tax_enabled)
+
+@management_bp.route('/manage/toggle_taxes', methods=['POST'])
+@admin_required
+def toggle_taxes():
+    store_id = session.get('store_id')
+    store = Store.query.get(store_id)
+    if not store:
+        flash('Store not found.', 'danger')
+        return redirect(url_for('management.manage_services'))
+    tax_enabled = 'tax_enabled' in request.form
+    store.tax_enabled = tax_enabled
+    db.session.commit()
+    flash(f'Taxes have been {"enabled" if tax_enabled else "disabled"} for all invoices and receipts.', 'success')
+    return redirect(url_for('management.manage_services'))
 
 @management_bp.route('/manage/services/add', methods=['GET', 'POST'])
 @admin_required
@@ -1108,7 +1177,6 @@ def edit_store():
 
     import re
     import shutil
-    import json
     from werkzeug.utils import secure_filename
     
     if request.method == 'POST':
@@ -1123,14 +1191,33 @@ def edit_store():
         email = request.form.get('email', store.email)
         if email and not re.match(r"[^@]+@[^@]+\.[^@]+", email):
             errors.append('Invalid email format.')
-        # Handle logo upload
+        # Handle logo upload - Simplified and direct approach
         logo_file = request.files.get('logo')
-        if logo_file and logo_file.filename:
-            filename = secure_filename(logo_file.filename)
-            upload_folder = current_app.config['UPLOAD_FOLDER']
-            os.makedirs(upload_folder, exist_ok=True)
-            file_path = os.path.join(upload_folder, filename)
-            logo_file.save(file_path)
+        if logo_file and logo_file.filename and logo_file.filename != '':
+            try:
+                # Get a clean filename
+                filename = secure_filename(logo_file.filename)
+                
+                # Ensure directory exists
+                upload_folder = os.path.join(current_app.static_folder, 'uploads', 'store_logos')
+                os.makedirs(upload_folder, exist_ok=True)
+                
+                # Save file directly using open/write method instead of save()
+                file_path = os.path.join(upload_folder, filename)
+                with open(file_path, 'wb') as f:
+                    logo_file.save(f)
+                
+                # Confirm file was saved
+                if os.path.exists(file_path):
+                    flash('Logo uploaded successfully!', 'success')
+                    print(f"Logo saved to: {file_path}")
+                else:
+                    flash('Logo upload failed - file not created.', 'danger')
+                    print(f"Failed to save logo to: {file_path}")
+            except Exception as e:
+                flash(f'Error uploading logo: {str(e)}', 'danger')
+                print(f"Exception during logo upload: {str(e)}")
+                return render_template('edit_store.html', store=store, form=form, errors=errors, title='Edit Store')
             # Optionally delete old logo file
             if store.logo_filename and store.logo_filename != filename:
                 old_path = os.path.join(upload_folder, store.logo_filename)
@@ -1140,49 +1227,7 @@ def edit_store():
                 except Exception:
                     pass
             store.logo_filename = filename
-            
-        # Handle gallery image uploads
-        gallery_images = request.files.getlist('gallery_images')
-        gallery_upload_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], 'gallery')
-        os.makedirs(gallery_upload_folder, exist_ok=True)
-
-        # Initialize or load existing gallery images
-        current_gallery_images = json.loads(store.gallery_images) if store.gallery_images else []
-
-        # Save new uploads
-        new_images = []
-        for gallery_image in gallery_images:
-            if gallery_image and gallery_image.filename:
-                filename = secure_filename(gallery_image.filename)
-                file_path = os.path.join(gallery_upload_folder, filename)
-                gallery_image.save(file_path)
-                new_images.append(filename)
-
-        # Handle removal of existing images and combine with new images
-        existing_images_to_keep = request.form.getlist('existing_gallery_images')
-        images_to_keep_final = existing_images_to_keep + new_images  # Combine both
-
-        # Remove deleted images from filesystem
-        for image in current_gallery_images:
-            if image not in images_to_keep_final:
-                try:
-                    file_to_remove = os.path.join(gallery_upload_folder, image)
-                    if os.path.exists(file_to_remove):
-                        os.remove(file_to_remove)
-                        current_app.logger.info(f"Removed gallery image: {image}")
-                except Exception as e:
-                    current_app.logger.error(f"Failed to remove gallery image {image}: {e}")
-
-        # Update the store with the final list of gallery images
-        store.gallery_images = json.dumps(images_to_keep_final)
-
-    # Ensure gallery_images_list is always available for the template
-    try:
-        store.gallery_images_list = json.loads(store.gallery_images) if store.gallery_images else []
-    except Exception:
-        store.gallery_images_list = []
-
-    # Password logic
+        # Password logic
         password = request.form.get('password', '')
         if password:
             if len(password) < 8:
@@ -1262,7 +1307,7 @@ def sync_google_calendar_for_store(store, user):
             ]
         )
         service = build('calendar', 'v3', credentials=credentials)
-        now_utc = datetime.datetime.utcnow().replace(tzinfo=pytz.UTC)
+        now_utc = datetime.utcnow().replace(tzinfo=pytz.UTC)
         now = now_utc.astimezone(store_tz).isoformat()
         events_result = service.events().list(
             calendarId=store.google_calendar_id,
@@ -1465,7 +1510,7 @@ def sync_google_calendar_for_store(store, user):
 @admin_required
 def sync_google_calendar():
     store_id = session.get('store_id')
-    store = db.session.get(Store, store_id)
+    store = Store.query.get_or_404(store_id)
     num_synced = sync_google_calendar_for_store(store, g.user)
     if num_synced > 0:
         flash(f'Synced {num_synced} new appointments from Google Calendar.', 'success')
@@ -1473,3 +1518,583 @@ def sync_google_calendar():
     else:
         flash('No new appointments to sync from Google Calendar.', 'info')
     return redirect(url_for('management.management'))
+
+
+# --- Data Management Routes ---
+@management_bp.route('/data_management')
+@admin_required
+def data_management():
+    """Render the data management page for exporting/importing data."""
+    store_id = session.get('store_id')
+    store = Store.query.get_or_404(store_id) if store_id else None
+    form = DatabaseImportForm()
+    return render_template('data_management.html', form=form)
+
+
+@management_bp.route('/data_management/export_database')
+@admin_required
+def export_database():
+    """Export only the store's data as a database file."""
+    store_id = session.get('store_id')
+    store = Store.query.get_or_404(store_id) if store_id else None
+    
+    if not store:
+        flash("Store not found.", "error")
+        return redirect(url_for('management.data_management'))
+    
+    # Create a temporary database file for just this store's data
+    temp_dir = tempfile.mkdtemp()
+    temp_db_path = os.path.join(temp_dir, 'store_export.db')
+    
+    try:
+        # Import sqlite3 module locally
+        import sqlite3
+        
+        # Connect to the new temporary database
+        new_conn = sqlite3.connect(temp_db_path)
+        new_cursor = new_conn.cursor()
+        
+        # Create the schema in the new database
+        # First, get table information from the current database
+        source_engine = db.get_engine()
+        with source_engine.connect() as connection:
+            # Get all table names
+            table_names_result = connection.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"))
+            table_names = [row[0] for row in table_names_result.fetchall()]
+            
+            # Also get the sqlite_sequence table (needed for auto-incrementing IDs)
+            table_names.append('sqlite_sequence')
+            
+            # For each table, create it in the new database and copy data for the store
+            for table_name in table_names:
+                # Get table creation SQL (this requires raw SQL execution)
+                create_table_sql_result = connection.execute(text(f"SELECT sql FROM sqlite_master WHERE type='table' AND name='{table_name}'"))
+                create_sql = create_table_sql_result.fetchone()
+                
+                if create_sql and create_sql[0]:
+                    # Create the table in the new database
+                    new_cursor.execute(create_sql[0])
+                    
+                    # Check if table has store_id column to filter data
+                    columns_info_result = connection.execute(text(f"PRAGMA table_info('{table_name}')"))
+                    columns_info = columns_info_result.fetchall()
+                    column_names = [col[1] for col in columns_info]
+                    
+                    if 'store_id' in column_names:
+                        has_store_id = True
+                        # Get data for this store only
+                        rows_result = connection.execute(text(f"SELECT * FROM {table_name} WHERE store_id = {store_id}"))
+                        rows = rows_result.fetchall()
+                        
+                        if rows:
+                            # Prepare insert statement with the right number of placeholders
+                            placeholders = ', '.join(['?' for _ in column_names])
+                            insert_sql = f"INSERT INTO {table_name} VALUES ({placeholders})"
+                            new_cursor.executemany(insert_sql, rows)
+                    else:
+                        # For tables without store_id, check if they are global tables that should be copied
+                        # These might include configuration tables, etc.
+                        if table_name in ['sqlite_sequence']:  # Add other global tables if needed
+                            rows_result = connection.execute(text(f"SELECT * FROM {table_name}"))
+                            rows = rows_result.fetchall()
+                            
+                            if rows:
+                                placeholders = ', '.join(['?' for _ in range(len(rows[0]))])
+                                insert_sql = f"INSERT INTO {table_name} VALUES ({placeholders})"
+                                new_cursor.executemany(insert_sql, rows)
+        
+        # Commit changes and close the new database connection
+        new_conn.commit()
+        new_conn.close()
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        store_name_safe = secure_filename(store.name)
+        download_name = f"{store_name_safe}_database_{timestamp}.db"
+        
+        # Log activity
+        log = ActivityLog(
+            action="Store Database Exported",
+            details=f"Store-specific database exported by user {g.user.username}",
+            user_id=g.user.id,
+            store_id=store_id
+        )
+        db.session.add(log)
+        db.session.commit()
+        
+        @after_this_request
+        def cleanup(response):
+            try:
+                shutil.rmtree(temp_dir)
+            except Exception as e:
+                current_app.logger.error(f"Error cleaning up temp directory: {e}")
+            return response
+        
+        return send_file(temp_db_path, as_attachment=True, download_name=download_name)
+    
+    except Exception as e:
+        current_app.logger.error(f"Error creating store database export: {e}")
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+        flash(f"Error creating database export: {str(e)}", "error")
+        return redirect(url_for('management.data_management'))
+
+
+@management_bp.route('/data_management/export_images')
+@admin_required
+def export_images():
+    """Export only the store's images as a zip file."""
+    store_id = session.get('store_id')
+    store = Store.query.get_or_404(store_id) if store_id else None
+    
+    if not store:
+        flash("Store not found.", "error")
+        return redirect(url_for('management.data_management'))
+    
+    upload_folder = current_app.config['UPLOAD_FOLDER']
+    static_folder = current_app.static_folder
+    
+    if not os.path.exists(upload_folder):
+        flash("Upload folder not found.", "error")
+        return redirect(url_for('management.data_management'))
+    
+    # Collect all image filenames for this store from database
+    store_images = set()
+    
+    # 1. Get store logo filename if exists
+    if store.logo_filename:
+        store_images.add(store.logo_filename)
+    
+    # 2. Get all user profile pictures for this store
+    users = User.query.filter_by(store_id=store_id).all()
+    for user in users:
+        if user.picture_filename:
+            store_images.add(user.picture_filename)
+    
+    # 3. Get all dog pictures for this store
+    dogs = Dog.query.filter_by(store_id=store_id).all()
+    for dog in dogs:
+        if dog.picture_filename:
+            store_images.add(dog.picture_filename)
+    
+    # Create temp directory for zip
+    temp_dir = tempfile.mkdtemp()
+    temp_zip_path = os.path.join(temp_dir, 'images.zip')
+    
+    try:
+        # Track found images to report any missing files
+        images_found = 0
+        images_missing = 0
+        
+        with zipfile.ZipFile(temp_zip_path, 'w') as zipf:
+            # First check the main uploads folder
+            if os.path.exists(upload_folder):
+                for root, _, files in os.walk(upload_folder):
+                    for file in files:
+                        # Check if this file is in our store's image set
+                        if file in store_images:
+                            file_path = os.path.join(root, file)
+                            rel_path = os.path.join('uploads', os.path.relpath(file_path, upload_folder))
+                            zipf.write(file_path, rel_path)
+                            images_found += 1
+            
+            # Also check static/uploads folders for store logos
+            static_uploads = os.path.join(static_folder, 'uploads')
+            if os.path.exists(static_uploads):
+                for root, _, files in os.walk(static_uploads):
+                    for file in files:
+                        if file in store_images:
+                            file_path = os.path.join(root, file)
+                            # Get path relative to static folder
+                            rel_path = os.path.relpath(file_path, static_folder)
+                            zipf.write(file_path, rel_path)
+                            images_found += 1
+        
+        # Check if we found any images
+        if images_found == 0:
+            flash("No images found for this store.", "warning")
+            shutil.rmtree(temp_dir)
+            return redirect(url_for('management.data_management'))
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        store_name_safe = secure_filename(store.name)
+        download_name = f"{store_name_safe}_images_{timestamp}.zip"
+        
+        # Log activity
+        log = ActivityLog(
+            action="Store Images Exported",
+            details=f"Store-specific images ({images_found} files) exported by user {g.user.username}",
+            user_id=g.user.id,
+            store_id=store_id
+        )
+        db.session.add(log)
+        db.session.commit()
+        
+        @after_this_request
+        def cleanup(response):
+            try:
+                shutil.rmtree(temp_dir)
+            except Exception as e:
+                current_app.logger.error(f"Error cleaning up temp directory: {e}")
+            return response
+        
+        return send_file(temp_zip_path, as_attachment=True, download_name=download_name)
+    
+    except Exception as e:
+        current_app.logger.error(f"Error creating store images export: {e}")
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+        flash(f"Error creating images export: {str(e)}", "error")
+        return redirect(url_for('management.data_management'))
+
+
+@management_bp.route('/data_management/export_all_data')
+@admin_required
+def export_all_data():
+    """Export both store-specific database and images as a single zip file."""
+    store_id = session.get('store_id')
+    store = Store.query.get_or_404(store_id) if store_id else None
+    
+    if not store:
+        flash("Store not found.", "error")
+        return redirect(url_for('management.data_management'))
+    
+    upload_folder = current_app.config['UPLOAD_FOLDER']
+    
+    if not os.path.exists(upload_folder):
+        flash("Upload folder not found.", "error")
+        return redirect(url_for('management.data_management'))
+    
+    # Create a temporary directory
+    temp_dir = tempfile.mkdtemp()
+    temp_zip_path = os.path.join(temp_dir, 'all_data.zip')
+    temp_db_path = os.path.join(temp_dir, 'store_export.db')
+    
+    try:
+        # Create store-specific database file
+        import sqlite3
+        
+        # Connect to the new temporary database
+        new_conn = sqlite3.connect(temp_db_path)
+        new_cursor = new_conn.cursor()
+        
+        # Create the schema in the new database
+        source_engine = db.get_engine()
+        with source_engine.connect() as connection:
+            # Get all table names
+            table_names_result = connection.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"))
+            table_names = [row[0] for row in table_names_result.fetchall()]
+            
+            # Also get the sqlite_sequence table (needed for auto-incrementing IDs)
+            table_names.append('sqlite_sequence')
+            
+            # For each table, create it in the new database and copy data for the store
+            for table_name in table_names:
+                # Get table creation SQL
+                create_table_sql_result = connection.execute(text(f"SELECT sql FROM sqlite_master WHERE type='table' AND name='{table_name}'"))
+                create_sql = create_table_sql_result.fetchone()
+                
+                if create_sql and create_sql[0]:
+                    # Create the table in the new database
+                    new_cursor.execute(create_sql[0])
+                    
+                    # Check if table has store_id column to filter data
+                    columns_info_result = connection.execute(text(f"PRAGMA table_info('{table_name}')"))
+                    columns_info = columns_info_result.fetchall()
+                    column_names = [col[1] for col in columns_info]
+                    
+                    if 'store_id' in column_names:
+                        # Get data for this store only
+                        rows = connection.execute(f"SELECT * FROM {table_name} WHERE store_id = {store_id}").fetchall()
+                        
+                        if rows:
+                            # Prepare insert statement with the right number of placeholders
+                            placeholders = ', '.join(['?' for _ in column_names])
+                            insert_sql = f"INSERT INTO {table_name} VALUES ({placeholders})"
+                            
+                            # Insert the data
+                            new_cursor.executemany(insert_sql, rows)
+                    else:
+                        # For tables without store_id, check if they are global tables that should be copied
+                        if table_name in ['sqlite_sequence']:  # Add other global tables if needed
+                            rows = connection.execute(f"SELECT * FROM {table_name}").fetchall()
+                            
+                            if rows:
+                                placeholders = ', '.join(['?' for _ in range(len(rows[0]))])
+                                insert_sql = f"INSERT INTO {table_name} VALUES ({placeholders})"
+                                new_cursor.executemany(insert_sql, rows)
+        
+        # Commit changes and close the new database connection
+        new_conn.commit()
+        new_conn.close()
+        
+        # Now create the zip file with both the database and images
+        with zipfile.ZipFile(temp_zip_path, 'w') as zipf:
+            # Add the store-specific database file
+            db_filename = f"{secure_filename(store.name)}_database.db"
+            zipf.write(temp_db_path, db_filename)
+            
+            # Collect all image filenames for this store from database
+            store_images = set()
+            
+            # 1. Get store logo filename if exists
+            if store.logo_filename:
+                store_images.add(store.logo_filename)
+            
+            # 2. Get all user profile pictures for this store
+            users = User.query.filter_by(store_id=store_id).all()
+            for user in users:
+                if user.picture_filename:
+                    store_images.add(user.picture_filename)
+            
+            # 3. Get all dog pictures for this store
+            dogs = Dog.query.filter_by(store_id=store_id).all()
+            for dog in dogs:
+                if dog.picture_filename:
+                    store_images.add(dog.picture_filename)
+            
+            # Track found images count
+            images_found = 0
+            
+            # Add images from uploads folder
+            if os.path.exists(upload_folder):
+                for root, _, files in os.walk(upload_folder):
+                    for file in files:
+                        # Check if this file is in our store's image set
+                        if file in store_images:
+                            file_path = os.path.join(root, file)
+                            rel_path = os.path.join('uploads', os.path.relpath(file_path, upload_folder))
+                            zipf.write(file_path, rel_path)
+                            images_found += 1
+            
+            # Also check static/uploads folders for store logos
+            static_uploads = os.path.join(current_app.static_folder, 'uploads')
+            if os.path.exists(static_uploads):
+                for root, _, files in os.walk(static_uploads):
+                    for file in files:
+                        if file in store_images:
+                            file_path = os.path.join(root, file)
+                            # Get path relative to static folder
+                            rel_path = os.path.relpath(file_path, current_app.static_folder)
+                            zipf.write(file_path, rel_path)
+                            images_found += 1
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        store_name_safe = secure_filename(store.name)
+        download_name = f"{store_name_safe}_all_data_{timestamp}.zip"
+        
+        # Log activity
+        log = ActivityLog(
+            action="Store Data Exported",
+            details=f"Store-specific data export by user {g.user.username}",
+            user_id=g.user.id,
+            store_id=store_id
+        )
+        db.session.add(log)
+        db.session.commit()
+        
+        @after_this_request
+        def cleanup(response):
+            try:
+                shutil.rmtree(temp_dir)
+            except Exception as e:
+                current_app.logger.error(f"Error cleaning up temp directory: {e}")
+            return response
+        
+        return send_file(temp_zip_path, as_attachment=True, download_name=download_name)
+    
+    except Exception as e:
+        current_app.logger.error(f"Error creating all data export: {e}")
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+        flash(f"Error creating data export: {str(e)}", "error")
+        return redirect(url_for('management.data_management'))
+
+
+@management_bp.route('/data_management/import_database', methods=['POST'])
+@admin_required
+def import_database():
+    """Import a database file, either overwriting or merging with the current one."""
+    form = DatabaseImportForm()
+    
+    if form.validate_on_submit():
+        try:
+            # Get import mode (overwrite or merge)
+            import_mode = request.form.get('import_mode', 'overwrite')
+            
+            # Get the current database path
+            db_path = current_app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+            
+            # Create a backup of the current database
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_path = f"{db_path}.backup_{timestamp}"
+            shutil.copy2(db_path, backup_path)
+            
+            # Get the uploaded file
+            uploaded_file = form.database_file.data
+            
+            # Save the uploaded file to a temporary location
+            temp_dir = tempfile.mkdtemp()
+            temp_db_path = os.path.join(temp_dir, 'uploaded_database.db')
+            uploaded_file.save(temp_db_path)
+            
+            # Process based on import mode
+            if import_mode == 'overwrite':
+                # Close database connections before replacing the file
+                db.session.close()
+                db.engine.dispose()
+                
+                # Overwrite mode - simply replace the current database
+                shutil.copy2(temp_db_path, db_path)
+                
+                action_details = "Database completely overwritten"
+                flash_message = "Database replaced successfully! The application will log you out to apply changes."
+            else:  # merge mode
+                # Merge the uploaded database with the current one
+                try:
+                    # Open connections to both databases
+                    current_conn = sqlite3.connect(db_path)
+                    current_cursor = current_conn.cursor()
+                    imported_conn = sqlite3.connect(temp_db_path)
+                    imported_cursor = imported_conn.cursor()
+                    
+                    # Get store ID for filtering imported data
+                    store_id = session.get('store_id')
+                    
+                    # Get all tables from the imported database
+                    imported_cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+                    imported_tables = [row[0] for row in imported_cursor.fetchall()]
+                    
+                    # For each table in the imported database
+                    tables_updated = []
+                    records_added = 0
+                    
+                    for table_name in imported_tables:
+                        # Check if the table exists in the current database
+                        current_cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'")
+                        if not current_cursor.fetchone():
+                            # Table doesn't exist in current database, skip it
+                            current_app.logger.warning(f"Table {table_name} not found in current database, skipping")
+                            continue
+                        
+                        # Get the primary key column(s) for the table
+                        current_cursor.execute(f"PRAGMA table_info('{table_name}')")
+                        columns_info = current_cursor.fetchall()
+                        primary_key_columns = [col[1] for col in columns_info if col[5] > 0]  # col[5] > 0 means primary key
+                        column_names = [col[1] for col in columns_info]
+                        
+                        # If no primary key, use all columns as composite key for uniqueness check
+                        if not primary_key_columns:
+                            primary_key_columns = column_names
+                            
+                        # Only import data related to this store if store_id is present
+                        has_store_id = 'store_id' in column_names
+                        
+                        # Get data from imported database
+                        if has_store_id:
+                            imported_cursor.execute(f"SELECT * FROM {table_name} WHERE store_id = {store_id}")
+                        else:
+                            # For global tables, only get them if they're in our allowlist
+                            if table_name in ['sqlite_sequence']:
+                                imported_cursor.execute(f"SELECT * FROM {table_name}")
+                            else:
+                                # Skip tables without store_id that aren't in our allowlist
+                                continue
+                                
+                        imported_rows = imported_cursor.fetchall()
+                        if not imported_rows:
+                            continue
+                            
+                        # For each imported row, check if it already exists in the current database
+                        table_updated = False
+                        for row in imported_rows:
+                            # Build a WHERE clause to check for duplicates based on primary key(s)
+                            where_conditions = []
+                            for i, col_name in enumerate(column_names):
+                                if col_name in primary_key_columns:
+                                    # Handle NULL values in the primary key
+                                    if row[i] is None:
+                                        where_conditions.append(f"{col_name} IS NULL")
+                                    else:
+                                        where_conditions.append(f"{col_name} = ?")
+                            
+                            # If we have where conditions, check for duplicates
+                            if where_conditions:
+                                where_clause = " AND ".join(where_conditions)
+                                where_values = [row[i] for i, col_name in enumerate(column_names) 
+                                               if col_name in primary_key_columns and row[i] is not None]
+                                
+                                current_cursor.execute(f"SELECT COUNT(*) FROM {table_name} WHERE {where_clause}", where_values)
+                                if current_cursor.fetchone()[0] == 0:
+                                    # No duplicate found, insert the row
+                                    placeholders = ', '.join(['?' for _ in column_names])
+                                    current_cursor.execute(f"INSERT INTO {table_name} VALUES ({placeholders})", row)
+                                    records_added += 1
+                                    table_updated = True
+                            else:
+                                # No primary key to check duplicates, just insert
+                                placeholders = ', '.join(['?' for _ in column_names])
+                                current_cursor.execute(f"INSERT INTO {table_name} VALUES ({placeholders})", row)
+                                records_added += 1
+                                table_updated = True
+                        
+                        if table_updated:
+                            tables_updated.append(table_name)
+                    
+                    # Commit all changes
+                    current_conn.commit()
+                    
+                    action_details = f"Database merged: {records_added} records added across {len(tables_updated)} tables"
+                    flash_message = f"Database merged successfully! Added {records_added} records to {len(tables_updated)} tables. The application will log you out to apply changes."
+                    
+                except Exception as merge_error:
+                    current_app.logger.error(f"Error merging databases: {merge_error}")
+                    raise Exception(f"Error merging databases: {merge_error}")
+                finally:
+                    # Close connections
+                    try:
+                        current_cursor.close()
+                        current_conn.close()
+                        imported_cursor.close()
+                        imported_conn.close()
+                    except Exception as close_error:
+                        current_app.logger.error(f"Error closing database connections: {close_error}")
+            
+            # Log the activity
+            try:
+                store_id = session.get('store_id')
+                log = ActivityLog(
+                    action=f"Database Imported ({import_mode})",
+                    details=f"Database import ({import_mode}) by {g.user.username}. {action_details}. Backup at {backup_path}",
+                    user_id=g.user.id,
+                    store_id=store_id
+                )
+                
+                # Reopen connection for logging
+                db.session.close()
+                db.engine.dispose()
+                db.create_all()
+                db.session.add(log)
+                db.session.commit()
+            except Exception as log_error:
+                # If logging fails, continue with import but notify about the error
+                current_app.logger.error(f"Failed to log import activity: {log_error}")
+                flash(f"Database import succeeded, but could not log activity: {str(log_error)}", "warning")
+            
+            # Clean up temp directory
+            try:
+                shutil.rmtree(temp_dir)
+            except Exception as cleanup_error:
+                current_app.logger.error(f"Error cleaning up temp directory: {cleanup_error}")
+            
+            flash(flash_message, "success")
+            return redirect(url_for('auth.logout'))
+            
+        except Exception as e:
+            current_app.logger.error(f"Error importing database: {e}")
+            flash(f"Error importing database: {str(e)}", "error")
+    else:
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f"Error in {getattr(form, field).label.text}: {error}", "error")
+    
+    return redirect(url_for('management.data_management'))

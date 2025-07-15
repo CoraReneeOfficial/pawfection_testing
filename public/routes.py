@@ -1,7 +1,7 @@
-from flask import Blueprint, render_template, request, flash, redirect, url_for, current_app
+from flask import Blueprint, flash, redirect, render_template, request, url_for
 from models import Store, AppointmentRequest
+from notification_system import check_for_notifications
 from extensions import db
-import json
 
 public_bp = Blueprint('public', __name__)
 
@@ -37,16 +37,11 @@ def public_store_page(store_username):
         )
         db.session.add(new_req)
         db.session.commit()
+        
+        # Generate notification for the new appointment request
+        check_for_notifications(store.id)
+        
         flash('Your request has been submitted! We will contact you soon.', 'success')
         return redirect(url_for('public.public_store_page', store_username=store_username))
 
-    # Parse gallery images for the template
-    if store.gallery_images:
-        try:
-            store.gallery_images_list = json.loads(store.gallery_images)
-        except (json.JSONDecodeError, TypeError):
-            store.gallery_images_list = []
-    else:
-        store.gallery_images_list = []
-            
     return render_template('public_store_page.html', store=store)

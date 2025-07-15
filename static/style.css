@@ -84,7 +84,8 @@
 }
 .store-details {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: center;
     justify-content: center;
     gap: 1.5rem;
     margin-bottom: 0.5rem;
@@ -97,7 +98,7 @@
     font-size: 1rem;
     box-shadow: 0 1px 4px 0 rgb(0 0 0 / 0.04);
     margin-bottom: 0.5rem;
-    min-width: 230px;
+    width: fit-content;
 }
 .detail-label {
     font-weight: 600;
@@ -106,6 +107,10 @@
 }
 .detail-value {
     color: var(--text-dark);
+}
+
+.detail-item:not(:last-child) {
+    margin-bottom: 0.5rem;
 }
 
 .enhanced-booking-form {
@@ -351,6 +356,145 @@ a:hover {
 .nav-dropdown-item.logout:hover { background-color: var(--danger-light); color: var(--danger-hover); }
 .nav-dropdown-divider { height: 1px; background-color: var(--border-color); margin: 0.5rem 0; }
 .nav-dropdown-user-info { padding: 0.6rem 1.2rem; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid var(--border-color); margin-top: 0.5rem; }
+
+/* Notification styles */
+.notification-dropdown {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    background-color: var(--white);
+    color: var(--text-dark);
+    border-radius: var(--border-radius);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    border: 1px solid var(--border-color);
+    z-index: 110;
+    min-width: 280px;
+    padding: 0.5rem 0;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.notification-header-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 0.5rem;
+}
+
+.notification-header {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin: 0;
+}
+
+.mark-all-read-btn {
+    font-size: 0.75rem;
+    color: var(--primary-color);
+    text-decoration: none;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius);
+    transition: background-color 0.1s ease-in-out;
+}
+
+.mark-all-read-btn:hover {
+    background-color: var(--primary-lighter);
+    text-decoration: none;
+}
+
+.notification-list {
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.notification-item {
+    display: block;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    text-decoration: none;
+    transition: background-color 0.1s ease-in-out;
+}
+
+.notification-item:hover {
+    background-color: var(--primary-lighter);
+    text-decoration: none;
+}
+
+.notification-item.unread {
+    background-color: rgba(59, 130, 246, 0.05);
+}
+
+.notification-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.notification-title {
+    font-size: 0.9rem;
+    color: var(--text-dark);
+}
+
+.notification-time {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.no-notifications {
+    padding: 1rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.notification-footer {
+    border-top: 1px solid var(--border-color);
+    margin-top: 0.5rem;
+}
+
+.see-all-link {
+    display: block;
+    text-align: center;
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--primary-color);
+}
+
+.see-all-link:hover {
+    background-color: var(--primary-lighter);
+    text-decoration: none;
+}
+
+/* Notification page styles */
+.notification-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+}
+
+.notification-page-header h1 {
+    margin: 0;
+}
+
+.notification-list-page {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.notification-item-full {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--white);
+}
 
 
 /* --- Buttons --- */

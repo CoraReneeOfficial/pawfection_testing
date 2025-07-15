@@ -58,6 +58,12 @@
     </div>
 
     <p>Here you can add, edit, and delete grooming services and additional fees.</p>
+    <form method="POST" action="{{ url_for('management.toggle_taxes') }}" style="margin-bottom:1.5rem;">
+      <label for="tax-enabled-toggle" style="font-weight:600;font-size:1.08em;">Taxes:
+        <input type="checkbox" id="tax-enabled-toggle" name="tax_enabled" value="1" onchange="this.form.submit()" {% if tax_enabled %}checked{% endif %} style="margin-left:0.5em;">
+        <span style="font-size:0.98em;font-weight:400;">Enable taxes for all invoices and receipts</span>
+      </label>
+    </form>
 
     {# --- Services Section --- #}
     <div class="section-header">

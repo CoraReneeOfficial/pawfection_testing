@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block title %}Record Payment - Checkout{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<style>
+  .payment-btn-row { display: flex; gap: 1rem; margin-top: 1.3rem; }
+  .payment-btn { flex: 1 1 140px; font-size: 1.1em; }
+  .loading-indicator { display: none; margin: 1.2rem auto 0 auto; text-align: center; }
+  .loading-indicator.active { display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container checkout-container">
+  <div class="checkout-header">
+    <h1>Record Payment</h1>
+    <p>Enter total into Valor terminal, then select payment type below.</p>
+  </div>
+  <div class="checkout-card" style="max-width:420px;margin:auto;">
+    <div style="margin-bottom:1.1rem;font-size:1.2em;">
+      Final Total: <b>${{ '%.2f'|format(final_total) }}</b>
+    </div>
+    <div style="margin-bottom:0.6rem;">
+      Tip: <span>${{ '%.2f'|format(tip_amount) }}</span>
+    </div>
+    <form id="payment-form" method="POST" action="{{ url_for('appointments.payment_selection', appointment_id=appointment_id) }}">
+      <input type="hidden" name="final_total" value="{{ final_total }}">
+      <input type="hidden" name="tip_amount" value="{{ tip_amount }}">
+      <div class="payment-btn-row">
+        <button type="button" class="button button-primary payment-btn" onclick="submitPayment('card')"><i class="fas fa-credit-card"></i> Card Payment</button>
+        <button type="button" class="button button-secondary payment-btn" onclick="submitPayment('cash')"><i class="fas fa-money-bill-wave"></i> Cash Payment</button>
+      </div>
+      <div id="loading-indicator" class="loading-indicator">
+        <i class="fas fa-spinner fa-spin"></i> Processing...
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function submitPayment(method) {
+  document.getElementById('loading-indicator').classList.add('active');
+  const form = document.getElementById('payment-form');
+  const input = document.createElement('input');
+  input.type = 'hidden';
+  input.name = 'payment_method';
+  input.value = method;
+  form.appendChild(input);
+  form.submit();
+}
+</script>
+{% endblock %}

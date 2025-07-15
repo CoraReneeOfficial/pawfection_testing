@@ -122,7 +122,7 @@
     <div class="profile-image-container">
         {% if dog.picture_filename %}
             {# MODIFIED: Use the new route for uploaded files #}
-            <img src="{{ url_for('uploaded_file', filename='dog_pics/' ~ dog.picture_filename) }}" alt="Picture of {{ dog.name }}">
+            <img src="{{ url_for('uploaded_persistent_file', filename=dog.picture_filename) }}" alt="Picture of {{ dog.name }}">
         {% else %}
             <span>No Image</span>
         {% endif %}
@@ -147,15 +147,17 @@
         <dd class="{{ 'no-info' if not dog.anxiety_issues }}">{{ dog.anxiety_issues or 'No anxiety issues noted.' }}</dd>
         <dt>Other Notes</dt>
         <dd class="{{ 'no-info' if not dog.other_notes }}">{{ dog.other_notes or 'No other notes provided.' }}</dd>
+        <dt>Vaccines</dt>
+        <dd class="{{ 'no-info' if not dog.vaccines }}">{{ dog.vaccines or 'No vaccine information provided.' }}</dd>
     </dl>
 
     <hr style="margin: 1.5rem 0;">
 
-    <h2>Service History</h2>
+    <h2>Service History <small style="font-weight: normal; font-size: 0.8rem; color: var(--text-muted);">(Recent 5)</small></h2>
     {# Ensure 'appointments' is passed to this template from the view_dog route #}
     {% if appointments %} 
         <ul class="service-history-list">
-            {% for appt in appointments %}
+            {% for appt in appointments[:5] %}
             <li class="service-history-item">
                 {% set local_appt_time = appt.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(BUSINESS_TIMEZONE) if BUSINESS_TIMEZONE else appt.appointment_datetime %}
                 <span class="date-time">{{ local_appt_time.strftime('%a, %b %d, %Y @ %I:%M %p') }}</span>
@@ -169,7 +171,7 @@
                      <span class="groomer-info">Groomer: Unassigned</span>
                 {% endif %}
                 {% if appt.requested_services_text %}
-                    <p style="margin-top: 0.25rem;"><strong>Services/Fees:</strong> {{ appt.requested_services_text }}</p>
+                    <p style="margin-top: 0.25rem;"><strong>Services/Fees:</strong> {{ appt.requested_services_text|service_names_from_ids }}</p>
                 {% endif %}
                 {% if appt.notes %}
                     <p style="margin-top: 0.25rem;"><strong>Appointment Notes:</strong> {{ appt.notes }}</p>
@@ -180,6 +182,11 @@
             </li>
             {% endfor %}
         </ul>
+        {% if appointments|length > 5 %}
+        <div style="margin-top: 1rem; text-align: center;">
+            <a href="{{ url_for('dogs.dog_service_history', dog_id=dog.id) }}" class="button button-primary">See All Service History ({{ appointments|length }} entries)</a>
+        </div>
+        {% endif %}
     {% else %}
         <p class="no-service-history">No service history found for {{ dog.name }}.</p>
     {% endif %}

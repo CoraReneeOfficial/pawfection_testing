@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Select Appointment - Checkout{% endblock %}
+{% block content %}
+<div class="container checkout-container">
+  <div class="checkout-card" style="max-width:520px;margin:auto;">
+    <h2>Select Appointment for Checkout</h2>
+    {% if appointments %}
+      <ul class="appointment-select-list">
+        {% for appt in appointments %}
+        <li class="appointment-select-item" style="margin-bottom:1em;">
+          <div>
+            <strong>{{ appt.dog.name }}</strong> ({{ appt.dog.owner.name }})<br>
+            <span>{{ appt.appointment_datetime.strftime('%a, %b %d @ %I:%M %p') }}</span>
+            {% if appt.requested_services_text %} - {{ appt.requested_services_text|service_names_from_ids }}{% endif %}
+            {% if appt.groomer %}<span style="margin-left:1em;">Groomer: {{ appt.groomer.username }}</span>{% endif %}
+          </div>
+          <a href="{{ url_for('appointments.invoice_checkout', appointment_id=appt.id) }}" class="button button-primary" style="margin-top:0.6em;">Start Checkout</a>
+        </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No scheduled appointments available for checkout.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

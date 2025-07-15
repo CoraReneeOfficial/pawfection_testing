@@ -22,6 +22,7 @@ def init_secure_headers(app):
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com; "
             "style-src 'self' 'unsafe-inline'; "
             "object-src 'none'; "
-            "frame-ancestors 'self';"
+            "frame-ancestors 'self'; "
+            "frame-src 'self' https://calendar.google.com;"
         )
         return response

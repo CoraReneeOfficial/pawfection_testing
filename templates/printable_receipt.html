@@ -1,0 +1,10 @@
+{% extends 'email/receipt_email.html' %}
+{% block head %}
+    {{ super() }}
+    <style>
+      @media print {
+        body { background: #fff !important; }
+        .receipt-container { box-shadow: none !important; }
+      }
+    </style>
+{% endblock %}

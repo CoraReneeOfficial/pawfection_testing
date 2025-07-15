@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Tip - Checkout{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<style>
+  .modal-centered { display: flex; align-items: center; justify-content: center; min-height: 80vh; }
+  .tip-modal { background: #fff; border-radius: var(--border-radius); padding: 2.5rem 2rem 2rem 2rem; box-shadow: var(--box-shadow); max-width: 370px; margin: auto; text-align: center; }
+  .tip-btn-grid { display: flex; flex-wrap: wrap; gap: 0.7rem; justify-content: center; margin-bottom: 1.2rem; }
+  .tip-btn { flex: 1 1 90px; font-size: 1.1em; }
+  .final-total { font-size: 1.4em; font-weight: bold; color: var(--primary-color); margin: 1.2rem 0 1.2rem 0; }
+  .custom-tip-row { margin-top: 0.7rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container modal-centered">
+  <div class="tip-modal">
+    <h2>Add a Tip?</h2>
+    <div style="margin-bottom:1.2rem;">
+      <span style="font-size:1.2em;">Total: <b id="initial-total">${{ '%.2f'|format(initial_total) }}</b></span>
+      {% if taxes == 0 %}
+      <div style="color:var(--danger-color);font-size:0.97em;margin-top:0.4em;">No taxes included (taxes are disabled for this store)</div>
+      {% endif %}
+    </div>
+    <div class="tip-btn-grid">
+      <button type="button" class="button button-primary tip-btn" onclick="setTipPercent(0.18)">18%</button>
+      <button type="button" class="button button-primary tip-btn" onclick="setTipPercent(0.20)">20%</button>
+      <button type="button" class="button button-primary tip-btn" onclick="setTipPercent(0.25)">25%</button>
+      <button type="button" class="button button-secondary tip-btn" onclick="showCustomInput()">Custom</button>
+      <button type="button" class="button button-secondary tip-btn" onclick="setTipAmount(0)">No Tip</button>
+    </div>
+    <div class="custom-tip-row" id="custom-tip-row" style="display:none;">
+      <input type="number" id="custom-tip-input" class="form-input" min="0" step="0.01" placeholder="Enter tip amount">
+      <button type="button" class="button button-primary" onclick="applyCustomTip()">Apply</button>
+    </div>
+    <div class="final-total">Final Total: <span id="final-total-display">${{ '%.2f'|format(initial_total) }}</span></div>
+    <button type="button" class="button button-primary" style="width:100%;font-size:1.1em;" onclick="confirmTip()">
+      Confirm Total: <span id="confirm-total-btn">${{ '%.2f'|format(initial_total) }}</span>
+    </button>
+    <button type="button" class="button button-secondary" style="width:100%;margin-top:0.7rem;" onclick="window.history.back()">Cancel</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const subtotal = {{ subtotal|float if subtotal is defined else initial_total|float }};
+const taxes = {{ taxes|float if taxes is defined else 0 }};
+const total = {{ initial_total|float }};
+let tipAmount = 0;
+let finalTotal = total;
+
+function setTipPercent(percent) {
+  tipAmount = +(total * percent).toFixed(2);
+  updateFinalTotal();
+  hideCustomInput();
+}
+function setTipAmount(amount) {
+  tipAmount = +amount;
+  updateFinalTotal();
+  hideCustomInput();
+}
+function showCustomInput() {
+  document.getElementById('custom-tip-row').style.display = 'block';
+}
+function hideCustomInput() {
+  document.getElementById('custom-tip-row').style.display = 'none';
+}
+function applyCustomTip() {
+  const val = parseFloat(document.getElementById('custom-tip-input').value);
+  if (isNaN(val) || val < 0) { alert('Enter a valid tip.'); return; }
+  setTipAmount(val);
+}
+function updateFinalTotal() {
+  finalTotal = +(total + tipAmount).toFixed(2);
+  document.getElementById('final-total-display').textContent = `$${finalTotal.toFixed(2)}`;
+  document.getElementById('confirm-total-btn').textContent = `$${finalTotal.toFixed(2)}`;
+}
+
+// On load, ensure correct initial value
+updateFinalTotal();
+function confirmTip() {
+  // For Flask: submit via POST or redirect with params, depending on your backend setup
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = '{{ url_for('appointments.tip_modal', appointment_id=appointment_id) }}';
+  form.innerHTML = `<input type="hidden" name="tip_amount" value="${tipAmount}"><input type="hidden" name="final_total" value="${finalTotal}">`;
+  document.body.appendChild(form);
+  form.submit();
+}
+</script>
+{% endblock %}

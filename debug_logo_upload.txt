@@ -1,0 +1,32 @@
+DEBUG LOGO UPLOAD
+=================
+
+1. Flask config UPLOAD_FOLDER:
+   - Currently set to: <project_root>/uploads
+   - Actual value: determined by PERSISTENT_DATA_ROOT (usually project root)
+
+2. Edit store upload logic:
+   - Saves logo to: current_app.config['UPLOAD_FOLDER']
+   - This is NOT the same as static/uploads/store_logos
+
+3. Template expects:
+   - <img src="{{ url_for('static', filename='uploads/store_logos/' ~ store.logo_filename) }}">
+   - This expects logo to be in static/uploads/store_logos
+
+4. Actual upload location:
+   - Logo is being saved to: <project_root>/uploads
+   - NOT accessible via static!
+
+5. Directory static/uploads/store_logos is EMPTY.
+
+6. Solution:
+   - Change upload logic in edit_store to save to static/uploads/store_logos, NOT UPLOAD_FOLDER.
+   - This will make logo accessible at the same path as the template expects.
+
+7. Action required:
+   - Update management/routes.py to:
+     upload_folder = os.path.join(current_app.static_folder, 'uploads', 'store_logos')
+
+8. After fix:
+   - Re-upload logo from edit page.
+   - Logo should appear in static/uploads/store_logos and display on public page.

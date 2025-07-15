@@ -1,0 +1,308 @@
+{% extends 'base.html' %}
+
+{% block title %}Invoice - Checkout{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<style>
+  /* Custom styles for modal and grid buttons, matching app theme */
+  .modal-backdrop { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.35); z-index: 1000; display: flex; justify-content: center; align-items: center; }
+  .modal-content { background: #fff; border-radius: var(--border-radius); padding: 2rem; min-width: 320px; box-shadow: var(--box-shadow); }
+  .addon-grid { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 1rem; }
+  .addon-btn { flex: 1 1 120px; margin-bottom: 0.5rem; }
+  .line-item-row { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--border-color); }
+  .line-item-row:last-child { border-bottom: none; }
+  .remove-btn { color: var(--danger-color); background: none; border: none; cursor: pointer; font-size: 1.1em; }
+  .totals-section { margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem; }
+  .totals-row { display: flex; justify-content: space-between; margin-bottom: 0.4rem; }
+  .totals-row.total { font-weight: bold; font-size: 1.2em; color: var(--primary-color); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container checkout-container">
+  <div class="checkout-header">
+    <h1>Checkout for <span id="pet-name">{{ pet_name or 'Pet' }}</span></h1>
+    <p>Build and finalize the list of services and products for this appointment.</p>
+  </div>
+  <div class="checkout-card">
+    <form id="invoice-form" method="POST" action="{{ url_for('appointments.invoice_checkout', appointment_id=appointment_id) }}">
+      <input type="hidden" name="appointment_id" value="{{ appointment_id }}">
+      <input type="hidden" id="line-items-json" name="line_items" value=''>
+
+      <div class="form-group">
+        <label>Customer:</label> <span id="customer-name">{{ customer_name or 'Customer' }}</span><br>
+        <label>Pet:</label> <span id="pet-name-inline">{{ pet_name or 'Pet' }}</span>
+      </div>
+      <h2>Line Items</h2>
+      <div id="line-items-list">
+  <!-- Line items will be rendered here by JS -->
+</div>
+      <div class="form-group">
+  <h3>Services</h3>
+  <div class="addon-grid">
+    {% for service in services %}
+    <button type='button' class='button button-primary addon-btn' data-name='{{ service.name|e }}' data-price='{{ service.base_price|float }}' onclick='addServiceOrFee(this)'>{{ service.name }}<br><small>${{ '%.2f'|format(service.base_price) }}</small></button>
+    {% endfor %}
+  </div>
+</div>
+<div class="form-group">
+  <h3>Fees</h3>
+  <div class="addon-grid">
+    {% for fee in fees %}
+    <button type='button' class='button button-primary addon-btn' data-name='{{ fee.name|e }}' data-price='{{ fee.base_price|float }}' onclick='addServiceOrFee(this)'>{{ fee.name }}<br><small>${{ '%.2f'|format(fee.base_price) }}</small></button>
+    {% endfor %}
+  </div>
+</div>
+<div class="form-group">
+  <button type="button" class="button button-secondary" onclick="showCustomModal()"><i class="fas fa-plus"></i> Add Custom Item</button>
+</div>
+<div class="form-group">
+  <button type="button" class="button button-secondary" onclick="showDiscountModal()"><i class="fas fa-percent"></i> Add Discount</button>
+</div>
+
+      <div class="totals-section">
+        <div class="totals-row"><span>Subtotal:</span><span id="subtotal-display">${{ '%.2f'|format(subtotal) }}</span></div>
+        <div class="totals-row"><span>Taxes:</span><span id="taxes-display">${{ '%.2f'|format(taxes) }}</span></div>
+        {% if taxes == 0 %}
+        <div style="color:var(--danger-color);font-size:0.97em;margin-top:0.4em;">No taxes included (taxes are disabled for this store)</div>
+        {% endif %}
+        <div class="totals-row total"><span>Total:</span><span id="total-display">${{ '%.2f'|format(total) }}</span></div>
+      </div>
+      <button type="submit" class="button button-primary" style="width:100%;margin-top:1.5rem;font-size:1.1em;">Continue to Tip Screen</button>
+    </form>
+  </div>
+
+  <!-- Custom Item Modal -->
+  <div id="custom-modal" class="modal-backdrop" style="display:none;">
+    <div class="modal-content">
+      <h3>Add Custom Item</h3>
+      <div class="form-group">
+        <label>Item Name</label>
+        <input type="text" id="custom-item-name" class="form-input" placeholder="Enter name">
+      </div>
+      <div class="form-group">
+        <label>Price ($)</label>
+        <input type="number" id="custom-item-price" class="form-input" min="0" step="0.01" placeholder="0.00">
+      </div>
+      <div style="display:flex;gap:0.5rem;margin-top:1rem;">
+        <button type="button" class="button button-primary" onclick="addCustomItem()">Add</button>
+        <button type="button" class="button button-secondary" onclick="hideCustomModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Discount Modal -->
+  <div id="discount-modal" class="modal-backdrop" style="display:none;">
+    <div class="modal-content">
+      <h3>Add Discount</h3>
+      <div class="form-group">
+        <label>Discount Name</label>
+        <input type="text" id="discount-name" class="form-input" placeholder="Enter discount name">
+      </div>
+      <div class="form-group">
+        <label>Discount Type</label>
+        <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
+          <button type="button" id="amount-btn" class="button button-primary" onclick="setDiscountType('amount')">Amount ($)</button>
+          <button type="button" id="percent-btn" class="button button-secondary" onclick="setDiscountType('percent')">Percentage (%)</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label id="discount-value-label">Discount Amount ($)</label>
+        <input type="number" id="discount-value" class="form-input" min="0" step="0.01" placeholder="0.00">
+      </div>
+      <div style="display:flex;gap:0.5rem;margin-top:1rem;">
+        <button type="button" class="button button-primary" onclick="applyDiscount()">Apply</button>
+        <button type="button" class="button button-secondary" onclick="hideDiscountModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function addServiceOrFee(btn) {
+  const name = btn.getAttribute('data-name');
+  const price = parseFloat(btn.getAttribute('data-price'));
+  addItem({ name, price });
+}
+
+// State
+let lineItems = {{ line_items|tojson|safe }};
+let subtotal = {{ subtotal|default(0)|float }};
+let taxes = {{ taxes|default(0)|float }};
+let total = {{ total|default(0)|float }};
+let discount = { name: '', type: 'amount', value: 0, amount: 0 }; // New discount object
+var taxEnabled = (function() {
+  var val = {{ tax_enabled|tojson|safe if tax_enabled is defined else 'true' }};
+  if (typeof val === 'boolean') return val;
+  if (typeof val === 'string') return val === 'true';
+  return !!val;
+})();
+const taxRate = {{ tax_rate|default(0.07)|float }};
+
+function updateTotals() {
+  // Calculate raw subtotal from line items
+  var rawSubtotal = lineItems.reduce(function(sum, item) {
+    return sum + parseFloat(item.price);
+  }, 0);
+  subtotal = rawSubtotal;
+  
+  // Calculate discount amount
+  if (discount.type === 'percent' && discount.value > 0) {
+    discount.amount = parseFloat((subtotal * (discount.value / 100)).toFixed(2));
+  } else {
+    discount.amount = parseFloat(discount.value);
+  }
+  
+  // Apply discount to subtotal before tax
+  var discountedSubtotal = Math.max(0, subtotal - discount.amount);
+  
+  if (taxEnabled) {
+    taxes = parseFloat((discountedSubtotal * taxRate).toFixed(2));
+    total = parseFloat((discountedSubtotal + taxes).toFixed(2));
+  } else {
+    taxes = 0.00;
+    total = discountedSubtotal;
+  }
+  
+  document.getElementById('subtotal-display').textContent = '$' + subtotal.toFixed(2);
+  
+  // Update or create discount display row
+  let discountRow = document.getElementById('discount-row');
+  if (discount.amount > 0) {
+    if (!discountRow) {
+      discountRow = document.createElement('div');
+      discountRow.id = 'discount-row';
+      discountRow.className = 'totals-row';
+      const taxesRow = document.getElementById('taxes-display').closest('.totals-row');
+      taxesRow.parentNode.insertBefore(discountRow, taxesRow);
+    }
+    const discountName = discount.name ? discount.name : (discount.type === 'percent' ? discount.value + '% Discount' : 'Discount');
+    discountRow.innerHTML = '<span>' + discountName + ':</span><span id="discount-display">-$' + discount.amount.toFixed(2) + '</span>';
+  } else if (discountRow) {
+    discountRow.remove();
+  }
+  
+  document.getElementById('taxes-display').textContent = '$' + taxes.toFixed(2);
+  document.getElementById('total-display').textContent = '$' + total.toFixed(2);
+}
+
+function renderLineItems() {
+  const container = document.getElementById('line-items-list');
+  container.innerHTML = '';
+  lineItems.forEach((item, idx) => {
+    const row = document.createElement('div');
+    row.className = 'line-item-row';
+    row.innerHTML = '<span>' + item.name + '</span> <span>$' + parseFloat(item.price).toFixed(2) + '</span> <button type="button" class="remove-btn" title="Delete item" onclick="removeItem(' + idx + ')" style="margin-left:8px;"><i class="fas fa-trash-alt"></i> Void</button>';
+    console.log('Rendered Void button for item', item.name, idx);
+    container.appendChild(row);
+  });
+  updateTotals();
+}
+
+function addItem(item) {
+  lineItems.push(item);
+  renderLineItems();
+}
+
+function removeItem(idx) {
+  console.log('removeItem called for idx', idx);
+  lineItems.splice(idx, 1);
+  renderLineItems();
+}
+
+function showCustomModal() {
+  document.getElementById('custom-modal').style.display = 'flex';
+}
+
+function hideCustomModal() {
+  document.getElementById('custom-modal').style.display = 'none';
+  document.getElementById('custom-item-name').value = '';
+  document.getElementById('custom-item-price').value = '';
+}
+
+function addCustomItem() {
+  const name = document.getElementById('custom-item-name').value.trim();
+  const price = parseFloat(document.getElementById('custom-item-price').value);
+  if (!name || isNaN(price) || price < 0) { alert('Enter valid name and price.'); return; }
+  addItem({ name, price });
+  hideCustomModal();
+}
+
+// Discount modal functions
+function showDiscountModal() {
+  document.getElementById('discount-modal').style.display = 'flex';
+  // Set initial UI state
+  setDiscountType(discount.type || 'amount');
+}
+
+function hideDiscountModal() {
+  document.getElementById('discount-modal').style.display = 'none';
+}
+
+function setDiscountType(type) {
+  discount.type = type;
+  // Update button styles
+  if (type === 'amount') {
+    document.getElementById('amount-btn').className = 'button button-primary';
+    document.getElementById('percent-btn').className = 'button button-secondary';
+    document.getElementById('discount-value-label').textContent = 'Discount Amount ($)';
+    document.getElementById('discount-value').step = '0.01';
+  } else {
+    document.getElementById('amount-btn').className = 'button button-secondary';
+    document.getElementById('percent-btn').className = 'button button-primary';
+    document.getElementById('discount-value-label').textContent = 'Discount Percentage (%)';
+    document.getElementById('discount-value').step = '1';
+  }
+}
+
+function applyDiscount() {
+  discount.name = document.getElementById('discount-name').value.trim();
+  discount.value = parseFloat(document.getElementById('discount-value').value) || 0;
+  
+  // Validate discount value
+  if (discount.value < 0) {
+    alert('Discount value cannot be negative.');
+    return;
+  }
+  
+  // Additional validation for percentage (can't be over 100%)
+  if (discount.type === 'percent' && discount.value > 100) {
+    alert('Discount percentage cannot exceed 100%.');
+    return;
+  }
+  
+  updateTotals();
+  hideDiscountModal();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderLineItems();
+  // Serialize line items before submitting the form
+  document.getElementById('invoice-form').addEventListener('submit', function(e) {
+    console.log('Form submit triggered');
+    
+    // Create a copy of the line items array
+    var itemsToSubmit = lineItems.slice();
+    
+    // If there's a discount, add it as a negative line item
+    if (discount.amount > 0) {
+      // Create a display name for the discount
+      var discountName = discount.name || (discount.type === 'percent' ? discount.value + '% Discount' : 'Discount');
+      
+      // Add the discount as a negative line item
+      itemsToSubmit.push({
+        name: discountName,
+        price: -discount.amount
+      });
+    }
+    
+    // Submit just the array of line items (including the discount as a line item)
+    document.getElementById('line-items-json').value = JSON.stringify(itemsToSubmit);
+  });
+});
+
+</script>
+{% endblock %}

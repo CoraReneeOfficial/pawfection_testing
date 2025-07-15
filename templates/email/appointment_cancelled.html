@@ -38,7 +38,7 @@
             <div class="appointment-details">
                 <p><strong>Date:</strong> {{ appointment_datetime_local.strftime('%A, %B %d, %Y') if appointment_datetime_local else 'N/A' }}</p>
                 <p><strong>Time:</strong> {{ appointment_datetime_local.strftime('%I:%M %p') if appointment_datetime_local else 'N/A' }} ({{ BUSINESS_TIMEZONE_NAME or 'Your Local Time' }})</p>
-                <p><strong>Services:</strong> {{ services_text or 'As discussed' }}</p>
+                <p><strong>Services:</strong> {{ services_text|service_names_from_ids or 'As discussed' }}</p>
                 {% if groomer_name %}
                     <p><strong>Assigned Groomer:</strong> {{ groomer_name }}</p>
                 {% endif %}
