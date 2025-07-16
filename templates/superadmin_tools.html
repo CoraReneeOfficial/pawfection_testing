@@ -2,21 +2,325 @@
 
 {% block title %}Superadmin Tools - Pawfection Grooming Solutions{% endblock %}
 
+{% block styles %}
+{{ super() }}
+<style>
+    .tools-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+    .tool-card {
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .tool-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+    .tool-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    .tool-icon {
+        background-color: #f0f4ff;
+        color: #4c6ef5;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        font-size: 18px;
+    }
+    .tool-title {
+        margin: 0;
+        font-size: 1.25rem;
+    }
+    .tool-description {
+        color: #6c757d;
+        margin-bottom: 1.25rem;
+        font-size: 0.9rem;
+    }
+    .tool-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    .status-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        margin-left: 0.5rem;
+    }
+    .status-active {
+        background-color: #e6f7ed;
+        color: #0d8a47;
+    }
+    .status-beta {
+        background-color: #fff8e6;
+        color: #cc8800;
+    }
+    .tab-container {
+        margin-top: 1.5rem;
+    }
+    .tab-navigation {
+        display: flex;
+        border-bottom: 1px solid #dee2e6;
+        margin-bottom: 1.5rem;
+    }
+    .tab-button {
+        padding: 0.75rem 1.5rem;
+        background: none;
+        border: none;
+        font-weight: 500;
+        color: #6c757d;
+        cursor: pointer;
+        position: relative;
+    }
+    .tab-button.active {
+        color: #4c6ef5;
+    }
+    .tab-button.active:after {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background-color: #4c6ef5;
+    }
+    .tab-content {
+        display: none;
+    }
+    .tab-content.active {
+        display: block;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="logo-image-login">
     <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pawfection Grooming Solutions Logo" style="max-width: 350px; margin-bottom: 1rem; align-items:center;">
 </div>
-<div class="form-wrapper">
-    <div class="form-container">
-        <h1 class="form-title" style="text-align:center;">Superadmin Tools</h1>
-        <div style="margin:2rem 0;">
-            <h2>Feature Testing</h2>
-            <button class="button button-primary" disabled>Test New Feature (Coming Soon)</button>
+<div class="form-wrapper" style="max-width: 1200px;">
+    <div class="form-container" style="padding: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h1 class="form-title">Superadmin Tools</h1>
+            <a href="/superadmin/dashboard" class="button button-secondary">Back to Dashboard</a>
         </div>
-        <div style="margin:2rem 0;">
-            <h2>Admin Scripts</h2>
-            <button class="button button-secondary" disabled>Run Admin Script (Coming Soon)</button>
+        
+        <div class="tab-container">
+            <div class="tab-navigation">
+                <button class="tab-button active" onclick="openTab(event, 'system-tab')">System Management</button>
+                <button class="tab-button" onclick="openTab(event, 'data-tab')">Data Management</button>
+                <button class="tab-button" onclick="openTab(event, 'maintenance-tab')">Maintenance</button>
+                <button class="tab-button" onclick="openTab(event, 'analytics-tab')">Analytics</button>
+            </div>
+            
+            <!-- System Management Tab -->
+            <div id="system-tab" class="tab-content active">
+                <div class="tools-grid">
+                    <!-- System Health Card -->
+                    <div class="tool-card">
+                        <div class="tool-header">
+                            <div class="tool-icon"><i class="fas fa-heartbeat"></i></div>
+                            <h3 class="tool-title">System Health <span class="status-badge status-active">Active</span></h3>
+                        </div>
+                        <p class="tool-description">View current system status, performance metrics, and active users</p>
+                        <div class="tool-actions">
+                            <form action="/superadmin/system-health" method="get">
+                                <button type="submit" class="button button-primary">View Status</button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Configuration Card -->
+                    <div class="tool-card">
+                        <div class="tool-header">
+                            <div class="tool-icon"><i class="fas fa-sliders-h"></i></div>
+                            <h3 class="tool-title">Configuration</h3>
+                        </div>
+                        <p class="tool-description">Manage global system settings and configuration parameters</p>
+                        <div class="tool-actions">
+                            <form action="/superadmin/system-config" method="get">
+                                <button type="submit" class="button button-primary">Manage Settings</button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- User Management Card -->
+                    <div class="tool-card">
+                        <div class="tool-header">
+                            <div class="tool-icon"><i class="fas fa-users-cog"></i></div>
+                            <h3 class="tool-title">User Management</h3>
+                        </div>
+                        <p class="tool-description">Manage superadmin users and global access permissions</p>
+                        <div class="tool-actions">
+                            <form action="/superadmin/manage-users" method="get">
+                                <button type="submit" class="button button-primary">Manage Users</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Data Management Tab -->
+            <div id="data-tab" class="tab-content">
+                <div class="tools-grid">
+                    <!-- Database Tools Card -->
+                    <div class="tool-card">
+                        <div class="tool-header">
+                            <div class="tool-icon"><i class="fas fa-database"></i></div>
+                            <h3 class="tool-title">Database Tools</h3>
+                        </div>
+                        <p class="tool-description">Run database operations, backups, and maintenance tasks</p>
+                        <div class="tool-actions">
+                            <form action="/superadmin/database-tools" method="get">
+                                <button type="submit" class="button button-primary">Database Tools</button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Bulk Operations Card -->
+                    <div class="tool-card">
+                        <div class="tool-header">
+                            <div class="tool-icon"><i class="fas fa-layer-group"></i></div>
+                            <h3 class="tool-title">Bulk Operations</h3>
+                        </div>
+                        <p class="tool-description">Perform batch operations on stores, subscriptions, or user accounts</p>
+                        <div class="tool-actions">
+                            <form action="/superadmin/bulk-operations" method="get">
+                                <button type="submit" class="button button-primary">Bulk Operations</button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Data Export Card -->
+                    <div class="tool-card">
+                        <div class="tool-header">
+                            <div class="tool-icon"><i class="fas fa-file-export"></i></div>
+                            <h3 class="tool-title">Data Export</h3>
+                        </div>
+                        <p class="tool-description">Export system data in various formats (CSV, JSON, Excel)</p>
+                        <div class="tool-actions">
+                            <form action="/superadmin/data-export" method="get">
+                                <button type="submit" class="button button-primary">Export Data</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Maintenance Tab -->
+            <div id="maintenance-tab" class="tab-content">
+                <div class="tools-grid">
+                    <!-- Error Logs Card -->
+                    <div class="tool-card">
+                        <div class="tool-header">
+                            <div class="tool-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                            <h3 class="tool-title">Error Logs</h3>
+                        </div>
+                        <p class="tool-description">View and analyze system error logs and exceptions</p>
+                        <div class="tool-actions">
+                            <form action="/superadmin/error-logs" method="get">
+                                <button type="submit" class="button button-primary">View Logs</button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Task Scheduler Card -->
+                    <div class="tool-card">
+                        <div class="tool-header">
+                            <div class="tool-icon"><i class="fas fa-calendar-alt"></i></div>
+                            <h3 class="tool-title">Task Scheduler <span class="status-badge status-beta">Beta</span></h3>
+                        </div>
+                        <p class="tool-description">Manage scheduled tasks and background jobs</p>
+                        <div class="tool-actions">
+                            <form action="/superadmin/task-scheduler" method="get">
+                                <button type="submit" class="button button-primary">Manage Tasks</button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Email Test Tool Card -->
+                    <div class="tool-card">
+                        <div class="tool-header">
+                            <div class="tool-icon"><i class="fas fa-envelope"></i></div>
+                            <h3 class="tool-title">Email Test Tool</h3>
+                        </div>
+                        <p class="tool-description">Test email delivery and templates for the notification system</p>
+                        <div class="tool-actions">
+                            <form action="/superadmin/email-test" method="get">
+                                <button type="submit" class="button button-primary">Email Test Tool</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Analytics Tab -->
+            <div id="analytics-tab" class="tab-content">
+                <div class="tools-grid">
+                    <!-- Business Analytics Card -->
+                    <div class="tool-card">
+                        <div class="tool-header">
+                            <div class="tool-icon"><i class="fas fa-chart-line"></i></div>
+                            <h3 class="tool-title">Business Analytics</h3>
+                        </div>
+                        <p class="tool-description">View platform-wide metrics and store performance data</p>
+                        <div class="tool-actions">
+                            <form action="/superadmin/analytics" method="get">
+                                <button type="submit" class="button button-primary">View Analytics</button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- Usage Reports Card -->
+                    <div class="tool-card">
+                        <div class="tool-header">
+                            <div class="tool-icon"><i class="fas fa-file-alt"></i></div>
+                            <h3 class="tool-title">Usage Reports</h3>
+                        </div>
+                        <p class="tool-description">Generate and download reports on system and feature usage</p>
+                        <div class="tool-actions">
+                            <form action="/superadmin/usage-reports" method="get">
+                                <button type="submit" class="button button-primary">Generate Reports</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
-{% endblock %} 
+
+<script>
+function openTab(evt, tabName) {
+    var i, tabcontent, tabbuttons;
+    
+    // Hide all tab content
+    tabcontent = document.getElementsByClassName("tab-content");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].classList.remove("active");
+    }
+    
+    // Remove active class from all tab buttons
+    tabbuttons = document.getElementsByClassName("tab-button");
+    for (i = 0; i < tabbuttons.length; i++) {
+        tabbuttons[i].classList.remove("active");
+    }
+    
+    // Show the current tab and add active class to the button
+    document.getElementById(tabName).classList.add("active");
+    evt.currentTarget.classList.add("active");
+}
+</script>
+{% endblock %}

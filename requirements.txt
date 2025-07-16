@@ -14,6 +14,7 @@ python-dotenv
 Authlib>=1.2.1
 APScheduler
 stripe
+psutil
 
 # Optional, but often good to specify if you rely on specific versions:
 # Werkzeug

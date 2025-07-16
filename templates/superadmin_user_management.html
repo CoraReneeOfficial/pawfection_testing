@@ -1,0 +1,587 @@
+{% extends 'base.html' %}
+
+{% block title %}User Management - Superadmin Tools{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+    .search-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    .search-box {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .filter-box {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    .user-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .user-table th, .user-table td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .user-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .user-table tr:hover {
+        background-color: #f8f9fa;
+    }
+    .sort-icon {
+        margin-left: 0.25rem;
+        font-size: 0.8rem;
+    }
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    .badge-success {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    .badge-primary {
+        background-color: #cce5ff;
+        color: #004085;
+    }
+    .badge-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    .badge-warning {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    .badge-secondary {
+        background-color: #e2e3e5;
+        color: #383d41;
+    }
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .action-button {
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+    .action-button-edit {
+        background-color: #e7f5ff;
+        color: #1864ab;
+        border: 1px solid #1864ab;
+    }
+    .action-button-delete {
+        background-color: #fff5f5;
+        color: #c92a2a;
+        border: 1px solid #c92a2a;
+    }
+    .action-button-reset {
+        background-color: #f8f9fa;
+        color: #495057;
+        border: 1px solid #495057;
+    }
+    .pagination-container {
+        display: flex;
+        justify-content: center;
+        margin-top: 1.5rem;
+    }
+    .pagination {
+        display: flex;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .page-item {
+        margin: 0 0.25rem;
+    }
+    .page-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 4px;
+        text-decoration: none;
+        color: #4c6ef5;
+        background-color: #ffffff;
+        border: 1px solid #dee2e6;
+    }
+    .page-link:hover {
+        background-color: #f8f9fa;
+    }
+    .page-item.active .page-link {
+        color: #ffffff;
+        background-color: #4c6ef5;
+        border-color: #4c6ef5;
+    }
+    .page-item.disabled .page-link {
+        color: #6c757d;
+        pointer-events: none;
+        cursor: not-allowed;
+    }
+    .add-user-button {
+        margin-left: auto;
+    }
+    .role-indicator {
+        width: 8px;
+        height: 8px;
+        display: inline-block;
+        border-radius: 50%;
+        margin-right: 4px;
+    }
+    .role-superadmin {
+        background-color: #c92a2a;
+    }
+    .role-admin {
+        background-color: #5c940d;
+    }
+    .role-staff {
+        background-color: #1864ab;
+    }
+    .role-user {
+        background-color: #495057;
+    }
+    .role-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 3rem 0;
+        color: #6c757d;
+    }
+    .empty-state-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        color: #dee2e6;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="logo-image-login">
+    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pawfection Grooming Solutions Logo" style="max-width: 350px; margin-bottom: 1rem; align-items:center;">
+</div>
+<div class="form-wrapper" style="max-width: 1200px;">
+    <div class="form-container" style="padding: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h1 class="form-title">User Management</h1>
+            <div>
+                <a href="/superadmin/tools" class="button button-secondary">Back to Tools</a>
+                <button class="button button-primary" data-toggle="modal" data-target="#addUserModal">
+                    <i class="fas fa-plus"></i> Add New User
+                </button>
+            </div>
+        </div>
+        
+        <!-- Search and Filter Section -->
+        <div class="search-section">
+            <form action="/superadmin/user-management" method="GET" class="search-box">
+                <div class="input-container">
+                    <input type="text" name="search" value="{{ search_query }}" placeholder="Search users..." class="input-field">
+                </div>
+                <button type="submit" class="button button-primary">
+                    <i class="fas fa-search"></i> Search
+                </button>
+                {% if search_query or role_filter %}
+                <a href="/superadmin/user-management" class="button button-secondary">
+                    <i class="fas fa-times"></i> Clear
+                </a>
+                {% endif %}
+            </form>
+            
+            <div class="filter-box">
+                <span>Filter by Role:</span>
+                <form action="/superadmin/user-management" method="GET" id="roleFilterForm">
+                    <select name="role" class="input-field" onchange="document.getElementById('roleFilterForm').submit();">
+                        <option value="">All Roles</option>
+                        {% for role in roles %}
+                        <option value="{{ role }}" {% if role_filter == role %}selected{% endif %}>{{ role|title }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Users Table -->
+        {% if users %}
+        <div class="table-container" style="overflow-x: auto;">
+            <table class="user-table">
+                <thead>
+                    <tr>
+                        <th>
+                            <a href="{{ url_for('superadmin_user_management', search=search_query, role=role_filter, sort_by='username', sort_order='asc' if sort_by == 'username' and sort_order == 'desc' else 'desc') }}">
+                                Username
+                                {% if sort_by == 'username' %}
+                                <i class="fas fa-sort-{{ 'up' if sort_order == 'asc' else 'down' }} sort-icon"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="{{ url_for('superadmin_user_management', search=search_query, role=role_filter, sort_by='email', sort_order='asc' if sort_by == 'email' and sort_order == 'desc' else 'desc') }}">
+                                Email
+                                {% if sort_by == 'email' %}
+                                <i class="fas fa-sort-{{ 'up' if sort_order == 'asc' else 'down' }} sort-icon"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>Role</th>
+                        <th>
+                            <a href="{{ url_for('superadmin_user_management', search=search_query, role=role_filter, sort_by='created_at', sort_order='asc' if sort_by == 'created_at' and sort_order == 'desc' else 'desc') }}">
+                                Created
+                                {% if sort_by == 'created_at' %}
+                                <i class="fas fa-sort-{{ 'up' if sort_order == 'asc' else 'down' }} sort-icon"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="{{ url_for('superadmin_user_management', search=search_query, role=role_filter, sort_by='last_login', sort_order='asc' if sort_by == 'last_login' and sort_order == 'desc' else 'desc') }}">
+                                Last Login
+                                {% if sort_by == 'last_login' %}
+                                <i class="fas fa-sort-{{ 'up' if sort_order == 'asc' else 'down' }} sort-icon"></i>
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>
+                            <span class="role-badge">
+                                <span class="role-indicator role-{{ user.role|lower if user.role else 'user' }}"></span>
+                                {{ user.role|title if user.role else 'User' }}
+                            </span>
+                        </td>
+                        <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</td>
+                        <td>{{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else 'Never' }}</td>
+                        <td>
+                            {% if user.active %}
+                            <span class="badge badge-success">Active</span>
+                            {% else %}
+                            <span class="badge badge-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="action-button action-button-edit" data-toggle="modal" data-target="#editUserModal" data-user-id="{{ user.id }}" title="Edit User">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="action-button action-button-reset" data-toggle="modal" data-target="#resetPasswordModal" data-user-id="{{ user.id }}" title="Reset Password">
+                                    <i class="fas fa-key"></i>
+                                </button>
+                                {% if user.role != 'superadmin' or session.get('user_id') != user.id %}
+                                <button class="action-button action-button-delete" data-toggle="modal" data-target="#deleteUserModal" data-user-id="{{ user.id }}" title="Delete User">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        <div class="pagination-container">
+            <ul class="pagination">
+                <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('superadmin_user_management', search=search_query, role=role_filter, sort_by=sort_by, sort_order=sort_order, page=pagination.prev_num) }}" aria-label="Previous">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+                
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if page_num %}
+                        <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('superadmin_user_management', search=search_query, role=role_filter, sort_by=sort_by, sort_order=sort_order, page=page_num) }}">{{ page_num }}</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('superadmin_user_management', search=search_query, role=role_filter, sort_by=sort_by, sort_order=sort_order, page=pagination.next_num) }}" aria-label="Next">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="text-center mt-2">
+            Showing {{ users|length }} of {{ pagination.total }} users
+        </div>
+        {% else %}
+        <!-- Empty State -->
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <h3>No Users Found</h3>
+            <p>No users match your search criteria. Try adjusting your filters or add a new user.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1" role="dialog" aria-labelledby="addUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addUserModalLabel">Add New User</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form action="/superadmin/create-user" method="POST">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="first_name">First Name</label>
+                        <input type="text" class="form-control" id="first_name" name="first_name">
+                    </div>
+                    <div class="form-group">
+                        <label for="last_name">Last Name</label>
+                        <input type="text" class="form-control" id="last_name" name="last_name">
+                    </div>
+                    <div class="form-group">
+                        <label for="role">Role</label>
+                        <select class="form-control" id="role" name="role">
+                            <option value="user">User</option>
+                            <option value="staff">Staff</option>
+                            <option value="admin">Admin</option>
+                            <option value="superadmin">Superadmin</option>
+                        </select>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="active" name="active" checked>
+                        <label class="form-check-label" for="active">Active</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="button button-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="button button-primary">Create User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1" role="dialog" aria-labelledby="editUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editUserModalLabel">Edit User</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form action="/superadmin/update-user" method="POST">
+                <input type="hidden" id="edit_user_id" name="user_id">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="edit_username">Username</label>
+                        <input type="text" class="form-control" id="edit_username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_email">Email</label>
+                        <input type="email" class="form-control" id="edit_email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_first_name">First Name</label>
+                        <input type="text" class="form-control" id="edit_first_name" name="first_name">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_last_name">Last Name</label>
+                        <input type="text" class="form-control" id="edit_last_name" name="last_name">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_role">Role</label>
+                        <select class="form-control" id="edit_role" name="role">
+                            <option value="user">User</option>
+                            <option value="staff">Staff</option>
+                            <option value="admin">Admin</option>
+                            <option value="superadmin">Superadmin</option>
+                        </select>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="edit_active" name="active">
+                        <label class="form-check-label" for="edit_active">Active</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="button button-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="button button-primary">Update User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div class="modal fade" id="resetPasswordModal" tabindex="-1" role="dialog" aria-labelledby="resetPasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="resetPasswordModalLabel">Reset Password</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form action="/superadmin/reset-user-password" method="POST">
+                <input type="hidden" id="reset_user_id" name="user_id">
+                <div class="modal-body">
+                    <p>Are you sure you want to reset the password for this user?</p>
+                    <div class="form-group">
+                        <label for="new_password">New Password</label>
+                        <input type="password" class="form-control" id="new_password" name="new_password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm_password">Confirm Password</label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="button button-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="button button-primary">Reset Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete User Modal -->
+<div class="modal fade" id="deleteUserModal" tabindex="-1" role="dialog" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteUserModalLabel">Delete User</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form action="/superadmin/delete-user" method="POST">
+                <input type="hidden" id="delete_user_id" name="user_id">
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this user? This action cannot be undone.</p>
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i> Warning: Deleting a user will remove all associated data.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="button button-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="button button-danger">Delete User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    // Script to handle populating user data in edit modal
+    $('#editUserModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget);
+        var userId = button.data('user-id');
+        var modal = $(this);
+        
+        // Fetch user data via AJAX
+        $.ajax({
+            url: '/superadmin/get-user/' + userId,
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    var user = response.user;
+                    modal.find('#edit_user_id').val(user.id);
+                    modal.find('#edit_username').val(user.username);
+                    modal.find('#edit_email').val(user.email);
+                    modal.find('#edit_first_name').val(user.first_name);
+                    modal.find('#edit_last_name').val(user.last_name);
+                    modal.find('#edit_role').val(user.role);
+                    modal.find('#edit_active').prop('checked', user.active);
+                } else {
+                    alert('Error loading user data');
+                }
+            },
+            error: function() {
+                alert('Error loading user data');
+            }
+        });
+    });
+    
+    // Reset password modal
+    $('#resetPasswordModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget);
+        var userId = button.data('user-id');
+        var modal = $(this);
+        modal.find('#reset_user_id').val(userId);
+    });
+    
+    // Delete user modal
+    $('#deleteUserModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget);
+        var userId = button.data('user-id');
+        var modal = $(this);
+        modal.find('#delete_user_id').val(userId);
+    });
+    
+    // Validate password match on reset password form
+    $('#resetPasswordModal form').submit(function(e) {
+        var newPassword = $('#new_password').val();
+        var confirmPassword = $('#confirm_password').val();
+        
+        if (newPassword !== confirmPassword) {
+            e.preventDefault();
+            alert('Passwords do not match!');
+            return false;
+        }
+        return true;
+    });
+</script>
+{% endblock %}

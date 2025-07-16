@@ -1,0 +1,287 @@
+{% extends 'base.html' %}
+{% block title %}Deposit Payment{% endblock %}
+
+{% block head %}
+<style>
+  .form-section {
+    margin-bottom: 2rem;
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  .form-full-width {
+    grid-column: span 2;
+  }
+  @media (max-width: 768px) {
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+    .form-full-width {
+      grid-column: span 1;
+    }
+  }
+  .appointment-lookup-section {
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    background-color: #f9f9f9;
+  }
+  .deposit-details {
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: #f9f9f9;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container checkout-container">
+  <div class="checkout-card" style="max-width:700px;margin:auto;">
+    <h2>Deposit Payment</h2>
+    <p>Process a deposit payment for an upcoming appointment.</p>
+
+    <form id="deposit-form" method="POST" action="{{ url_for('appointments.deposit_payment') }}">
+      <!-- Appointment Lookup Section -->
+      <div class="form-section appointment-lookup-section">
+        <h3>Appointment Lookup</h3>
+        <div class="form-grid">
+          <div class="form-group form-full-width">
+            <label for="lookup_value">Search by Customer Name, Phone, or Email</label>
+            <div style="display:flex;gap:0.5rem;">
+              <input type="text" id="lookup_value" name="lookup_value" class="form-input" style="flex:1;">
+              <button type="button" id="lookup-btn" class="button button-primary">Search</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Search Results will appear here -->
+        <div id="appointment-search-results" style="margin-top:1rem;display:none;">
+          <h4>Upcoming Appointments</h4>
+          <div class="search-results-container">
+            <!-- Results will be populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Customer and Appointment Information -->
+      <div id="appointment-info" class="form-section" style="display:none;">
+        <h3>Selected Appointment</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Customer Name</label>
+            <div id="customer_name_display" class="form-static-text">-</div>
+            <input type="hidden" id="customer_id" name="customer_id">
+          </div>
+          <div class="form-group">
+            <label>Pet Name</label>
+            <div id="pet_name_display" class="form-static-text">-</div>
+            <input type="hidden" id="pet_id" name="pet_id">
+          </div>
+          <div class="form-group">
+            <label>Appointment Date</label>
+            <div id="appointment_date_display" class="form-static-text">-</div>
+            <input type="hidden" id="appointment_id" name="appointment_id">
+          </div>
+          <div class="form-group">
+            <label>Services</label>
+            <div id="services_display" class="form-static-text">-</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Deposit Amount -->
+      <div id="deposit-section" class="form-section" style="display:none;">
+        <h3>Deposit Information</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="deposit_amount">Deposit Amount ($) *</label>
+            <input type="number" id="deposit_amount" name="deposit_amount" min="0" step="0.01" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label for="deposit_notes">Notes</label>
+            <input type="text" id="deposit_notes" name="deposit_notes" class="form-input">
+          </div>
+        </div>
+      </div>
+
+      <!-- Manual Entry Section for when no appointment is found -->
+      <div id="manual-entry-section" class="form-section" style="display:none;">
+        <h3>Manual Entry</h3>
+        <p>No appointment found? Enter customer information manually:</p>
+        
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="manual_customer_name">Customer Name *</label>
+            <input type="text" id="manual_customer_name" name="manual_customer_name" class="form-input">
+          </div>
+          <div class="form-group">
+            <label for="manual_phone">Phone Number</label>
+            <input type="tel" id="manual_phone" name="manual_phone" class="form-input">
+          </div>
+          <div class="form-group form-full-width">
+            <label for="manual_notes">Notes (service details, date, etc.)</label>
+            <textarea id="manual_notes" name="manual_notes" class="form-input" rows="3"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="form-group" style="margin-top:2rem;">
+        <button type="button" id="toggle-manual-btn" class="button button-secondary" style="width:100%;margin-bottom:1rem;">No Appointment Found? Enter Manually</button>
+        <button type="submit" id="continue-btn" class="button button-primary" style="width:100%;display:none;">Continue to Payment</button>
+      </div>
+      <div class="form-group">
+        <a href="{{ url_for('appointments.checkout_start') }}" class="button button-secondary" style="width:100%;">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Elements
+  const lookupBtn = document.getElementById('lookup-btn');
+  const searchResultsContainer = document.getElementById('appointment-search-results');
+  const searchResultsList = document.querySelector('.search-results-container');
+  const appointmentInfo = document.getElementById('appointment-info');
+  const depositSection = document.getElementById('deposit-section');
+  const continueBtn = document.getElementById('continue-btn');
+  const toggleManualBtn = document.getElementById('toggle-manual-btn');
+  const manualEntrySection = document.getElementById('manual-entry-section');
+
+  // Event Listeners
+  lookupBtn.addEventListener('click', lookupAppointment);
+  toggleManualBtn.addEventListener('click', toggleManualEntry);
+
+  // Functions
+  function lookupAppointment() {
+    const lookupValue = document.getElementById('lookup_value').value.trim();
+    if (!lookupValue) {
+      alert('Please enter a search term');
+      return;
+    }
+
+    // This would typically make an AJAX call to the backend
+    // For demo purposes, let's simulate finding some appointments
+    simulateLookup(lookupValue);
+  }
+
+  function simulateLookup(query) {
+    // This is a placeholder - in reality, you'd make an AJAX call to your backend
+    // For demo purposes, let's simulate finding some appointments
+    
+    // Clear previous results
+    searchResultsList.innerHTML = '';
+    
+    // Show the search results container
+    searchResultsContainer.style.display = 'block';
+    
+    // Simulate some sample data (in real app, this comes from server)
+    const appointments = [
+      {
+        id: '1001',
+        customer: {id: '101', name: 'Jane Smith'},
+        pet: {id: '201', name: 'Buddy', breed: 'Golden Retriever'},
+        date: '2025-07-22T14:30:00',
+        services: 'Full Grooming, Bath & Haircut'
+      },
+      {
+        id: '1002',
+        customer: {id: '102', name: 'John Doe'},
+        pet: {id: '202', name: 'Max', breed: 'Poodle'},
+        date: '2025-07-25T10:00:00',
+        services: 'Bath & Nail Trim'
+      }
+    ];
+    
+    // Render appointments as selectable items
+    if (appointments.length > 0) {
+      appointments.forEach(appt => {
+        const apptDate = new Date(appt.date);
+        const formattedDate = apptDate.toLocaleDateString() + ' at ' + 
+                              apptDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        
+        const apptEl = document.createElement('div');
+        apptEl.className = 'appointment-item';
+        apptEl.style.padding = '0.75rem';
+        apptEl.style.marginBottom = '0.5rem';
+        apptEl.style.border = '1px solid var(--border-color)';
+        apptEl.style.borderRadius = 'var(--border-radius)';
+        apptEl.style.cursor = 'pointer';
+        
+        apptEl.innerHTML = `
+          <div><strong>${appt.pet.name}</strong> (${appt.customer.name})</div>
+          <div>${formattedDate}</div>
+          <div><small>${appt.services}</small></div>
+        `;
+        
+        apptEl.addEventListener('click', () => selectAppointment(appt));
+        
+        searchResultsList.appendChild(apptEl);
+      });
+    } else {
+      searchResultsList.innerHTML = '<p>No upcoming appointments found. Use manual entry below.</p>';
+    }
+  }
+
+  function selectAppointment(appointment) {
+    // Fill in the hidden fields
+    document.getElementById('customer_id').value = appointment.customer.id;
+    document.getElementById('pet_id').value = appointment.pet.id;
+    document.getElementById('appointment_id').value = appointment.id;
+    
+    // Fill in the display fields
+    document.getElementById('customer_name_display').textContent = appointment.customer.name;
+    document.getElementById('pet_name_display').textContent = appointment.pet.name;
+    
+    const apptDate = new Date(appointment.date);
+    document.getElementById('appointment_date_display').textContent = apptDate.toLocaleDateString() + ' at ' + 
+      apptDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    
+    document.getElementById('services_display').textContent = appointment.services;
+    
+    // Show the appointment info and deposit sections
+    appointmentInfo.style.display = 'block';
+    depositSection.style.display = 'block';
+    continueBtn.style.display = 'block';
+    
+    // Hide manual entry section if it was shown
+    manualEntrySection.style.display = 'none';
+    
+    // Update the toggle button text
+    toggleManualBtn.textContent = "Can't find the right appointment? Enter manually";
+  }
+
+  function toggleManualEntry() {
+    if (manualEntrySection.style.display === 'none' || manualEntrySection.style.display === '') {
+      manualEntrySection.style.display = 'block';
+      depositSection.style.display = 'block';
+      continueBtn.style.display = 'block';
+      toggleManualBtn.textContent = 'Hide Manual Entry';
+      
+      // If we're showing manual entry, hide appointment selection if it was shown
+      if (appointmentInfo.style.display !== 'none') {
+        appointmentInfo.style.display = 'none';
+      }
+    } else {
+      manualEntrySection.style.display = 'none';
+      
+      // If no appointment is selected, hide deposit section and continue button
+      if (appointmentInfo.style.display === 'none') {
+        depositSection.style.display = 'none';
+        continueBtn.style.display = 'none';
+      }
+      
+      toggleManualBtn.textContent = "No Appointment Found? Enter Manually";
+    }
+  }
+});
+</script>
+{% endblock %}

@@ -393,13 +393,15 @@ def create_app():
     @app.route('/user-agreement')
     def view_user_agreement():
         from flask import render_template
-        return render_template('user_agreement.html')
+        from datetime import datetime
+        return render_template('user_agreement.html', now=datetime.now)
 
     # Privacy policy route
     @app.route('/privacy-policy')
     def view_privacy_policy():
         from flask import render_template
-        return render_template('privacy_policy.html')
+        from datetime import datetime
+        return render_template('privacy_policy.html', now=datetime.now)
 
     # Dashboard route
     @app.route('/dashboard')
@@ -634,8 +636,19 @@ def create_app():
         stores = Store.query.all()
         store_admins = {store.id: User.query.filter_by(store_id=store.id, is_admin=True).all() for store in stores}
         
-        app.logger.info("Superadmin viewed dashboard.")
-        return render_template('superadmin_dashboard.html', stores=stores, store_admins=store_admins)
+        # Count active and expired subscriptions
+        active_subscriptions = Store.query.filter_by(subscription_status='active').count()
+        expired_subscriptions = Store.query.filter_by(subscription_status='expired').count()
+        
+        from models import ActivityLog
+        activity_logs = ActivityLog.query.order_by(ActivityLog.timestamp.desc()).limit(10).all()
+        
+        return render_template('superadmin_dashboard.html', 
+                              stores=stores, 
+                              store_admins=store_admins,
+                              active_subscriptions=active_subscriptions,
+                              expired_subscriptions=expired_subscriptions,
+                              activity_logs=activity_logs)
 
     # Superadmin tools route
     @app.route('/superadmin/tools')
@@ -649,6 +662,177 @@ def create_app():
             return redirect(url_for('superadmin_login'))
         app.logger.info("Superadmin viewed tools page.")
         return render_template('superadmin_tools.html')
+    
+    # Superadmin System Health route
+    @app.route('/superadmin/system-health')
+    def superadmin_system_health():
+        """
+        Displays system health and performance metrics for superadmins.
+        """
+        import psutil
+        import platform
+        from datetime import datetime
+        from flask import render_template
+        
+        if not session.get('is_superadmin'):
+            flash('Access denied.', 'danger')
+            return redirect(url_for('superadmin_login'))
+        
+        # Collect system information
+        system_info = {
+            'platform': platform.platform(),
+            'python_version': platform.python_version(),
+            'uptime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'cpu_usage': f"{psutil.cpu_percent(interval=1)}%",
+            'memory_usage': f"{psutil.virtual_memory().percent}%",
+            'disk_usage': f"{psutil.disk_usage('/').percent}%",
+        }
+        
+        # Get active users in the last 24 hours
+        from models import User, Store, ActivityLog
+        from datetime import datetime, timedelta
+        
+        yesterday = datetime.now() - timedelta(days=1)
+        
+        # System statistics
+        total_stores = Store.query.count()
+        active_stores = Store.query.filter_by(subscription_status='active').count()
+        total_users = User.query.count()
+        recent_activity = ActivityLog.query.filter(ActivityLog.timestamp >= yesterday).count()
+        
+        # Recent logins
+        recent_logins = ActivityLog.query.filter(
+            ActivityLog.timestamp >= yesterday,
+            ActivityLog.action.like('%login%')
+        ).order_by(ActivityLog.timestamp.desc()).limit(10).all()
+        
+        app.logger.info("Superadmin viewed system health page.")
+        return render_template('superadmin_system_health.html', 
+                              system_info=system_info,
+                              total_stores=total_stores,
+                              active_stores=active_stores,
+                              total_users=total_users,
+                              recent_activity=recent_activity,
+                              recent_logins=recent_logins)
+                              
+    # Superadmin User Management route
+    @app.route('/superadmin/user-management')
+    def superadmin_user_management():
+        """
+        Displays user management interface for superadmins.
+        """
+        from flask import render_template, request
+        
+        if not session.get('is_superadmin'):
+            flash('Access denied.', 'danger')
+            return redirect(url_for('superadmin_login'))
+        
+        # Get query parameters for filtering/sorting
+        search_query = request.args.get('search', '')
+        role_filter = request.args.get('role', '')
+        sort_by = request.args.get('sort_by', 'created_at')
+        sort_order = request.args.get('sort_order', 'desc')
+        page = request.args.get('page', 1, type=int)
+        per_page = 15  # Users per page
+        
+        # Base query
+        query = User.query
+        
+        # Apply filters
+        if search_query:
+            query = query.filter(
+                or_(
+                    User.username.ilike(f'%{search_query}%'),
+                    User.email.ilike(f'%{search_query}%'),
+                    User.first_name.ilike(f'%{search_query}%'),
+                    User.last_name.ilike(f'%{search_query}%')
+                )
+            )
+        
+        if role_filter:
+            query = query.filter(User.role == role_filter)
+        
+        # Apply sorting
+        if sort_by == 'username':
+            query = query.order_by(User.username.asc() if sort_order == 'asc' else User.username.desc())
+        elif sort_by == 'email':
+            query = query.order_by(User.email.asc() if sort_order == 'asc' else User.email.desc())
+        elif sort_by == 'created_at':
+            query = query.order_by(User.created_at.asc() if sort_order == 'asc' else User.created_at.desc())
+        elif sort_by == 'last_login':
+            query = query.order_by(User.last_login.asc() if sort_order == 'asc' else User.last_login.desc())
+        
+        # Paginate results
+        users_pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+        users = users_pagination.items
+        
+        # Get unique roles for filter dropdown
+        roles = db.session.query(User.role).distinct().all()
+        unique_roles = [role[0] for role in roles if role[0]]
+        
+        app.logger.info("Superadmin viewed user management page.")
+        return render_template('superadmin_user_management.html',
+                              users=users,
+                              pagination=users_pagination,
+                              search_query=search_query,
+                              role_filter=role_filter,
+                              sort_by=sort_by,
+                              sort_order=sort_order,
+                              roles=unique_roles)
+    
+    # Superadmin Data Export route
+    @app.route('/superadmin/data-export')
+    def superadmin_data_export():
+        """
+        Displays data export interface for superadmins.
+        """
+        from flask import render_template
+        import datetime
+        
+        if not session.get('is_superadmin'):
+            flash('Access denied.', 'danger')
+            return redirect(url_for('superadmin_login'))
+        
+        # Get export options (tables available for export)
+        export_tables = [
+            {'name': 'stores', 'label': 'Stores', 'description': 'All store details including subscription status'},
+            {'name': 'users', 'label': 'Users', 'description': 'All user accounts and their roles'},
+            {'name': 'appointments', 'label': 'Appointments', 'description': 'All appointment data including status'},
+            {'name': 'dogs', 'label': 'Dogs', 'description': 'All registered dogs and their details'},
+            {'name': 'activity_logs', 'label': 'Activity Logs', 'description': 'System activity logs'},
+            {'name': 'services', 'label': 'Services', 'description': 'Available services across all stores'}
+        ]
+        
+        # Get recent exports if we had a table to track them
+        recent_exports = [
+            {
+                'id': 1,
+                'table': 'stores',
+                'format': 'csv',
+                'timestamp': datetime.datetime.now() - datetime.timedelta(days=1),
+                'status': 'completed',
+                'file_size': '45 KB',
+                'exported_by': 'admin'
+            },
+            {
+                'id': 2,
+                'table': 'appointments',
+                'format': 'json',
+                'timestamp': datetime.datetime.now() - datetime.timedelta(days=3),
+                'status': 'completed',
+                'file_size': '128 KB',
+                'exported_by': 'admin'
+            }
+        ]
+        
+        # List of available export formats
+        export_formats = ['csv', 'json', 'excel']
+        
+        app.logger.info("Superadmin viewed data export page.")
+        return render_template('superadmin_data_export.html',
+                              export_tables=export_tables,
+                              recent_exports=recent_exports,
+                              export_formats=export_formats)
 
     # Superadmin impersonate store
     @app.route('/superadmin/impersonate/<int:store_id>')
@@ -673,7 +857,6 @@ def create_app():
 
     # Superadmin stop impersonation
     @app.route('/superadmin/stop_impersonation')
-    @login_required
     def superadmin_stop_impersonation():
         """
         Allows a superadmin to stop impersonating a store.
@@ -681,13 +864,288 @@ def create_app():
         if not session.get('is_superadmin'):
             flash('Access denied.', 'danger')
             return redirect(url_for('superadmin_login'))
-        
-        current_impersonated_store_id = session.get('store_id')
-        session.pop('store_id', None)
-        session.pop('impersonating', None)
+            
+        current_impersonated_store_id = session.pop('store_id', None)
+        session['impersonating'] = False
         app.logger.info(f"Superadmin {g.user.username} (ID: {g.user.id}) stopped impersonating store ID: {current_impersonated_store_id}.")
-        flash('Stopped impersonating store.', 'info')
+        flash(f"You are no longer impersonating a store.", "info")
         return redirect(url_for('superadmin_dashboard'))
+        
+    # Create new store
+    @app.route('/superadmin/create_store', methods=['POST'])
+    def superadmin_create_store():
+        """
+        Creates a new store with admin user.
+        """
+        from flask import request
+        from datetime import datetime
+        import bcrypt
+        
+        if not session.get('is_superadmin'):
+            flash('Access denied.', 'danger')
+            return redirect(url_for('superadmin_login'))
+            
+        # Get form data
+        name = request.form.get('name')
+        username = request.form.get('username')
+        password = request.form.get('password')
+        email = request.form.get('email')
+        phone = request.form.get('phone', '')
+        address = request.form.get('address', '')
+        subscription_status = request.form.get('subscription_status', 'trial')
+        subscription_ends_at = request.form.get('subscription_ends_at')
+        
+        # Basic validation
+        if not all([name, username, password, email]):
+            flash('Please fill out all required fields.', 'danger')
+            return redirect(url_for('superadmin_dashboard'))
+            
+        # Check if store username already exists
+        if Store.query.filter_by(username=username).first():
+            flash(f'Store with username "{username}" already exists.', 'danger')
+            return redirect(url_for('superadmin_dashboard'))
+            
+        try:
+            # Create new store
+            new_store = Store(
+                name=name,
+                username=username,
+                email=email,
+                phone=phone,
+                address=address,
+                subscription_status=subscription_status,
+                subscription_ends_at=datetime.strptime(subscription_ends_at, '%Y-%m-%d') if subscription_ends_at else None
+            )
+            db.session.add(new_store)
+            db.session.flush()  # Get the store ID before committing
+            
+            # Create an admin user for the store
+            hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            admin_user = User(
+                username=username,
+                password=hashed_password,
+                store_id=new_store.id,
+                is_admin=True
+            )
+            db.session.add(admin_user)
+            db.session.commit()
+            
+            # Log activity
+            log_activity(g.user.id, new_store.id, f"Created store '{name}' with username '{username}'")
+            
+            flash(f'Store "{name}" has been created successfully.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error creating store: {e}")
+            flash(f'An error occurred while creating the store: {e}', 'danger')
+            
+        return redirect(url_for('superadmin_dashboard'))
+        
+    # Edit store
+    @app.route('/superadmin/edit_store', methods=['POST'])
+    def superadmin_edit_store():
+        """
+        Edit an existing store's details.
+        """
+        from flask import request
+        
+        if not session.get('is_superadmin'):
+            flash('Access denied.', 'danger')
+            return redirect(url_for('superadmin_login'))
+            
+        # Get form data
+        store_id = request.form.get('store_id')
+        name = request.form.get('name')
+        username = request.form.get('username')
+        email = request.form.get('email')
+        phone = request.form.get('phone', '')
+        address = request.form.get('address', '')
+        
+        # Basic validation
+        if not all([store_id, name, username, email]):
+            flash('Please fill out all required fields.', 'danger')
+            return redirect(url_for('superadmin_dashboard'))
+            
+        try:
+            # Get the store
+            store = db.session.get(Store, store_id)
+            if not store:
+                flash('Store not found.', 'danger')
+                return redirect(url_for('superadmin_dashboard'))
+                
+            # Check if username is already taken by another store
+            existing_store = Store.query.filter(Store.username == username, Store.id != store_id).first()
+            if existing_store:
+                flash(f'Username "{username}" is already taken.', 'danger')
+                return redirect(url_for('superadmin_dashboard'))
+                
+            # Update store details
+            store.name = name
+            store.username = username
+            store.email = email
+            store.phone = phone
+            store.address = address
+            
+            # Handle admin users
+            admin_usernames = request.form.getlist('admin_username[]')
+            admin_passwords = request.form.getlist('admin_password[]')
+            
+            if admin_usernames and admin_passwords and len(admin_usernames) == len(admin_passwords):
+                import bcrypt
+                for i in range(len(admin_usernames)):
+                    if admin_usernames[i] and admin_passwords[i]:
+                        # Check if admin user already exists
+                        admin_user = User.query.filter_by(username=admin_usernames[i], store_id=store_id).first()
+                        if not admin_user:
+                            # Create new admin user
+                            hashed_password = bcrypt.hashpw(admin_passwords[i].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+                            new_admin = User(
+                                username=admin_usernames[i],
+                                password=hashed_password,
+                                store_id=store_id,
+                                is_admin=True
+                            )
+                            db.session.add(new_admin)
+            
+            db.session.commit()
+            
+            # Log activity
+            log_activity(g.user.id, store.id, f"Updated store '{store.name}' details")
+            
+            flash(f'Store "{name}" has been updated successfully.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error updating store: {e}")
+            flash(f'An error occurred while updating the store: {e}', 'danger')
+            
+        return redirect(url_for('superadmin_dashboard'))
+        
+    # Delete store
+    @app.route('/superadmin/delete_store/<int:store_id>', methods=['POST'])
+    def superadmin_delete_store(store_id):
+        """
+        Delete a store and all associated data.
+        """
+        if not session.get('is_superadmin'):
+            flash('Access denied.', 'danger')
+            return redirect(url_for('superadmin_login'))
+            
+        try:
+            # Get the store
+            store = db.session.get(Store, store_id)
+            if not store:
+                flash('Store not found.', 'danger')
+                return redirect(url_for('superadmin_dashboard'))
+                
+            store_name = store.name
+            
+            # Delete all associated data
+            # This should cascade if properly set up in the models, but we'll be explicit here
+            User.query.filter_by(store_id=store_id).delete()
+            # Add other model deletions here if needed
+            
+            # Delete the store itself
+            db.session.delete(store)
+            db.session.commit()
+            
+            # Log activity
+            log_activity(g.user.id, None, f"Deleted store '{store_name}' (ID: {store_id})")
+            
+            flash(f'Store "{store_name}" has been deleted successfully.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error deleting store: {e}")
+            flash(f'An error occurred while deleting the store: {e}', 'danger')
+            
+        return redirect(url_for('superadmin_dashboard'))
+        
+    # Update store subscription
+    @app.route('/superadmin/update_subscription', methods=['POST'])
+    def superadmin_update_subscription():
+        """
+        Update a store's subscription details.
+        """
+        from flask import request
+        from datetime import datetime
+        
+        if not session.get('is_superadmin'):
+            flash('Access denied.', 'danger')
+            return redirect(url_for('superadmin_login'))
+            
+        # Get form data
+        store_id = request.form.get('store_id')
+        subscription_status = request.form.get('subscription_status')
+        subscription_ends_at = request.form.get('subscription_ends_at')
+        notes = request.form.get('notes', '')
+        
+        # Basic validation
+        if not all([store_id, subscription_status]):
+            flash('Please fill out all required fields.', 'danger')
+            return redirect(url_for('superadmin_dashboard'))
+            
+        try:
+            # Get the store
+            store = db.session.get(Store, store_id)
+            if not store:
+                flash('Store not found.', 'danger')
+                return redirect(url_for('superadmin_dashboard'))
+                
+            # Update subscription details
+            old_status = store.subscription_status
+            store.subscription_status = subscription_status
+            store.subscription_ends_at = datetime.strptime(subscription_ends_at, '%Y-%m-%d') if subscription_ends_at else None
+            
+            # Store subscription notes if we have a field for it
+            # This might require a model update if not already present
+            if hasattr(store, 'subscription_notes'):
+                store.subscription_notes = notes
+                
+            db.session.commit()
+            
+            # Log activity
+            log_activity(g.user.id, store.id, f"Updated subscription for '{store.name}' from {old_status} to {subscription_status}")
+            
+            flash(f'Subscription for "{store.name}" has been updated successfully.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error updating subscription: {e}")
+            flash(f'An error occurred while updating the subscription: {e}', 'danger')
+            
+        return redirect(url_for('superadmin_dashboard'))
+        
+    # Get store details for AJAX
+    @app.route('/superadmin/get_store/<int:store_id>')
+    def superadmin_get_store(store_id):
+        """
+        Get store details in JSON format for AJAX requests.
+        """
+        from flask import jsonify
+        
+        if not session.get('is_superadmin'):
+            return jsonify({'error': 'Access denied'}), 403
+            
+        store = db.session.get(Store, store_id)
+        if not store:
+            return jsonify({'error': 'Store not found'}), 404
+            
+        admin_users = User.query.filter_by(store_id=store_id, is_admin=True).all()
+        
+        store_data = {
+            'id': store.id,
+            'name': store.name,
+            'username': store.username,
+            'email': store.email,
+            'phone': store.phone or '',
+            'address': store.address or '',
+            'subscription_status': store.subscription_status,
+            'subscription_ends_at': store.subscription_ends_at.strftime('%Y-%m-%d') if store.subscription_ends_at else None,
+            'admin_users': [{
+                'id': user.id,
+                'username': user.username
+            } for user in admin_users]
+        }
+        
+        return jsonify(store_data)
 
     # Apply ProxyFix middleware
     app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)

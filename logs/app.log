@@ -22630,3 +22630,1480 @@ Status: Scheduled, start={'dateTime': '2025-07-16T07:00:00-04:00', 'timeZone': '
 2025-07-14 23:26:48,924 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
 2025-07-14 23:26:48,924 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
 2025-07-14 23:26:48,927 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:02:00,013 - app - INFO - Logging configured successfully
+2025-07-15 16:02:00,119 - app - INFO - SQLAlchemy Database URI: sqlite:///C:\Users\coras\Documents\GitHub\pawfection_testing\grooming_business_v2.db
+2025-07-15 16:02:00,163 - app - INFO - [DEBUG] 'details_needed' column exists in 'appointment' table.
+2025-07-15 16:02:04,748 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 16:02:04,749 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:02:04,759 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('warning', 'Please log in to access this page.')]}
+2025-07-15 16:02:04,759 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:02:04,800 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('warning', 'Please log in to access this page.'), ('warning', 'Please select your store first.')]}
+2025-07-15 16:02:04,800 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:02:04,935 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 16:02:04,936 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:02:04,936 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 16:02:04,937 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:02:05,830 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 16:02:05,830 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:02:13,816 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 16:02:13,816 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:02:14,029 - app - INFO - Store 'Fur Fabulous Pet Spa & Mobile' (ID: 2) logged in successfully. session['store_id'] set to 2.
+2025-07-15 16:02:14,191 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', "Store 'Fur Fabulous Pet Spa & Mobile' logged in. Please sign in as a user.")], '_fresh': False, 'store_id': 2}
+2025-07-15 16:02:14,191 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:02:14,304 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'store_id': 2}
+2025-07-15 16:02:14,304 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:02:14,313 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'store_id': 2}
+2025-07-15 16:02:14,313 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:02:17,684 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'store_id': 2}
+2025-07-15 16:02:17,684 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:02:17,687 - app - INFO - [LOGIN DEBUG] Attempt login: username=Amanda, store_id=2, password_entered=Amanda123
+2025-07-15 16:02:17,692 - app - INFO - [LOGIN DEBUG] Found user: Amanda, id=3, store_id=2
+2025-07-15 16:02:17,897 - app - INFO - [LOGIN DEBUG] Password check passed: True
+2025-07-15 16:02:18,108 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', 'Welcome back, Amanda!')], '_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:02:18,109 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:02:18,115 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-07-15 16:02:18,116 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-07-15 16:02:18,117 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-07-15 16:02:21,356 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:02:21,358 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:02:21,358 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:02:21,362 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:02:39,110 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:02:39,111 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:02:39,125 - app - INFO - [DEBUG] store.google_token_json: {"token": "ya29.a0AW4XtxjdrQbTBgIZDIkH3Dz421AM8h-LxajD6L9il2pyZR-QLLeA9U_0W15aQPJHimdHpOQ6dkT9IiVyTfLrDrM8KJ_1pvaJ8g8U3jH8gaXL4AEGqaUTOCi07PyRThWVoLWGGIvfSSfNocJiBIzI54y1KDVO95fJygHSCgxOaCgYKAasSARYSFQHGX2MiitCa-M14A4AXy91JAdKvvA0175", "refresh_token": "1//01v4HU9_UXG9mCgYIARAAGAESNwF-L9IroDsaaIYZyynqAz-_MLAyiw36RHcDvpVveMgDhg4yskSjeX0dQNYMOjhX42Cu08NYP2w", "token_uri": "https://oauth2.googleapis.com/token", "client_id": "832000035869-b43ljrbcl33h2ksfkhha9a8kt48pefl4.apps.googleusercontent.com", "client_secret": "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", "scopes": ["https://www.googleapis.com/auth/calendar.readonly", "https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/gmail.send", "https://www.googleapis.com/auth/calendar", "https://www.googleapis.com/auth/userinfo.profile", "openid"]}
+2025-07-15 16:02:39,125 - app - INFO - [DEBUG] parsed scopes: ['https://www.googleapis.com/auth/calendar.readonly', 'https://www.googleapis.com/auth/calendar.events', 'https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/gmail.send', 'https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/userinfo.profile', 'openid']
+2025-07-15 16:02:39,203 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:02:39,204 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:02:39,205 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:02:39,207 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:02:41,828 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:02:41,830 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:02:41,831 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-07-15 16:02:41,833 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-07-15 16:02:41,834 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-07-15 16:02:41,879 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:02:41,880 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:02:41,881 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:02:41,883 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:02:44,207 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:02:44,208 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:02:44,208 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-07-15 16:02:44,210 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-07-15 16:02:44,210 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-07-15 16:02:44,281 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:02:44,283 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:02:44,286 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:02:44,287 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:02:46,601 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:02:46,601 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:02:46,644 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:02:46,645 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:02:46,653 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:02:46,654 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:10:35,540 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:10:35,542 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:10:35,577 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:10:35,580 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:10:35,580 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:10:35,582 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:10:37,751 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:10:37,753 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:10:37,779 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:10:37,780 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:10:37,785 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:10:37,787 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:10:49,000 - app - INFO - Logging configured successfully
+2025-07-15 16:10:49,012 - app - INFO - SQLAlchemy Database URI: sqlite:///C:\Users\coras\Documents\GitHub\pawfection_testing\grooming_business_v2.db
+2025-07-15 16:10:49,014 - app - INFO - [DEBUG] 'details_needed' column exists in 'appointment' table.
+2025-07-15 16:11:05,833 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 16:11:05,834 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:11:05,839 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('danger', 'You do not have permission to access this page.')]}
+2025-07-15 16:11:05,839 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:11:05,896 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('danger', 'You do not have permission to access this page.')], '_fresh': False}
+2025-07-15 16:11:05,896 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:11:08,603 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('danger', 'You do not have permission to access this page.')], '_fresh': False}
+2025-07-15 16:11:08,603 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:11:08,637 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('danger', 'You do not have permission to access this page.'), ('warning', 'Please select your store first.')]}
+2025-07-15 16:11:08,637 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:11:08,731 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 16:11:08,732 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:11:08,733 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 16:11:08,733 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:11:15,526 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 16:11:15,527 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:11:15,740 - app - INFO - Store 'Fur Fabulous Pet Spa & Mobile' (ID: 2) logged in successfully. session['store_id'] set to 2.
+2025-07-15 16:11:15,745 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', "Store 'Fur Fabulous Pet Spa & Mobile' logged in. Please sign in as a user.")], '_fresh': False, 'store_id': 2}
+2025-07-15 16:11:15,745 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:11:15,783 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'store_id': 2}
+2025-07-15 16:11:15,785 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:11:15,785 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'store_id': 2}
+2025-07-15 16:11:15,785 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:11:18,977 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'store_id': 2}
+2025-07-15 16:11:18,977 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:11:18,979 - app - INFO - [LOGIN DEBUG] Attempt login: username=Amanda, store_id=2, password_entered=Amanda123
+2025-07-15 16:11:18,981 - app - INFO - [LOGIN DEBUG] Found user: Amanda, id=3, store_id=2
+2025-07-15 16:11:19,207 - app - INFO - [LOGIN DEBUG] Password check passed: True
+2025-07-15 16:11:19,232 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', 'Welcome back, Amanda!')], '_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:11:19,233 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:11:19,234 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-07-15 16:11:19,236 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-07-15 16:11:19,236 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-07-15 16:11:19,460 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:11:19,461 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:11:19,467 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:11:19,469 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:11:22,512 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:11:22,513 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:11:22,551 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:11:22,552 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:11:22,554 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:11:22,556 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:11:25,450 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:11:25,451 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:11:25,451 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-07-15 16:11:25,453 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-07-15 16:11:25,454 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-07-15 16:11:25,491 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:11:25,491 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:11:25,503 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:11:25,505 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:11:28,345 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:11:28,348 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:11:28,348 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-07-15 16:11:28,349 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-07-15 16:11:28,350 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-07-15 16:11:28,350 - app - INFO - Fetching appointments for store_id: 2
+2025-07-15 16:11:28,351 - app - INFO - Starting Google Calendar sync...
+2025-07-15 16:11:29,705 - app - INFO - [SYNC] Retrieved 0 events from Google Calendar.
+2025-07-15 16:11:29,706 - app - INFO - Google Calendar sync completed
+2025-07-15 16:11:29,706 - app - INFO - Querying local appointments...
+2025-07-15 16:11:29,714 - app - INFO - Retrieved 25 appointments
+2025-07-15 16:11:29,720 - app - INFO - Appt 1: ID=1, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-06-20 15:00:00-04:00, GoogleEventID=5hc4ev7s3ne1hhu9lt0quqgnhk, DetailsNeeded=False
+2025-07-15 16:11:29,722 - app - INFO - Appt 2: ID=4, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-06-21 02:47:00-04:00, GoogleEventID=1p6g78au4l1m8pc5q5jobn9iac, DetailsNeeded=False
+2025-07-15 16:11:29,723 - app - INFO - Appt 3: ID=3, Status=Cancelled, Dog=Vega Marie Hartman (ID: 6), Groomer=Amanda (ID: 3), Time=2025-06-21 06:00:00-04:00, GoogleEventID=o2ckpe696norj0957jsnuoief0, DetailsNeeded=False
+2025-07-15 16:11:29,724 - app - INFO - Appt 4: ID=7, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-06-23 06:00:00-04:00, GoogleEventID=ath5kf551egp2q3u6p6fvndjc8, DetailsNeeded=False
+2025-07-15 16:11:29,724 - app - INFO - Appt 5: ID=5, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-06-23 14:15:00-04:00, GoogleEventID=dq0dqf3u1ovcmua1jt4p3ucub8, DetailsNeeded=False
+2025-07-15 16:11:29,724 - app - INFO - Appt 6: ID=8, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-06-25 08:00:00-04:00, GoogleEventID=aogafpsn26mgsmam5sjotg3lb4, DetailsNeeded=False
+2025-07-15 16:11:29,725 - app - INFO - Appt 7: ID=10, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-06-25 08:00:00-04:00, GoogleEventID=j3qmorlsqtv78rt14jrdm6sais, DetailsNeeded=False
+2025-07-15 16:11:29,725 - app - INFO - Appt 8: ID=11, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-06-25 08:00:00-04:00, GoogleEventID=03fp6epa94qi8j9s0pqnrkpuqc, DetailsNeeded=False
+2025-07-15 16:11:29,725 - app - INFO - Appt 9: ID=9, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-06-25 11:00:00-04:00, GoogleEventID=ce4vat2jr1k69ael8pjuhh6qhg, DetailsNeeded=False
+2025-07-15 16:11:29,725 - app - INFO - Appt 10: ID=6, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-06-26 04:00:00-04:00, GoogleEventID=9a0i66t3gjsdklreta090f6mec, DetailsNeeded=False
+2025-07-15 16:11:29,725 - app - INFO - Appt 11: ID=13, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-06-27 12:30:00-04:00, GoogleEventID=agbn287ccfo19kdk1efk48lnsc, DetailsNeeded=False
+2025-07-15 16:11:29,725 - app - INFO - Appt 12: ID=12, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-06-27 16:30:00-04:00, GoogleEventID=sp0bm7jrlu0ik9c3vnprocsiv0, DetailsNeeded=False
+2025-07-15 16:11:29,726 - app - INFO - Appt 13: ID=14, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-07-01 22:30:00-04:00, GoogleEventID=odbcahs3plk0aem6ibjeekdf7k, DetailsNeeded=False
+2025-07-15 16:11:29,727 - app - INFO - Appt 14: ID=17, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-07-03 00:00:00-04:00, GoogleEventID=em6vt66hfea1huhjveurujbmto, DetailsNeeded=False
+2025-07-15 16:11:29,727 - app - INFO - Appt 15: ID=18, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-07-03 22:30:00-04:00, GoogleEventID=4ug2gt0jmui51a2d1v87a389ng, DetailsNeeded=False
+2025-07-15 16:11:29,727 - app - INFO - Appt 16: ID=16, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-07-03 23:00:00-04:00, GoogleEventID=8t6gsbonthpsabp6bcnbs1pafo, DetailsNeeded=False
+2025-07-15 16:11:29,727 - app - INFO - Appt 17: ID=15, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-07-04 12:00:00-04:00, GoogleEventID=d1slcuj9ohctmjj9cgvha9jp2k, DetailsNeeded=False
+2025-07-15 16:11:29,727 - app - INFO - Appt 18: ID=19, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-07-04 14:00:00-04:00, GoogleEventID=96gpvu5ub6vv4kem88d92plimc, DetailsNeeded=False
+2025-07-15 16:11:29,727 - app - INFO - Appt 19: ID=20, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-07-04 15:00:00-04:00, GoogleEventID=m5ldo7aut1v7hk577vgfeb5sk0, DetailsNeeded=False
+2025-07-15 16:11:29,729 - app - INFO - Appt 20: ID=21, Status=Completed, Dog=Irena "Beans" Laveau Harczuk (ID: 7), Groomer=Amanda (ID: 3), Time=2025-07-10 08:00:00-04:00, GoogleEventID=ng4ahcrvtquvrqffvf151kcf10, DetailsNeeded=False
+2025-07-15 16:11:29,729 - app - INFO - Appt 21: ID=27, Status=Completed, Dog=Vega Marie Hartman (ID: 6), Groomer=Amanda (ID: 3), Time=2025-07-11 03:00:00-04:00, GoogleEventID=None, DetailsNeeded=False
+2025-07-15 16:11:29,729 - app - INFO - Appt 22: ID=22, Status=Completed, Dog=Irena "Beans" Laveau Harczuk (ID: 7), Groomer=Amanda (ID: 3), Time=2025-07-11 08:30:00-04:00, GoogleEventID=oka3thgmklam9ku8qrv6v9s0i4, DetailsNeeded=False
+2025-07-15 16:11:29,729 - app - INFO - Appt 23: ID=23, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-07-13 22:00:00-04:00, GoogleEventID=None, DetailsNeeded=False
+2025-07-15 16:11:29,730 - app - INFO - Appt 24: ID=24, Status=Completed, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-07-14 13:45:00-04:00, GoogleEventID=None, DetailsNeeded=False
+2025-07-15 16:11:29,731 - app - INFO - Appt 25: ID=26, Status=Cancelled, Dog=Atlas Damien Kirkpatrick (ID: 5), Groomer=Amanda (ID: 3), Time=2025-07-15 11:30:00-04:00, GoogleEventID=None, DetailsNeeded=False
+2025-07-15 16:11:29,732 - app - INFO - Successfully formatted 25 events for calendar
+2025-07-15 16:11:29,803 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:11:29,803 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:11:29,812 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:11:29,813 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:12:18,912 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:12:18,914 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:12:18,914 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-07-15 16:12:18,914 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-07-15 16:12:18,916 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-07-15 16:12:18,962 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:12:18,963 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:12:18,965 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:12:18,967 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:12:22,028 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:12:22,030 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:12:22,076 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:12:22,077 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:12:22,079 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:12:22,081 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:12:38,036 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:12:38,037 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:12:38,037 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-07-15 16:12:38,038 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-07-15 16:12:38,038 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-07-15 16:12:38,074 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:12:38,075 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:12:38,076 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:12:38,080 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:41:09,765 - app - INFO - Logging configured successfully
+2025-07-15 16:41:09,774 - app - INFO - SQLAlchemy Database URI: sqlite:///C:\Users\coras\Documents\GitHub\pawfection_testing\grooming_business_v2.db
+2025-07-15 16:41:09,776 - app - INFO - [DEBUG] 'details_needed' column exists in 'appointment' table.
+2025-07-15 16:42:07,676 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 16:42:07,676 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:42:14,115 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 16:42:14,115 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:42:15,367 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 16:42:15,368 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:42:15,373 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('message', 'Please log in to access this page.')]}
+2025-07-15 16:42:15,373 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:42:15,420 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('message', 'Please log in to access this page.'), ('warning', 'Please select your store first.')]}
+2025-07-15 16:42:15,420 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:42:15,539 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 16:42:15,539 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:42:15,541 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 16:42:15,541 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:42:22,778 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 16:42:22,778 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:42:22,980 - app - INFO - Store 'Fur Fabulous Pet Spa & Mobile' (ID: 2) logged in successfully. session['store_id'] set to 2.
+2025-07-15 16:42:22,987 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', "Store 'Fur Fabulous Pet Spa & Mobile' logged in. Please sign in as a user.")], '_fresh': False, 'store_id': 2}
+2025-07-15 16:42:22,987 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:42:23,025 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'store_id': 2}
+2025-07-15 16:42:23,025 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:42:23,026 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'store_id': 2}
+2025-07-15 16:42:23,026 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:42:26,886 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'store_id': 2}
+2025-07-15 16:42:26,887 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:42:26,889 - app - INFO - [LOGIN DEBUG] Attempt login: username=Amanda, store_id=2, password_entered=Amanda123
+2025-07-15 16:42:26,891 - app - INFO - [LOGIN DEBUG] Found user: Amanda, id=3, store_id=2
+2025-07-15 16:42:27,110 - app - INFO - [LOGIN DEBUG] Password check passed: True
+2025-07-15 16:42:27,135 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', 'Welcome back, Amanda!')], '_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:42:27,136 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:42:27,137 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-07-15 16:42:27,139 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-07-15 16:42:27,139 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-07-15 16:42:27,295 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:42:27,295 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:42:27,308 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:42:27,309 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:42:29,223 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:42:29,225 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:42:29,225 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-07-15 16:42:29,225 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-07-15 16:42:29,226 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-07-15 16:42:29,283 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:42:29,283 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:42:29,291 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:42:29,292 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:42:35,841 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:42:35,842 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:42:35,842 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-07-15 16:42:35,844 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-07-15 16:42:35,844 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-07-15 16:42:35,857 - app - ERROR - Exception on /deposit_payment [GET]
+Traceback (most recent call last):
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 2190, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1486, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1484, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1469, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\utils.py", line 65, in decorated_function
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\appointments\routes.py", line 1144, in deposit_payment
+    return render_template('deposit_payment.html')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\templating.py", line 151, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\templating.py", line 132, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\jinja2\environment.py", line 1301, in render
+    self.environment.handle_exception()
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\jinja2\environment.py", line 936, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\templates\deposit_payment.html", line 1, in top-level template code
+    {% extends 'base.html' %}
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\templates\base.html", line 142, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\templates\deposit_payment.html", line 139, in block 'content'
+    <a href="{{ url_for('appointments.select_checkout_appointment') }}" class="button button-secondary" style="width:100%;">Cancel</a>
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1697, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1686, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\routing\map.py", line 950, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'appointments.select_checkout_appointment'. Did you mean 'appointments.delete_appointment' instead?
+2025-07-15 16:43:15,757 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:43:15,758 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:43:15,758 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-07-15 16:43:15,759 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-07-15 16:43:15,761 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-07-15 16:43:15,765 - app - ERROR - Exception on /walk_in_appointment [GET]
+Traceback (most recent call last):
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 2190, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1486, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1484, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1469, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\utils.py", line 65, in decorated_function
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\appointments\routes.py", line 1014, in walk_in_appointment
+    return render_template('walk_in_appointment.html')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\templating.py", line 151, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\templating.py", line 132, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\jinja2\environment.py", line 1301, in render
+    self.environment.handle_exception()
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\jinja2\environment.py", line 936, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\templates\walk_in_appointment.html", line 1, in top-level template code
+    {% extends 'base.html' %}
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\templates\base.html", line 142, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\templates\walk_in_appointment.html", line 90, in block 'content'
+    <a href="{{ url_for('appointments.select_checkout_appointment') }}" class="button button-secondary" style="width:100%;">Cancel</a>
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1697, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1686, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\routing\map.py", line 950, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'appointments.select_checkout_appointment'. Did you mean 'appointments.delete_appointment' instead?
+2025-07-15 16:45:15,091 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:45:15,093 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:45:15,096 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-07-15 16:45:15,098 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-07-15 16:45:15,098 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-07-15 16:45:15,101 - app - ERROR - Exception on /deposit_payment [GET]
+Traceback (most recent call last):
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 2190, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1486, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1484, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1469, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\utils.py", line 65, in decorated_function
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\appointments\routes.py", line 1144, in deposit_payment
+    return render_template('deposit_payment.html')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\templating.py", line 151, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\templating.py", line 132, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\jinja2\environment.py", line 1301, in render
+    self.environment.handle_exception()
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\jinja2\environment.py", line 936, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\templates\deposit_payment.html", line 1, in top-level template code
+    {% extends 'base.html' %}
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\templates\base.html", line 142, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\templates\deposit_payment.html", line 139, in block 'content'
+    <a href="{{ url_for('appointments.checkout_start') }}" class="button button-secondary" style="width:100%;">Cancel</a>
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1697, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1686, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\routing\map.py", line 950, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'appointments.select_checkout_appointment'. Did you mean 'appointments.delete_appointment' instead?
+2025-07-15 16:45:24,403 - app - INFO - Logging configured successfully
+2025-07-15 16:45:24,409 - app - INFO - SQLAlchemy Database URI: sqlite:///C:\Users\coras\Documents\GitHub\pawfection_testing\grooming_business_v2.db
+2025-07-15 16:45:24,411 - app - INFO - [DEBUG] 'details_needed' column exists in 'appointment' table.
+2025-07-15 16:45:27,144 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 16:45:27,145 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:45:27,146 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: None, username=None, is_subscribed=None
+2025-07-15 16:45:27,146 - app - INFO - [SUBSCRIPTION] subscription_required: DENIED for user: None
+2025-07-15 16:45:27,153 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('warning', 'You need an active subscription to access this page.')]}
+2025-07-15 16:45:27,153 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:45:27,158 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('warning', 'You need an active subscription to access this page.'), ('warning', 'Please log in to access this page.')]}
+2025-07-15 16:45:27,158 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:45:27,215 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('warning', 'You need an active subscription to access this page.'), ('warning', 'Please log in to access this page.'), ('warning', 'Please select your store first.')]}
+2025-07-15 16:45:27,215 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:45:27,268 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 16:45:27,269 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:45:27,276 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 16:45:27,276 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:45:27,670 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 16:45:27,670 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:45:37,630 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 16:45:37,630 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:45:37,860 - app - INFO - Store 'Fur Fabulous Pet Spa & Mobile' (ID: 2) logged in successfully. session['store_id'] set to 2.
+2025-07-15 16:45:37,866 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', "Store 'Fur Fabulous Pet Spa & Mobile' logged in. Please sign in as a user.")], '_fresh': False, 'store_id': 2}
+2025-07-15 16:45:37,870 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:45:37,907 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'store_id': 2}
+2025-07-15 16:45:37,907 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:45:37,913 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'store_id': 2}
+2025-07-15 16:45:37,915 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:45:41,833 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'store_id': 2}
+2025-07-15 16:45:41,833 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:45:41,837 - app - INFO - [LOGIN DEBUG] Attempt login: username=Amanda, store_id=2, password_entered=Amanda123
+2025-07-15 16:45:41,840 - app - INFO - [LOGIN DEBUG] Found user: Amanda, id=3, store_id=2
+2025-07-15 16:45:42,057 - app - INFO - [LOGIN DEBUG] Password check passed: True
+2025-07-15 16:45:42,076 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', 'Welcome back, Amanda!')], '_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:45:42,076 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:45:42,077 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-07-15 16:45:42,079 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-07-15 16:45:42,079 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-07-15 16:45:42,282 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:45:42,285 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:45:42,285 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:45:42,289 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:45:46,787 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:45:46,788 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:45:46,788 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-07-15 16:45:46,789 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-07-15 16:45:46,789 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-07-15 16:45:46,828 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:45:46,829 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:45:46,831 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:45:46,832 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:45:48,145 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:45:48,146 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:45:48,146 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-07-15 16:45:48,147 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-07-15 16:45:48,147 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-07-15 16:45:48,201 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:45:48,201 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:45:48,204 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:45:48,205 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:46:08,015 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:46:08,016 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:46:08,016 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-07-15 16:46:08,018 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-07-15 16:46:08,018 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-07-15 16:46:08,023 - app - ERROR - Exception on /walk_in_appointment [GET]
+Traceback (most recent call last):
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 2190, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1486, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1484, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1469, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\utils.py", line 65, in decorated_function
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\appointments\routes.py", line 1014, in walk_in_appointment
+    return render_template('walk_in_appointment.html')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\templating.py", line 151, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\templating.py", line 132, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\jinja2\environment.py", line 1301, in render
+    self.environment.handle_exception()
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\jinja2\environment.py", line 936, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\templates\walk_in_appointment.html", line 1, in top-level template code
+    {% extends 'base.html' %}
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\templates\base.html", line 142, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\templates\walk_in_appointment.html", line 90, in block 'content'
+    <a href="{{ url_for('appointments.select_checkout_appointment') }}" class="button button-secondary" style="width:100%;">Cancel</a>
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1697, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1686, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\routing\map.py", line 950, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'appointments.select_checkout_appointment'. Did you mean 'appointments.delete_appointment' instead?
+2025-07-15 16:48:15,545 - app - INFO - Logging configured successfully
+2025-07-15 16:48:15,554 - app - INFO - SQLAlchemy Database URI: sqlite:///C:\Users\coras\Documents\GitHub\pawfection_testing\grooming_business_v2.db
+2025-07-15 16:48:15,556 - app - INFO - [DEBUG] 'details_needed' column exists in 'appointment' table.
+2025-07-15 16:48:18,347 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 16:48:18,347 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:48:18,349 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: None, username=None, is_subscribed=None
+2025-07-15 16:48:18,349 - app - INFO - [SUBSCRIPTION] subscription_required: DENIED for user: None
+2025-07-15 16:48:18,355 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('warning', 'You need an active subscription to access this page.')]}
+2025-07-15 16:48:18,355 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:48:18,361 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('warning', 'You need an active subscription to access this page.'), ('warning', 'Please log in to access this page.')]}
+2025-07-15 16:48:18,361 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:48:18,415 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('warning', 'You need an active subscription to access this page.'), ('warning', 'Please log in to access this page.'), ('warning', 'Please select your store first.')]}
+2025-07-15 16:48:18,415 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:48:18,473 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 16:48:18,474 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:48:18,482 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 16:48:18,482 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:48:27,018 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 16:48:27,018 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:48:27,282 - app - INFO - Store 'Fur Fabulous Pet Spa & Mobile' (ID: 2) logged in successfully. session['store_id'] set to 2.
+2025-07-15 16:48:27,288 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', "Store 'Fur Fabulous Pet Spa & Mobile' logged in. Please sign in as a user.")], '_fresh': False, 'store_id': 2}
+2025-07-15 16:48:27,288 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:48:27,331 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'store_id': 2}
+2025-07-15 16:48:27,332 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:48:27,333 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'store_id': 2}
+2025-07-15 16:48:27,333 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:48:31,131 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'store_id': 2}
+2025-07-15 16:48:31,132 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 16:48:31,133 - app - INFO - [LOGIN DEBUG] Attempt login: username=Amanda, store_id=2, password_entered=Amanda123
+2025-07-15 16:48:31,136 - app - INFO - [LOGIN DEBUG] Found user: Amanda, id=3, store_id=2
+2025-07-15 16:48:31,371 - app - INFO - [LOGIN DEBUG] Password check passed: True
+2025-07-15 16:48:31,389 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', 'Welcome back, Amanda!')], '_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:48:31,390 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:48:31,390 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-07-15 16:48:31,391 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-07-15 16:48:31,391 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-07-15 16:48:31,572 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:48:31,574 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:48:31,574 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:48:31,578 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:49:43,356 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:49:43,357 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:49:43,357 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-07-15 16:49:43,358 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-07-15 16:49:43,358 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-07-15 16:49:43,411 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:49:43,412 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:49:43,413 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:49:43,415 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:49:44,974 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:49:44,975 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:49:44,975 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-07-15 16:49:44,975 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-07-15 16:49:44,975 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-07-15 16:49:45,014 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:49:45,015 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-15 16:49:45,015 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 16:49:45,016 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-15 22:11:32,706 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:11:32,706 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:11:32,707 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: None, username=None, is_subscribed=None
+2025-07-15 22:11:32,707 - app - INFO - [SUBSCRIPTION] subscription_required: DENIED for user: None
+2025-07-15 22:11:32,715 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('warning', 'You need an active subscription to access this page.')]}
+2025-07-15 22:11:32,716 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:11:32,720 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('warning', 'You need an active subscription to access this page.'), ('warning', 'Please log in to access this page.')]}
+2025-07-15 22:11:32,722 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:11:32,728 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('warning', 'You need an active subscription to access this page.'), ('warning', 'Please log in to access this page.'), ('warning', 'Please select your store first.')]}
+2025-07-15 22:11:32,728 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:11:32,782 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:11:32,782 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:11:32,783 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:11:32,783 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:15:40,272 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:15:40,272 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:15:40,329 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:15:40,329 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:15:40,331 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:15:40,332 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:15:47,216 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:15:47,216 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:15:47,224 - app - ERROR - Exception on /privacy-policy [GET]
+Traceback (most recent call last):
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 2190, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1486, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1484, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1469, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\app.py", line 402, in view_privacy_policy
+    return render_template('privacy_policy.html')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\templating.py", line 151, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\templating.py", line 132, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\jinja2\environment.py", line 1301, in render
+    self.environment.handle_exception()
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\jinja2\environment.py", line 936, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\templates\privacy_policy.html", line 1, in top-level template code
+    {% extends 'base.html' %}
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\templates\base.html", line 142, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\templates\privacy_policy.html", line 54, in block 'content'
+    <p><strong>Last Updated:</strong> {{ now().strftime('%B %d, %Y') }}</p>
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\jinja2\utils.py", line 83, in from_obj
+    if hasattr(obj, "jinja_pass_arg"):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+jinja2.exceptions.UndefinedError: 'now' is undefined
+2025-07-15 22:18:35,708 - app - INFO - Logging configured successfully
+2025-07-15 22:18:35,718 - app - INFO - SQLAlchemy Database URI: sqlite:///C:\Users\coras\Documents\GitHub\pawfection_testing\grooming_business_v2.db
+2025-07-15 22:18:35,720 - app - INFO - [DEBUG] 'details_needed' column exists in 'appointment' table.
+2025-07-15 22:18:46,353 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:18:46,353 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:18:46,410 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:18:46,410 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:18:46,412 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:18:46,412 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:18:48,041 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:18:48,041 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:18:48,046 - app - ERROR - Exception on /user-agreement [GET]
+Traceback (most recent call last):
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 2190, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1486, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1484, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1469, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\app.py", line 396, in view_user_agreement
+    return render_template('user_agreement.html')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\templating.py", line 151, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\templating.py", line 132, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\jinja2\environment.py", line 1301, in render
+    self.environment.handle_exception()
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\jinja2\environment.py", line 936, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\templates\user_agreement.html", line 1, in top-level template code
+    {% extends 'base.html' %}
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\templates\base.html", line 142, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\templates\user_agreement.html", line 54, in block 'content'
+    <p><strong>Last Updated:</strong> {{ now().strftime('%B %d, %Y') }}</p>
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\jinja2\utils.py", line 83, in from_obj
+    if hasattr(obj, "jinja_pass_arg"):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+jinja2.exceptions.UndefinedError: 'now' is undefined
+2025-07-15 22:22:34,648 - app - INFO - Logging configured successfully
+2025-07-15 22:22:34,655 - app - INFO - SQLAlchemy Database URI: sqlite:///C:\Users\coras\Documents\GitHub\pawfection_testing\grooming_business_v2.db
+2025-07-15 22:22:34,662 - app - INFO - [DEBUG] 'details_needed' column exists in 'appointment' table.
+2025-07-15 22:22:45,764 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:22:45,764 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:22:45,817 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:22:45,817 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:22:46,146 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:22:46,146 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:23:06,449 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:23:06,450 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:23:10,392 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:23:10,393 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:23:10,434 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:23:10,434 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:23:30,979 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:23:30,980 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:23:31,015 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:23:31,016 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:23:31,017 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:23:31,017 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:23:33,904 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:23:33,904 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:23:33,939 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:23:33,939 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:23:42,921 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:23:42,921 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:23:42,988 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:23:42,990 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:23:51,436 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:23:51,436 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:23:51,472 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:23:51,472 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:23:54,141 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:23:54,141 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:23:54,172 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:23:54,172 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:23:56,982 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:23:56,982 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:23:57,008 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:23:57,008 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:24:03,405 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:24:03,405 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:24:03,412 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: None, username=None, is_subscribed=None
+2025-07-15 22:24:03,413 - app - INFO - [SUBSCRIPTION] subscription_required: DENIED for user: None
+2025-07-15 22:24:03,419 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('warning', 'You need an active subscription to access this page.')]}
+2025-07-15 22:24:03,422 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:24:03,426 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('warning', 'You need an active subscription to access this page.'), ('warning', 'Please log in to access this page.')]}
+2025-07-15 22:24:03,428 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:24:03,436 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('warning', 'You need an active subscription to access this page.'), ('warning', 'Please log in to access this page.'), ('warning', 'Please select your store first.')]}
+2025-07-15 22:24:03,436 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:24:04,713 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:24:04,713 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:24:04,713 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: None, username=None, is_subscribed=None
+2025-07-15 22:24:04,713 - app - INFO - [SUBSCRIPTION] subscription_required: DENIED for user: None
+2025-07-15 22:24:04,720 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('warning', 'You need an active subscription to access this page.')], '_fresh': False}
+2025-07-15 22:24:04,720 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:24:04,726 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('warning', 'You need an active subscription to access this page.'), ('warning', 'Please log in to access this page.')], '_fresh': False}
+2025-07-15 22:24:04,727 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:24:04,732 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('warning', 'You need an active subscription to access this page.'), ('warning', 'Please log in to access this page.'), ('warning', 'Please select your store first.')]}
+2025-07-15 22:24:04,733 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:25:08,803 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:25:08,803 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:25:08,834 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:25:08,834 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:26:11,184 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:26:11,185 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:26:11,195 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('warning', 'Please select your store first.')]}
+2025-07-15 22:26:11,195 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:26:11,243 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:26:11,243 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:26:11,245 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:26:11,245 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:28:31,986 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:28:31,986 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:28:32,030 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:28:32,030 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:28:32,032 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:28:32,032 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:28:35,011 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:28:35,011 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:28:35,057 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:28:35,057 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:30:53,824 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:30:53,826 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:30:53,853 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:30:53,853 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:30:53,855 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:30:53,855 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:31:03,815 - app - INFO - Logging configured successfully
+2025-07-15 22:31:03,829 - app - INFO - SQLAlchemy Database URI: sqlite:///C:\Users\coras\Documents\GitHub\pawfection_testing\grooming_business_v2.db
+2025-07-15 22:31:03,831 - app - INFO - [DEBUG] 'details_needed' column exists in 'appointment' table.
+2025-07-15 22:31:05,705 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:31:05,705 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:31:05,747 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:31:05,749 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:31:05,750 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:31:05,751 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:31:10,497 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:31:10,499 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:31:10,533 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:31:10,533 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:31:12,701 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:31:12,703 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:31:12,792 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('warning', 'Please select your store first.')]}
+2025-07-15 22:31:12,792 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:31:12,840 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:31:12,842 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:31:12,842 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:31:12,842 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:41:57,626 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:41:57,627 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:41:57,672 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:41:57,672 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:41:57,674 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:41:57,676 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:42:07,303 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:42:07,304 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:42:07,308 - app - WARNING - Invalid superadmin username or password attempt for username: corasings93.
+2025-07-15 22:42:07,341 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:42:07,341 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:42:07,343 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:42:07,343 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:42:12,771 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:42:12,773 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:42:13,006 - app - INFO - Superadmin 'Cora' (ID: 1) logged in.
+2025-07-15 22:42:13,011 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', "Superadmin 'Cora' logged in.")], '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 22:42:13,013 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 22:42:13,016 - app - INFO - Superadmin viewed dashboard.
+2025-07-15 22:42:13,024 - app - ERROR - Exception on /superadmin/dashboard [GET]
+Traceback (most recent call last):
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 2190, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1486, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1484, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1469, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\app.py", line 640, in superadmin_dashboard
+    active_subscriptions = Store.query.filter_by(subscription_status='active').count()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\templating.py", line 151, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\templating.py", line 132, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\jinja2\environment.py", line 1301, in render
+    self.environment.handle_exception()
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\jinja2\environment.py", line 936, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\templates\superadmin_dashboard.html", line 1, in top-level template code
+    {% extends 'base.html' %}
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\templates\base.html", line 142, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\templates\superadmin_dashboard.html", line 163, in block 'content'
+    <form id="editStoreForm" action="{{ url_for('superadmin_edit_store') }}" method="POST">
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1697, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1686, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\werkzeug\routing\map.py", line 950, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'superadmin_edit_store'. Did you mean 'superadmin_dashboard' instead?
+2025-07-15 22:46:50,160 - app - INFO - Logging configured successfully
+2025-07-15 22:46:50,168 - app - INFO - SQLAlchemy Database URI: sqlite:///C:\Users\coras\Documents\GitHub\pawfection_testing\grooming_business_v2.db
+2025-07-15 22:46:50,169 - app - INFO - [DEBUG] 'details_needed' column exists in 'appointment' table.
+2025-07-15 22:46:54,385 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 22:46:54,386 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:46:54,391 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('danger', 'Access denied.')]}
+2025-07-15 22:46:54,392 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:46:54,436 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:46:54,437 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:46:54,437 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:46:54,437 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:46:54,845 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:46:54,845 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:47:04,360 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 22:47:04,361 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 22:47:04,580 - app - INFO - Superadmin 'Cora' (ID: 1) logged in.
+2025-07-15 22:47:04,586 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', "Superadmin 'Cora' logged in.")], '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 22:47:04,588 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 22:47:04,597 - app - ERROR - Exception on /superadmin/dashboard [GET]
+Traceback (most recent call last):
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 2190, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1486, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1484, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\flask\app.py", line 1469, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\app.py", line 645, in superadmin_dashboard
+    activity_logs = ActivityLog.query.order_by(ActivityLog.created_at.desc()).limit(10).all()
+                                               ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: type object 'ActivityLog' has no attribute 'created_at'
+2025-07-15 23:04:02,711 - app - INFO - Logging configured successfully
+2025-07-15 23:04:02,781 - app - INFO - SQLAlchemy Database URI: sqlite:///C:\Users\coras\Documents\GitHub\pawfection_testing\grooming_business_v2.db
+2025-07-15 23:04:02,783 - app - INFO - [DEBUG] 'details_needed' column exists in 'appointment' table.
+2025-07-15 23:04:04,747 - app - INFO - Logging configured successfully
+2025-07-15 23:04:04,754 - app - INFO - SQLAlchemy Database URI: sqlite:///C:\Users\coras\Documents\GitHub\pawfection_testing\grooming_business_v2.db
+2025-07-15 23:04:04,755 - app - INFO - [DEBUG] 'details_needed' column exists in 'appointment' table.
+2025-07-15 23:04:20,668 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 23:04:20,670 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:04:20,722 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 23:04:20,722 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:04:25,173 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 23:04:25,173 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:04:25,182 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 23:04:25,182 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:04:25,203 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('warning', 'Please select your store first.')]}
+2025-07-15 23:04:25,204 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('warning', 'Please select your store first.')]}
+2025-07-15 23:04:25,221 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:04:25,222 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:04:32,631 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('warning', 'Please select your store first.')]}
+2025-07-15 23:04:32,632 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:04:32,657 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 23:04:32,657 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 23:04:32,658 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:04:32,658 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:04:43,610 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 23:04:43,610 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:04:43,820 - app - WARNING - Invalid superadmin username or password attempt for username: Cora.
+2025-07-15 23:04:43,841 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 23:04:43,842 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 23:04:43,842 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:04:43,843 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:04:52,110 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 23:04:52,110 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:04:52,328 - app - INFO - Superadmin 'Cora' (ID: 1) logged in.
+2025-07-15 23:04:52,337 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 23:04:52,337 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:04:52,342 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 23:04:52,342 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:04:52,366 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('danger', 'Access denied.')]}
+2025-07-15 23:04:52,367 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:04:52,366 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('danger', 'Access denied.')]}
+2025-07-15 23:04:52,369 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:05:05,254 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', "Superadmin 'Cora' logged in.")], '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:05:05,256 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:05:05,310 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:05:05,311 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:05:05,311 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:05:05,317 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:05:07,837 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:05:07,839 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:05:07,888 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:05:07,889 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:05:07,889 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:05:07,890 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:05:23,868 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('danger', 'Access denied.')]}
+2025-07-15 23:05:23,869 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:05:24,104 - app - WARNING - Invalid superadmin username or password attempt for username: Cora.
+2025-07-15 23:05:24,122 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 23:05:24,123 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 23:05:24,123 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:05:24,124 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:05:46,972 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 23:05:46,972 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:05:47,183 - app - INFO - Superadmin 'Cora' (ID: 1) logged in.
+2025-07-15 23:05:47,188 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 23:05:47,188 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:05:47,193 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 23:05:47,193 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:05:47,208 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('danger', 'Access denied.')]}
+2025-07-15 23:05:47,209 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('danger', 'Access denied.')]}
+2025-07-15 23:05:47,209 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:05:47,209 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:05:59,863 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('danger', 'Access denied.')]}
+2025-07-15 23:05:59,863 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:06:00,090 - app - WARNING - Invalid superadmin username or password attempt for username: Cora.
+2025-07-15 23:06:00,108 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 23:06:00,108 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 23:06:00,109 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:06:00,109 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:06:41,322 - app - INFO - Logging configured successfully
+2025-07-15 23:06:41,332 - app - INFO - SQLAlchemy Database URI: sqlite:///C:\Users\coras\Documents\GitHub\pawfection_testing\grooming_business_v2.db
+2025-07-15 23:06:41,333 - app - INFO - [DEBUG] 'details_needed' column exists in 'appointment' table.
+2025-07-15 23:06:42,576 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 23:06:42,576 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:06:42,628 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 23:06:42,628 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:06:42,632 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 23:06:42,632 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:06:50,422 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 23:06:50,422 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:06:50,752 - app - INFO - Superadmin 'Cora' (ID: 1) logged in.
+2025-07-15 23:06:50,758 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', "Superadmin 'Cora' logged in.")], '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:06:50,773 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:08:58,816 - app - INFO - Logging configured successfully
+2025-07-15 23:08:58,839 - app - INFO - SQLAlchemy Database URI: sqlite:///C:\Users\coras\Documents\GitHub\pawfection_testing\grooming_business_v2.db
+2025-07-15 23:08:58,841 - app - INFO - [DEBUG] 'details_needed' column exists in 'appointment' table.
+2025-07-15 23:09:00,734 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 23:09:00,734 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:09:00,741 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('danger', 'Access denied.')]}
+2025-07-15 23:09:00,743 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:09:00,786 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 23:09:00,786 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:09:00,787 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 23:09:00,787 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:09:07,625 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 23:09:07,625 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:09:07,886 - app - INFO - Superadmin 'Cora' (ID: 1) logged in.
+2025-07-15 23:09:07,891 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', "Superadmin 'Cora' logged in.")], '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:09:07,929 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:09:07,993 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:09:07,996 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:09:07,996 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:09:07,997 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:09:32,200 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:09:32,204 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:09:32,204 - app - INFO - Superadmin viewed tools page.
+2025-07-15 23:09:32,241 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:09:32,241 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:09:32,250 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:09:32,251 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:28:08,906 - app - INFO - Logging configured successfully
+2025-07-15 23:28:08,915 - app - INFO - SQLAlchemy Database URI: sqlite:///C:\Users\coras\Documents\GitHub\pawfection_testing\grooming_business_v2.db
+2025-07-15 23:28:08,917 - app - INFO - [DEBUG] 'details_needed' column exists in 'appointment' table.
+2025-07-15 23:28:10,089 - app - INFO - Logging configured successfully
+2025-07-15 23:28:10,100 - app - INFO - SQLAlchemy Database URI: sqlite:///C:\Users\coras\Documents\GitHub\pawfection_testing\grooming_business_v2.db
+2025-07-15 23:28:10,103 - app - INFO - [DEBUG] 'details_needed' column exists in 'appointment' table.
+2025-07-15 23:30:04,233 - app - INFO - Logging configured successfully
+2025-07-15 23:30:04,241 - app - INFO - SQLAlchemy Database URI: sqlite:///C:\Users\coras\Documents\GitHub\pawfection_testing\grooming_business_v2.db
+2025-07-15 23:30:04,242 - app - INFO - [DEBUG] 'details_needed' column exists in 'appointment' table.
+2025-07-15 23:30:07,245 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-15 23:30:07,254 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:30:07,261 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('danger', 'Access denied.')]}
+2025-07-15 23:30:07,261 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:30:07,309 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 23:30:07,310 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:30:07,310 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 23:30:07,311 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:30:15,159 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-15 23:30:15,159 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-15 23:30:15,412 - app - INFO - Superadmin 'Cora' (ID: 1) logged in.
+2025-07-15 23:30:15,417 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', "Superadmin 'Cora' logged in.")], '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:30:15,470 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:30:15,551 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:30:15,553 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:30:15,558 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:30:15,560 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:31:10,433 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:31:10,435 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:31:10,435 - app - INFO - Superadmin viewed tools page.
+2025-07-15 23:31:10,479 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:31:10,480 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:31:10,481 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:31:10,483 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:31:18,989 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:31:18,989 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:31:20,191 - app - INFO - Superadmin viewed system health page.
+2025-07-15 23:31:20,242 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:31:20,244 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:31:20,244 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:31:20,245 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:31:43,670 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:31:43,671 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:31:49,270 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:31:49,272 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:32:09,553 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:32:09,556 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:32:35,252 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:32:35,253 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:32:37,909 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:32:37,911 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:32:42,530 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:32:42,531 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:32:46,822 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:32:46,824 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:32:47,835 - app - INFO - Superadmin viewed system health page.
+2025-07-15 23:32:47,863 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:32:47,864 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:32:47,873 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:32:47,874 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:32:53,682 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:32:53,683 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:32:54,693 - app - INFO - Superadmin viewed system health page.
+2025-07-15 23:32:54,724 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:32:54,726 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-15 23:32:54,728 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-15 23:32:54,730 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-16 11:25:58,547 - app - DEBUG - [SESSION DEBUG] Session at start of request: {}
+2025-07-16 11:25:58,548 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-16 11:25:58,553 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('danger', 'You do not have permission to access this page.')]}
+2025-07-16 11:25:58,553 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-16 11:25:58,598 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('danger', 'You do not have permission to access this page.')], '_fresh': False}
+2025-07-16 11:25:58,599 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-16 11:26:00,641 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('danger', 'You do not have permission to access this page.')], '_fresh': False}
+2025-07-16 11:26:00,641 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-16 11:26:00,654 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('danger', 'You do not have permission to access this page.'), ('warning', 'Please select your store first.')]}
+2025-07-16 11:26:00,654 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-16 11:26:00,717 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-16 11:26:00,717 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-16 11:26:00,728 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-16 11:26:00,729 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-16 11:26:04,840 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-16 11:26:04,840 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-16 11:26:04,960 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-16 11:26:04,961 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-16 11:26:05,249 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-16 11:26:05,250 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-16 11:26:17,297 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False}
+2025-07-16 11:26:17,298 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-16 11:26:17,506 - app - INFO - Superadmin 'Cora' (ID: 1) logged in.
+2025-07-16 11:26:17,511 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', "Superadmin 'Cora' logged in.")], '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-16 11:26:17,512 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-16 11:26:17,558 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-16 11:26:17,560 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-16 11:26:17,560 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-16 11:26:17,561 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-16 11:26:27,507 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-16 11:26:27,508 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-16 11:26:27,514 - app - ERROR - Error logging activity: (sqlite3.IntegrityError) NOT NULL constraint failed: activity_log.store_id
+[SQL: INSERT INTO activity_log (user_id, action, timestamp, details, store_id) VALUES (?, ?, ?, ?, ?)]
+[parameters: (1, 'Viewed Management page', '2025-07-16 15:26:27.508432', None, None)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+Traceback (most recent call last):
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1960, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\default.py", line 924, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.IntegrityError: NOT NULL constraint failed: activity_log.store_id
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\utils.py", line 94, in log_activity
+    db.session.commit()
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\scoping.py", line 597, in commit
+    return self._proxied.commit()
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 1972, in commit
+    trans.commit(_to_root=True)
+  File "<string>", line 2, in commit
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 1257, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 1232, in _prepare_impl
+    self.session.flush()
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 4296, in flush
+    self._flush(objects)
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 4431, in _flush
+    with util.safe_reraise():
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 4392, in _flush
+    flush_context.execute()
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1408, in execute
+    return meth(
+           ^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\sql\elements.py", line 513, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1630, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1839, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1979, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 2335, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1960, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\default.py", line 924, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: activity_log.store_id
+[SQL: INSERT INTO activity_log (user_id, action, timestamp, details, store_id) VALUES (?, ?, ?, ?, ?)]
+[parameters: (1, 'Viewed Management page', '2025-07-16 15:26:27.508432', None, None)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-07-16 11:26:27,699 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-16 11:26:27,701 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-16 11:26:29,130 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-16 11:26:29,131 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-16 11:26:29,131 - app - ERROR - Error logging activity: (sqlite3.IntegrityError) NOT NULL constraint failed: activity_log.store_id
+[SQL: INSERT INTO activity_log (user_id, action, timestamp, details, store_id) VALUES (?, ?, ?, ?, ?)]
+[parameters: (1, 'Viewed User Management page', '2025-07-16 15:26:29.131971', None, None)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+Traceback (most recent call last):
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1960, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\default.py", line 924, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.IntegrityError: NOT NULL constraint failed: activity_log.store_id
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\utils.py", line 94, in log_activity
+    db.session.commit()
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\scoping.py", line 597, in commit
+    return self._proxied.commit()
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 1972, in commit
+    trans.commit(_to_root=True)
+  File "<string>", line 2, in commit
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 1257, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 1232, in _prepare_impl
+    self.session.flush()
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 4296, in flush
+    self._flush(objects)
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 4431, in _flush
+    with util.safe_reraise():
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 4392, in _flush
+    flush_context.execute()
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1408, in execute
+    return meth(
+           ^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\sql\elements.py", line 513, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1630, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1839, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1979, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 2335, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1960, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\default.py", line 924, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: activity_log.store_id
+[SQL: INSERT INTO activity_log (user_id, action, timestamp, details, store_id) VALUES (?, ?, ?, ?, ?)]
+[parameters: (1, 'Viewed User Management page', '2025-07-16 15:26:29.131971', None, None)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-07-16 11:26:29,174 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-16 11:26:29,175 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-16 11:26:31,817 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-16 11:26:31,818 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-16 11:26:31,820 - app - ERROR - Error logging activity: (sqlite3.IntegrityError) NOT NULL constraint failed: activity_log.store_id
+[SQL: INSERT INTO activity_log (user_id, action, timestamp, details, store_id) VALUES (?, ?, ?, ?, ?)]
+[parameters: (1, 'Viewed Edit User page', '2025-07-16 15:26:31.820721', 'User ID: 1', None)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+Traceback (most recent call last):
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1960, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\default.py", line 924, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.IntegrityError: NOT NULL constraint failed: activity_log.store_id
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\utils.py", line 94, in log_activity
+    db.session.commit()
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\scoping.py", line 597, in commit
+    return self._proxied.commit()
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 1972, in commit
+    trans.commit(_to_root=True)
+  File "<string>", line 2, in commit
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 1257, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 1232, in _prepare_impl
+    self.session.flush()
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 4296, in flush
+    self._flush(objects)
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 4431, in _flush
+    with util.safe_reraise():
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 4392, in _flush
+    flush_context.execute()
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1408, in execute
+    return meth(
+           ^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\sql\elements.py", line 513, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1630, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1839, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1979, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 2335, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1960, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\default.py", line 924, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: activity_log.store_id
+[SQL: INSERT INTO activity_log (user_id, action, timestamp, details, store_id) VALUES (?, ?, ?, ?, ?)]
+[parameters: (1, 'Viewed Edit User page', '2025-07-16 15:26:31.820721', 'User ID: 1', None)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-07-16 11:26:31,870 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-16 11:26:31,870 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-16 11:27:08,448 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-16 11:27:08,449 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-16 11:27:08,475 - app - ERROR - Error updating user 1: name 'uuid' is not defined
+Traceback (most recent call last):
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\management\routes.py", line 594, in edit_user
+    uploaded_filename = _handle_user_picture_upload(user_to_edit, request.files)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\management\routes.py", line 136, in _handle_user_picture_upload
+    new_filename = secure_filename(f"user_{user_instance.id or 'temp'}_{uuid.uuid4().hex[:8]}.{ext}")
+                                                                        ^^^^
+NameError: name 'uuid' is not defined
+2025-07-16 11:27:08,516 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-16 11:27:08,517 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-16 11:27:43,824 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-16 11:27:43,826 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-16 11:27:43,826 - app - ERROR - Error logging activity: (sqlite3.IntegrityError) NOT NULL constraint failed: activity_log.store_id
+[SQL: INSERT INTO activity_log (user_id, action, timestamp, details, store_id) VALUES (?, ?, ?, ?, ?)]
+[parameters: (1, 'Viewed Directory page', '2025-07-16 15:27:43.826571', 'Store ID: None', None)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+Traceback (most recent call last):
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1960, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\default.py", line 924, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.IntegrityError: NOT NULL constraint failed: activity_log.store_id
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\coras\Documents\GitHub\pawfection_testing\utils.py", line 94, in log_activity
+    db.session.commit()
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\scoping.py", line 597, in commit
+    return self._proxied.commit()
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 1972, in commit
+    trans.commit(_to_root=True)
+  File "<string>", line 2, in commit
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 1257, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 1232, in _prepare_impl
+    self.session.flush()
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 4296, in flush
+    self._flush(objects)
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 4431, in _flush
+    with util.safe_reraise():
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\util\langhelpers.py", line 146, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\session.py", line 4392, in _flush
+    flush_context.execute()
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+             ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1408, in execute
+    return meth(
+           ^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\sql\elements.py", line 513, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1630, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1839, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1979, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 2335, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\base.py", line 1960, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\coras\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\sqlalchemy\engine\default.py", line 924, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: activity_log.store_id
+[SQL: INSERT INTO activity_log (user_id, action, timestamp, details, store_id) VALUES (?, ?, ?, ?, ?)]
+[parameters: (1, 'Viewed Directory page', '2025-07-16 15:27:43.826571', 'Store ID: None', None)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-07-16 11:27:43,871 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-16 11:27:43,872 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-16 11:27:47,174 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-16 11:27:47,175 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-16 11:27:47,177 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 1, username=Cora, is_subscribed=True
+2025-07-16 11:27:47,178 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=1, username=Cora, role=superadmin -- ALWAYS ALLOWED
+2025-07-16 11:27:47,178 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 1
+2025-07-16 11:27:47,182 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True, 'user_id': 1}
+2025-07-16 11:27:47,183 - app - DEBUG - Loaded user Cora (ID: 1, Store ID: None) from session.
+2025-07-16 11:27:47,188 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_permanent': True, 'is_superadmin': True}
+2025-07-16 11:27:47,188 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-16 11:27:47,193 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('warning', 'Please log in to access this page.')], '_permanent': True, 'is_superadmin': True}
+2025-07-16 11:27:47,193 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-16 11:27:47,199 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('warning', 'Please log in to access this page.'), ('warning', 'Please select your store first.')], '_permanent': True, 'is_superadmin': True}
+2025-07-16 11:27:47,200 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-16 11:27:47,233 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True}
+2025-07-16 11:27:47,235 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-16 11:27:47,236 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True}
+2025-07-16 11:27:47,236 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-16 11:27:59,080 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': False, '_permanent': True, 'is_superadmin': True}
+2025-07-16 11:27:59,081 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-16 11:27:59,318 - app - INFO - Store 'Fur Fabulous Pet Spa & Mobile' (ID: 2) logged in successfully. session['store_id'] set to 2.
+2025-07-16 11:27:59,324 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', "Store 'Fur Fabulous Pet Spa & Mobile' logged in. Please sign in as a user.")], '_fresh': False, '_permanent': True, 'is_superadmin': True, 'store_id': 2}
+2025-07-16 11:27:59,324 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-16 11:27:59,355 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_permanent': True, 'is_superadmin': True, 'store_id': 2}
+2025-07-16 11:27:59,355 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-16 11:27:59,357 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_permanent': True, 'is_superadmin': True, 'store_id': 2}
+2025-07-16 11:27:59,357 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-16 11:28:02,778 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_permanent': True, 'is_superadmin': True, 'store_id': 2}
+2025-07-16 11:28:02,778 - app - DEBUG - No user_id found in session. g.user set to None.
+2025-07-16 11:28:02,781 - app - INFO - [LOGIN DEBUG] Attempt login: username=Amanda, store_id=2, password_entered=Amanda123
+2025-07-16 11:28:02,782 - app - INFO - [LOGIN DEBUG] Found user: Amanda, id=3, store_id=2
+2025-07-16 11:28:02,989 - app - INFO - [LOGIN DEBUG] Password check passed: True
+2025-07-16 11:28:03,006 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_flashes': [('success', 'Welcome back, Amanda!')], '_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-16 11:28:03,007 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-16 11:28:03,007 - app - INFO - [SUBSCRIPTION] subscription_required: Checking access for user: 3, username=Amanda, is_subscribed=False
+2025-07-16 11:28:03,010 - app - INFO - [SUBSCRIPTION] is_user_subscribed: user_id=3, store_id=2, subscription_status=active, allowed=True
+2025-07-16 11:28:03,010 - app - INFO - [SUBSCRIPTION] subscription_required: ALLOWED for user: 3
+2025-07-16 11:28:05,075 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-16 11:28:05,077 - app - DEBUG - [SESSION DEBUG] Session at start of request: {'_fresh': True, '_id': 'c221d9ee593a7f258c94e3e1dff9dc5a197f52a0f6c7dde23d1804bc688e195ac8ea71385728dee9970d39fe9a19fec06f8d2003b802c4efea38f4b60e476148', '_permanent': True, '_user_id': '3', 'store_id': 2, 'user_id': 3}
+2025-07-16 11:28:05,077 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.
+2025-07-16 11:28:05,079 - app - DEBUG - Loaded user Amanda (ID: 3, Store ID: 2) from session.

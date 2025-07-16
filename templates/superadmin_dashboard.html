@@ -9,42 +9,477 @@
 <div class="form-wrapper">
     <div class="form-container">
         <h1 class="form-title" style="text-align:center;">Superadmin Dashboard</h1>
-        <div style="text-align:right; margin-bottom:1rem;">
-            <a href="{{ url_for('superadmin_tools') }}" class="button button-secondary">Superadmin Tools</a>
+        
+        <!-- Dashboard Summary Cards -->
+        <div class="dashboard-summary" style="display:flex; justify-content:space-between; margin-bottom:2rem;">
+            <div class="summary-card" style="flex:1; background-color:#f8f9fa; padding:1rem; border-radius:0.5rem; margin-right:0.5rem;">
+                <h3>Total Stores</h3>
+                <p class="big-number">{{ stores|length }}</p>
+            </div>
+            <div class="summary-card" style="flex:1; background-color:#f8f9fa; padding:1rem; border-radius:0.5rem; margin:0 0.5rem;">
+                <h3>Active Subscriptions</h3>
+                <p class="big-number">{{ active_subscriptions|default(0) }}</p>
+            </div>
+            <div class="summary-card" style="flex:1; background-color:#f8f9fa; padding:1rem; border-radius:0.5rem; margin-left:0.5rem;">
+                <h3>Expired Subscriptions</h3>
+                <p class="big-number">{{ expired_subscriptions|default(0) }}</p>
+            </div>
         </div>
-        <table class="table" style="width:100%; margin-bottom:2rem;">
-            <thead>
-                <tr>
-                    <th>Store Name</th>
-                    <th>Store Username</th>
-                    <th>Subscription Status</th>
-                    <th>Subscription Ends</th>
-                    <th>Admin Users</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for store in stores %}
-                <tr>
-                    <td>{{ store.name }}</td>
-                    <td>{{ store.username }}</td>
-                    <td>{{ store.subscription_status|capitalize }}</td>
-                    <td>{% if store.subscription_ends_at %}{{ store.subscription_ends_at.strftime('%Y-%m-%d') }}{% else %}-{% endif %}</td>
-                    <td>
-                        {% for admin in store_admins[store.id] %}
-                            {{ admin.username }}<br>
+        
+        <!-- Action Buttons -->
+        <div style="display:flex; justify-content:space-between; margin-bottom:1.5rem;">
+            <div>
+                <button type="button" class="button button-primary" data-toggle="modal" data-target="#createStoreModal">
+                    <i class="fas fa-plus"></i> Create New Store
+                </button>
+            </div>
+            <div>
+                <a href="{{ url_for('superadmin_tools') }}" class="button button-secondary">
+                    <i class="fas fa-tools"></i> Superadmin Tools
+                </a>
+            </div>
+        </div>
+        
+        <!-- Search and Filtering -->
+        <div style="margin-bottom:1.5rem; padding:1rem; background-color:#f8f9fa; border-radius:0.5rem;">
+            <h3>Search & Filter</h3>
+            <form id="filterForm" style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                <div style="flex:2;">
+                    <input type="text" id="searchInput" placeholder="Search stores..." class="form-control">
+                </div>
+                <div style="flex:1;">
+                    <select id="statusFilter" class="form-control">
+                        <option value="">All Statuses</option>
+                        <option value="active">Active</option>
+                        <option value="expired">Expired</option>
+                        <option value="trial">Trial</option>
+                    </select>
+                </div>
+                <div>
+                    <button type="button" id="applyFilters" class="button button-primary">Apply</button>
+                    <button type="button" id="resetFilters" class="button button-secondary">Reset</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Stores Table -->
+        <div class="table-responsive" style="margin-bottom:2rem;">
+            <table class="table" id="storesTable" style="width:100%;">
+                <thead>
+                    <tr>
+                        <th>Store Name</th>
+                        <th>Store Username</th>
+                        <th>Subscription Status</th>
+                        <th>Subscription Ends</th>
+                        <th>Admin Users</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for store in stores %}
+                    <tr data-store-id="{{ store.id }}" data-store-status="{{ store.subscription_status }}">
+                        <td>{{ store.name }}</td>
+                        <td>{{ store.username }}</td>
+                        <td>
+                            <span class="status-badge status-{{ store.subscription_status }}">{{ store.subscription_status|capitalize }}</span>
+                        </td>
+                        <td>{% if store.subscription_ends_at %}{{ store.subscription_ends_at.strftime('%Y-%m-%d') }}{% else %}-{% endif %}</td>
+                        <td>
+                            {% for admin in store_admins[store.id] %}
+                                {{ admin.username }}<br>
+                            {% else %}
+                                <span class="text-muted">None</span>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            <div class="button-group">
+                                <a href="{{ url_for('superadmin_impersonate', store_id=store.id) }}" class="button button-small button-primary" title="Impersonate Store">
+                                    <i class="fas fa-user-secret"></i>
+                                </a>
+                                <button class="button button-small button-secondary manage-store-btn" data-toggle="modal" 
+                                    data-target="#manageStoreModal" data-store-id="{{ store.id }}" data-store-name="{{ store.name }}"
+                                    title="Manage Store">
+                                    <i class="fas fa-cog"></i>
+                                </button>
+                                <button class="button button-small button-warning subscription-btn" data-toggle="modal"
+                                    data-target="#manageSubscriptionModal" data-store-id="{{ store.id }}" data-store-name="{{ store.name }}"
+                                    title="Manage Subscription">
+                                    <i class="fas fa-credit-card"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- User Activity Log -->
+        <div class="activity-log" style="margin-top:2rem;">
+            <h2>Recent Activity</h2>
+            <div class="table-responsive">
+                <table class="table" style="width:100%;">
+                    <thead>
+                        <tr>
+                            <th>Date/Time</th>
+                            <th>User</th>
+                            <th>Store</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if activity_logs %}
+                            {% for log in activity_logs %}
+                            <tr>
+                                <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>{{ log.username }}</td>
+                                <td>{{ log.store_name }}</td>
+                                <td>{{ log.action }}</td>
+                            </tr>
+                            {% endfor %}
                         {% else %}
-                            <span class="text-muted">None</span>
-                        {% endfor %}
-                    </td>
-                    <td>
-                        <a href="{{ url_for('superadmin_impersonate', store_id=store.id) }}" class="button button-small button-primary">Impersonate</a>
-                        <a href="#" class="button button-small button-secondary" disabled>Manage</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                            <tr>
+                                <td colspan="4" class="text-center">No recent activity</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
-{% endblock %} 
+
+<!-- Manage Store Modal -->
+<div class="modal fade" id="manageStoreModal" tabindex="-1" role="dialog" aria-labelledby="manageStoreModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="manageStoreModalLabel">Manage Store</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="editStoreForm" action="/superadmin/edit_store" method="POST">
+                    <input type="hidden" id="editStoreId" name="store_id" value="">
+                    
+                    <div class="form-group">
+                        <label for="editStoreName">Store Name</label>
+                        <input type="text" class="form-control" id="editStoreName" name="name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editStoreUsername">Username</label>
+                        <input type="text" class="form-control" id="editStoreUsername" name="username" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editStoreEmail">Email</label>
+                        <input type="email" class="form-control" id="editStoreEmail" name="email" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editStorePhone">Phone</label>
+                        <input type="tel" class="form-control" id="editStorePhone" name="phone">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editStoreAddress">Address</label>
+                        <textarea class="form-control" id="editStoreAddress" name="address" rows="3"></textarea>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h5>Admin Users</h5>
+                    <div id="adminUsersList">
+                        <!-- Admin users will be populated here via JavaScript -->
+                    </div>
+                    
+                    <button type="button" class="button button-secondary" id="addAdminUserBtn">
+                        <i class="fas fa-plus"></i> Add Admin User
+                    </button>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="button button-danger" id="deleteStoreBtn">Delete Store</button>
+                <button type="submit" form="editStoreForm" class="button button-primary">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Manage Subscription Modal -->
+<div class="modal fade" id="manageSubscriptionModal" tabindex="-1" role="dialog" aria-labelledby="manageSubscriptionModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="manageSubscriptionModalLabel">Manage Subscription</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="editSubscriptionForm" action="/superadmin/update_subscription" method="POST">
+                    <input type="hidden" id="subscriptionStoreId" name="store_id" value="">
+                    
+                    <div class="form-group">
+                        <label for="subscriptionStatus">Subscription Status</label>
+                        <select class="form-control" id="subscriptionStatus" name="subscription_status" required>
+                            <option value="active">Active</option>
+                            <option value="trial">Trial</option>
+                            <option value="expired">Expired</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="subscriptionEndDate">End Date</label>
+                        <input type="date" class="form-control" id="subscriptionEndDate" name="subscription_ends_at">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="subscriptionNotes">Notes</label>
+                        <textarea class="form-control" id="subscriptionNotes" name="notes" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-secondary" data-dismiss="modal">Close</button>
+                <button type="submit" form="editSubscriptionForm" class="button button-primary">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Store Modal -->
+<div class="modal fade" id="createStoreModal" tabindex="-1" role="dialog" aria-labelledby="createStoreModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createStoreModalLabel">Create New Store</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="createStoreForm" action="/superadmin/create_store" method="POST">
+                    <div class="form-group">
+                        <label for="newStoreName">Store Name *</label>
+                        <input type="text" class="form-control" id="newStoreName" name="name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="newStoreUsername">Username *</label>
+                        <input type="text" class="form-control" id="newStoreUsername" name="username" required>
+                        <small class="form-text text-muted">This will be used for login</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="newStorePassword">Password *</label>
+                        <input type="password" class="form-control" id="newStorePassword" name="password" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="newStoreEmail">Email *</label>
+                        <input type="email" class="form-control" id="newStoreEmail" name="email" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="newStorePhone">Phone</label>
+                        <input type="tel" class="form-control" id="newStorePhone" name="phone">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="newStoreAddress">Address</label>
+                        <textarea class="form-control" id="newStoreAddress" name="address" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="newStoreSubscription">Subscription Status</label>
+                        <select class="form-control" id="newStoreSubscription" name="subscription_status">
+                            <option value="trial">Trial</option>
+                            <option value="active">Active</option>
+                            <option value="expired">Expired</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="newStoreSubscriptionEnd">Subscription End Date</label>
+                        <input type="date" class="form-control" id="newStoreSubscriptionEnd" name="subscription_ends_at">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="button button-secondary" data-dismiss="modal">Cancel</button>
+                <button type="submit" form="createStoreForm" class="button button-primary">Create Store</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Dashboard Functionality -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle Manage Store button click
+        document.querySelectorAll('.manage-store-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const storeId = this.getAttribute('data-store-id');
+                const storeName = this.getAttribute('data-store-name');
+                
+                document.getElementById('editStoreId').value = storeId;
+                document.getElementById('manageStoreModalLabel').textContent = 'Manage Store: ' + storeName;
+                
+                // Here you would make an AJAX call to get store details and populate the form
+                // For now, we'll just use placeholder values
+                document.getElementById('editStoreName').value = storeName;
+                // Fetch and populate other store details here
+            });
+        });
+        
+        // Handle Subscription button click
+        document.querySelectorAll('.subscription-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const storeId = this.getAttribute('data-store-id');
+                const storeName = this.getAttribute('data-store-name');
+                
+                document.getElementById('subscriptionStoreId').value = storeId;
+                document.getElementById('manageSubscriptionModalLabel').textContent = 'Manage Subscription: ' + storeName;
+                
+                // Here you would make an AJAX call to get subscription details and populate the form
+            });
+        });
+        
+        // Search and filter functionality
+        document.getElementById('applyFilters').addEventListener('click', function() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            
+            const rows = document.querySelectorAll('#storesTable tbody tr');
+            
+            rows.forEach(row => {
+                const storeName = row.children[0].textContent.toLowerCase();
+                const storeUsername = row.children[1].textContent.toLowerCase();
+                const storeStatus = row.getAttribute('data-store-status');
+                
+                const matchesSearch = searchTerm === '' || 
+                                       storeName.includes(searchTerm) || 
+                                       storeUsername.includes(searchTerm);
+                                       
+                const matchesStatus = statusFilter === '' || storeStatus === statusFilter;
+                
+                if (matchesSearch && matchesStatus) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+        
+        // Reset filters
+        document.getElementById('resetFilters').addEventListener('click', function() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('statusFilter').value = '';
+            
+            const rows = document.querySelectorAll('#storesTable tbody tr');
+            rows.forEach(row => {
+                row.style.display = '';
+            });
+        });
+        
+        // Add Admin User button
+        document.getElementById('addAdminUserBtn').addEventListener('click', function() {
+            const adminsList = document.getElementById('adminUsersList');
+            const adminIndex = adminsList.children.length;
+            
+            const adminUserDiv = document.createElement('div');
+            adminUserDiv.className = 'admin-user-item d-flex align-items-center mb-2';
+            adminUserDiv.innerHTML = `
+                <div class="flex-grow-1">
+                    <div class="form-row">
+                        <div class="col">
+                            <input type="text" class="form-control" name="admin_username[]" placeholder="Username" required>
+                        </div>
+                        <div class="col">
+                            <input type="password" class="form-control" name="admin_password[]" placeholder="Password" required>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-danger ml-2 remove-admin-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            adminsList.appendChild(adminUserDiv);
+            
+            // Add event listener to the remove button
+            adminUserDiv.querySelector('.remove-admin-btn').addEventListener('click', function() {
+                adminUserDiv.remove();
+            });
+        });
+        
+        // Delete store confirmation
+        document.getElementById('deleteStoreBtn').addEventListener('click', function() {
+            const storeId = document.getElementById('editStoreId').value;
+            const storeName = document.getElementById('editStoreName').value;
+            
+            if (confirm(`Are you sure you want to delete the store "${storeName}"? This action cannot be undone.`)) {
+                // Here you would submit to a delete endpoint
+                // For now, we'll just show an alert
+                alert('Delete functionality will be implemented here');
+            }
+        });
+    });
+</script>
+
+<!-- Custom CSS for Dashboard -->
+<style>
+    .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.875rem;
+        font-weight: bold;
+    }
+    
+    .status-active {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .status-trial {
+        background-color: #17a2b8;
+        color: white;
+    }
+    
+    .status-expired {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .big-number {
+        font-size: 2rem;
+        font-weight: bold;
+        margin: 0;
+    }
+    
+    .button-group {
+        display: flex;
+        gap: 0.25rem;
+    }
+    
+    .table-responsive {
+        overflow-x: auto;
+    }
+    
+    /* Modal styles */
+    .modal-content {
+        border-radius: 0.5rem;
+    }
+    
+    .modal-header {
+        background-color: #f8f9fa;
+        border-top-left-radius: 0.5rem;
+        border-top-right-radius: 0.5rem;
+    }
+</style>
+{% endblock %}

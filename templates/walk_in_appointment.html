@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block title %}Walk In Appointment{% endblock %}
+
+{% block head %}
+<style>
+  .form-section {
+    margin-bottom: 2rem;
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  .form-full-width {
+    grid-column: span 2;
+  }
+  @media (max-width: 768px) {
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+    .form-full-width {
+      grid-column: span 1;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container checkout-container">
+  <div class="checkout-card" style="max-width:700px;margin:auto;">
+    <h2>Walk In Appointment</h2>
+    <p>Enter customer and dog information to create a walk-in appointment.</p>
+
+    <form id="walk-in-form" method="POST" action="{{ url_for('appointments.walk_in_appointment') }}">
+      <div class="form-section">
+        <h3>Customer Information</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="customer_name">Customer Name *</label>
+            <input type="text" id="customer_name" name="customer_name" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label for="phone_number">Phone Number *</label>
+            <input type="tel" id="phone_number" name="phone_number" class="form-input" required>
+          </div>
+          <div class="form-group form-full-width">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" class="form-input">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>Dog Information</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="dog_name">Dog Name *</label>
+            <input type="text" id="dog_name" name="dog_name" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label for="breed">Breed</label>
+            <input type="text" id="breed" name="breed" class="form-input">
+          </div>
+          <div class="form-group">
+            <label for="age">Age (Years)</label>
+            <input type="number" id="age" name="age" min="0" step="0.1" class="form-input">
+          </div>
+          <div class="form-group">
+            <label for="weight">Weight (lbs)</label>
+            <input type="number" id="weight" name="weight" min="0" step="0.1" class="form-input">
+          </div>
+          <div class="form-group form-full-width">
+            <label for="special_notes">Special Notes</label>
+            <textarea id="special_notes" name="special_notes" class="form-input" rows="3"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>Requested Services</h3>
+        <div class="form-group">
+          <textarea id="requested_services" name="requested_services" class="form-input" rows="2" placeholder="Enter requested services"></textarea>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top:2rem;">
+        <button type="submit" class="button button-primary" style="width:100%;">Continue to Checkout</button>
+      </div>
+      <div class="form-group">
+        <a href="{{ url_for('appointments.checkout_start') }}" class="button button-secondary" style="width:100%;">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

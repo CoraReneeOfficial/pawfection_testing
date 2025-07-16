@@ -1,0 +1,455 @@
+{% extends 'base.html' %}
+
+{% block title %}Data Export - Superadmin Tools{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+    .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+    .card {
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    .card-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+    }
+    .card-description {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-bottom: 1.25rem;
+    }
+    .card-footer {
+        margin-top: 1rem;
+        text-align: right;
+    }
+    .tab-container {
+        margin-top: 1.5rem;
+    }
+    .tab-buttons {
+        display: flex;
+        border-bottom: 1px solid #dee2e6;
+        margin-bottom: 1.5rem;
+    }
+    .tab-button {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 500;
+        color: #495057;
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        cursor: pointer;
+    }
+    .tab-button.active {
+        color: #4c6ef5;
+        border-bottom-color: #4c6ef5;
+    }
+    .tab-content {
+        display: none;
+    }
+    .tab-content.active {
+        display: block;
+    }
+    .export-option {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+    }
+    .export-option-label {
+        margin-bottom: 0;
+        cursor: pointer;
+    }
+    .export-form {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-top: 1.5rem;
+    }
+    .form-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .form-group {
+        flex: 1;
+        min-width: 200px;
+    }
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+    .form-control {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+    }
+    .history-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .history-table th, .history-table td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .history-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+    }
+    .history-table tr:hover {
+        background-color: #f8f9fa;
+    }
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    .badge-success {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    .badge-warning {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    .badge-danger {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    .badge-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    .filter-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .filter-control {
+        min-width: 150px;
+    }
+    .section {
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .section-title {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid #dee2e6;
+        padding-bottom: 0.75rem;
+    }
+    .section-title h2 {
+        margin: 0;
+        font-size: 1.5rem;
+    }
+    .section-icon {
+        background-color: #f0f4ff;
+        color: #4c6ef5;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.75rem;
+    }
+    .data-format-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        margin-right: 0.5rem;
+        font-size: 0.8rem;
+    }
+    .csv-icon {
+        background-color: #28a745;
+        color: white;
+    }
+    .json-icon {
+        background-color: #fd7e14;
+        color: white;
+    }
+    .excel-icon {
+        background-color: #20c997;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="logo-image-login">
+    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pawfection Grooming Solutions Logo" style="max-width: 350px; margin-bottom: 1rem; align-items:center;">
+</div>
+<div class="form-wrapper" style="max-width: 1200px;">
+    <div class="form-container" style="padding: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h1 class="form-title">Data Export</h1>
+            <div>
+                <a href="/superadmin/tools" class="button button-secondary">Back to Tools</a>
+            </div>
+        </div>
+        
+        <div class="tab-container">
+            <div class="tab-buttons">
+                <button class="tab-button active" data-tab="export-tab">Export Data</button>
+                <button class="tab-button" data-tab="history-tab">Export History</button>
+            </div>
+            
+            <!-- Export Tab -->
+            <div class="tab-content active" id="export-tab">
+                <div class="section">
+                    <div class="section-title">
+                        <div class="section-icon"><i class="fas fa-file-export"></i></div>
+                        <h2>Create New Export</h2>
+                    </div>
+                    
+                    <form action="/superadmin/generate-export" method="POST" class="export-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="data_table" class="form-label">Select Data to Export</label>
+                                <select id="data_table" name="data_table" class="form-control" required>
+                                    <option value="">-- Select Data Table --</option>
+                                    {% for table in export_tables %}
+                                    <option value="{{ table.name }}">{{ table.label }} - {{ table.description }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="export_format" class="form-label">Export Format</label>
+                                <select id="export_format" name="export_format" class="form-control" required>
+                                    <option value="">-- Select Format --</option>
+                                    {% for format in export_formats %}
+                                    <option value="{{ format }}">{{ format|upper }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="date_from" class="form-label">Date Range (Start)</label>
+                                <input type="date" id="date_from" name="date_from" class="form-control">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="date_to" class="form-label">Date Range (End)</label>
+                                <input type="date" id="date_to" name="date_to" class="form-control">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Additional Options</label>
+                            <div class="export-option">
+                                <input type="checkbox" id="include_headers" name="include_headers" checked>
+                                <label for="include_headers" class="export-option-label">Include Column Headers</label>
+                            </div>
+                            <div class="export-option">
+                                <input type="checkbox" id="include_deleted" name="include_deleted">
+                                <label for="include_deleted" class="export-option-label">Include Deleted/Inactive Records</label>
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: right;">
+                            <button type="submit" class="button button-primary">
+                                <i class="fas fa-file-export"></i> Generate Export
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">
+                        <div class="section-icon"><i class="fas fa-table"></i></div>
+                        <h2>Available Data Tables</h2>
+                    </div>
+                    
+                    <div class="card-grid">
+                        {% for table in export_tables %}
+                        <div class="card">
+                            <h3 class="card-title">{{ table.label }}</h3>
+                            <p class="card-description">{{ table.description }}</p>
+                            <div class="card-footer">
+                                <button class="button button-primary button-sm" onclick="selectTable('{{ table.name }}')">
+                                    <i class="fas fa-download"></i> Select
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- History Tab -->
+            <div class="tab-content" id="history-tab">
+                <div class="section">
+                    <div class="section-title">
+                        <div class="section-icon"><i class="fas fa-history"></i></div>
+                        <h2>Export History</h2>
+                    </div>
+                    
+                    <div class="filter-container">
+                        <div class="form-group">
+                            <label for="filter_table" class="form-label">Filter by Table</label>
+                            <select id="filter_table" class="form-control filter-control">
+                                <option value="">All Tables</option>
+                                {% for table in export_tables %}
+                                <option value="{{ table.name }}">{{ table.label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="filter_format" class="form-label">Filter by Format</label>
+                            <select id="filter_format" class="form-control filter-control">
+                                <option value="">All Formats</option>
+                                {% for format in export_formats %}
+                                <option value="{{ format }}">{{ format|upper }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="table-container" style="overflow-x: auto;">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Table</th>
+                                    <th>Format</th>
+                                    <th>Date & Time</th>
+                                    <th>Status</th>
+                                    <th>File Size</th>
+                                    <th>Exported By</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if recent_exports %}
+                                    {% for export in recent_exports %}
+                                    <tr>
+                                        <td>{{ export.id }}</td>
+                                        <td>{{ export.table|title }}</td>
+                                        <td>
+                                            <span class="data-format-icon {{ export.format }}-icon">{{ export.format|upper }}</span>
+                                        </td>
+                                        <td>{{ export.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                        <td>
+                                            <span class="badge badge-{{ 'success' if export.status == 'completed' else 'warning' }}">
+                                                {{ export.status|title }}
+                                            </span>
+                                        </td>
+                                        <td>{{ export.file_size }}</td>
+                                        <td>{{ export.exported_by }}</td>
+                                        <td>
+                                            <div class="action-buttons">
+                                                <a href="#" class="button button-primary button-sm" title="Download Export">
+                                                    <i class="fas fa-download"></i> Download
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="8" style="text-align: center; padding: 2rem;">
+                                        <i class="fas fa-info-circle"></i> No export history found
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    // Tab switching functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const tabButtons = document.querySelectorAll('.tab-button');
+        
+        tabButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Remove active class from all buttons and contents
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                
+                // Add active class to clicked button and corresponding content
+                this.classList.add('active');
+                const tabId = this.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+    });
+    
+    // Function to select a table for export
+    function selectTable(tableName) {
+        document.getElementById('data_table').value = tableName;
+        document.querySelector('.tab-button[data-tab="export-tab"]').click();
+        document.querySelector('.export-form').scrollIntoView({behavior: 'smooth'});
+    }
+    
+    // Filter functionality for export history
+    document.addEventListener('DOMContentLoaded', function() {
+        const filterTable = document.getElementById('filter_table');
+        const filterFormat = document.getElementById('filter_format');
+        
+        function filterHistory() {
+            const tableFilter = filterTable.value;
+            const formatFilter = filterFormat.value;
+            
+            const rows = document.querySelectorAll('.history-table tbody tr');
+            
+            rows.forEach(row => {
+                const tableCell = row.cells[1].textContent.toLowerCase();
+                const formatCell = row.cells[2].textContent.toLowerCase();
+                
+                const tableMatch = !tableFilter || tableCell.includes(tableFilter.toLowerCase());
+                const formatMatch = !formatFilter || formatCell.includes(formatFilter.toLowerCase());
+                
+                if (tableMatch && formatMatch) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+        
+        filterTable.addEventListener('change', filterHistory);
+        filterFormat.addEventListener('change', filterHistory);
+    });
+</script>
+{% endblock %}

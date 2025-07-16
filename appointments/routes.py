@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, g, jsonify, current_app, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, g, jsonify, current_app, session, abort
 from models import Appointment, Dog, Owner, User, ActivityLog, Store, Service
 from appointments.details_needed_utils import appointment_needs_details
 from extensions import db
@@ -908,247 +908,327 @@ from appointments.google_calendar_webhook import webhook_bp as google_calendar_w
 from flask import session as flask_session
 import json
 
-@appointments_bp.route('/checkout', methods=['GET'])
+@appointments_bp.route('/select_checkout')
 @subscription_required
 def checkout_start():
-    """
-    Step 1: Show invoice builder for a selected appointment.
-    """
-    store_id = session.get('store_id')
-    appointments = Appointment.query.options(
-        db.joinedload(Appointment.dog).joinedload(Dog.owner),
-        db.joinedload(Appointment.groomer)
-    ).filter(Appointment.status == 'Scheduled', Appointment.store_id == store_id).order_by(Appointment.appointment_datetime.asc()).all()
-    common_addons = Service.query.filter_by(store_id=store_id, item_type='addon').all()
-    # For demo: fallback if no add-ons
-    if not common_addons:
-        common_addons = [Service(name='Nail Grinding', base_price=15.0), Service(name='Teeth Brushing', base_price=10.0)]
-    # If no appointment_id is specified, show a selection screen
+    """Step 1: Show invoice builder for a selected appointment."""
+    if 'store_id' not in session:
+        return redirect(url_for('auth.login'))
+        
+    store_id = session['store_id']
+    
+    # Get all scheduled appointments for this store that can be checked out
+    appointments = Appointment.query.filter_by(
+        store_id=store_id,
+        status='scheduled'
+    ).all()
+    
     return render_template('select_checkout_appointment.html', appointments=appointments)
 
-@appointments_bp.route('/checkout/invoice/<int:appointment_id>', methods=['GET', 'POST'])
+
+@appointments_bp.route('/walk_in_appointment', methods=['GET', 'POST'])
 @subscription_required
-def invoice_checkout(appointment_id):
-    """
-    Step 1: Invoice builder for a specific appointment. POST submits invoice data and redirects to tip modal.
-    """
-    store_id = session.get('store_id')
-    appt = Appointment.query.options(db.joinedload(Appointment.dog).joinedload(Dog.owner)).filter_by(id=appointment_id, store_id=store_id).first_or_404()
-    owner = appt.dog.owner if appt.dog else None
-    customer_name = owner.name if owner else ''
-    pet_name = appt.dog.name if appt.dog else ''
-    # Load all services and fees for this store
-    services = Service.query.filter_by(store_id=store_id, item_type='service').all()
-    fees = Service.query.filter_by(store_id=store_id, item_type='fee').all()
+def walk_in_appointment():
+    """Handle walk-in appointment creation and checkout."""
+    if 'store_id' not in session:
+        return redirect(url_for('auth.login'))
+        
+    store_id = session['store_id']
+    
     if request.method == 'POST':
-        # Receive invoice line items from form (as JSON string)
-        line_items_json = request.form.get('line_items')
+        # Get form data
+        customer_name = sanitize_text_input(request.form.get('customer_name', ''))
+        phone_number = sanitize_text_input(request.form.get('phone_number', ''))
+        email = sanitize_text_input(request.form.get('email', ''))
+        dog_name = sanitize_text_input(request.form.get('dog_name', ''))
+        breed = sanitize_text_input(request.form.get('breed', ''))
+        age = request.form.get('age', None)
+        if age:
+            try:
+                age = float(age)
+            except ValueError:
+                age = None
+        weight = request.form.get('weight', None)
+        if weight:
+            try:
+                weight = float(weight)
+            except ValueError:
+                weight = None
+        special_notes = sanitize_text_input(request.form.get('special_notes', ''))
+        requested_services = sanitize_text_input(request.form.get('requested_services', ''))
+        
+        # Check if owner exists by phone number
+        owner = Owner.query.filter_by(phone=phone_number, store_id=store_id).first()
+        
+        # Create new owner if not exists
+        if not owner:
+            owner = Owner(
+                name=customer_name,
+                phone=phone_number,
+                email=email,
+                store_id=store_id
+            )
+            db.session.add(owner)
+            db.session.flush()  # Get the owner ID without committing
+            
+            log_activity(f"Created new walk-in customer: {customer_name}")
+        
+        # Check if dog exists for this owner
+        dog = Dog.query.filter_by(name=dog_name, owner_id=owner.id).first()
+        
+        # Create new dog if not exists
+        if not dog:
+            dog = Dog(
+                name=dog_name,
+                breed=breed,
+                age=age,
+                weight=weight,
+                notes=special_notes,
+                owner_id=owner.id,
+                store_id=store_id
+            )
+            db.session.add(dog)
+            db.session.flush()  # Get the dog ID without committing
+            
+            log_activity(f"Created new dog: {dog_name} for customer: {customer_name}")
+        
+        # Create walk-in appointment
+        now = datetime.datetime.now(tz=BUSINESS_TIMEZONE)
+        appointment = Appointment(
+            dog_id=dog.id,
+            appointment_datetime=now,
+            status='in-progress',  # Directly set to in-progress since it's a walk-in
+            requested_services_text=requested_services,
+            store_id=store_id,
+            check_in_time=now,
+            walk_in=True
+        )
+        db.session.add(appointment)
+        db.session.commit()
+        
+        log_activity(f"Created walk-in appointment for {dog_name}")
+        
+        # Redirect to invoice screen
+        return redirect(url_for('appointments.invoice_checkout', appointment_id=appointment.id))
+    
+    return render_template('walk_in_appointment.html')
+
+
+@appointments_bp.route('/deposit_payment', methods=['GET', 'POST'])
+@subscription_required
+def deposit_payment():
+    """Handle deposit payments for upcoming appointments."""
+    if 'store_id' not in session:
+        return redirect(url_for('auth.login'))
+        
+    store_id = session['store_id']
+    
+    if request.method == 'POST':
+        # Get form data
+        deposit_amount = request.form.get('deposit_amount', 0)
         try:
-            line_items = json.loads(line_items_json) if line_items_json else []
-        except Exception:
-            line_items = []
-        db.session.expire_all()  # Force reload of all ORM objects from DB
-        store = Store.query.get(store_id)
-        tax_enabled = getattr(store, 'tax_enabled', True)
-        current_app.logger.info(f"[CHECKOUT] Store {store_id} tax_enabled={tax_enabled}")
-        subtotal = sum(float(item['price']) for item in line_items)
-        taxes = round(subtotal * 0.07, 2) if tax_enabled else 0.0
-        total = round(subtotal + taxes, 2)
-        # Save invoice data to session for next step
-        flask_session['checkout_invoice'] = {
-            'appointment_id': appointment_id,
-            'customer_name': customer_name,
-            'pet_name': pet_name,
-            'line_items': line_items,
-            'subtotal': subtotal,
-            'taxes': taxes,
-            'total': total,
-            'tax_enabled': tax_enabled
-        }
-        # After processing the invoice, redirect to the tip modal
-        return redirect(url_for('appointments.tip_modal', appointment_id=appointment_id))
-    # GET: show invoice builder
-    store = Store.query.get(store_id)
-    tax_enabled = getattr(store, 'tax_enabled', True)
-    subtotal = 0
-    taxes = round(subtotal * 0.07, 2) if tax_enabled else 0.0
-    total = round(subtotal + taxes, 2)
-    return render_template('invoice_screen.html',
-        appointment_id=appointment_id,
-        customer_name=customer_name,
-        pet_name=pet_name,
-        line_items=[],
-        subtotal=subtotal,
-        taxes=taxes,
-        total=total,
-        tax_rate=0.07,
-        services=services,
-        fees=fees,
-        tax_enabled=tax_enabled
-    )
+            deposit_amount = float(deposit_amount)
+        except ValueError:
+            flash('Invalid deposit amount', 'error')
+            return redirect(url_for('appointments.deposit_payment'))
+            
+        if deposit_amount <= 0:
+            flash('Deposit amount must be greater than zero', 'error')
+            return redirect(url_for('appointments.deposit_payment'))
+        
+        # If we have an appointment ID, use that
+        appointment_id = request.form.get('appointment_id')
+        if appointment_id:
+            appointment = Appointment.query.filter_by(
+                id=appointment_id,
+                store_id=store_id
+            ).first()
+            
+            if not appointment:
+                flash('Invalid appointment selected', 'error')
+                return redirect(url_for('appointments.deposit_payment'))
+                
+            # Prepare session data for the receipt page
+            # We'll bypass the normal checkout flow and go straight to receipt
+            session['checkout_data'] = {
+                'appointment_id': appointment.id,
+                'is_deposit': True,
+                'deposit_amount': deposit_amount,
+                'customer_name': appointment.dog.owner.name if appointment.dog and appointment.dog.owner else 'Customer',
+                'pet_name': appointment.dog.name if appointment.dog else 'Pet',
+                'line_items': json.dumps([{
+                    'name': 'Deposit for future appointment',
+                    'price': deposit_amount
+                }]),
+                'subtotal': deposit_amount,
+                'tip_amount': 0,
+                'taxes': 0,
+                'total': deposit_amount,
+                'payment_method': 'pending'  # Will be set in payment_selection
+            }
+            
+            # Redirect to payment selection
+            return redirect(url_for('appointments.payment_selection', appointment_id=appointment.id))
+        else:
+            # Manual entry mode
+            customer_name = sanitize_text_input(request.form.get('manual_customer_name', 'Customer'))
+            phone = sanitize_text_input(request.form.get('manual_phone', ''))
+            notes = sanitize_text_input(request.form.get('manual_notes', ''))
+            
+            # Create a temporary appointment just for this receipt
+            # We'll mark it with a special status to indicate it's just a deposit record
+            now = datetime.datetime.now(tz=BUSINESS_TIMEZONE)
+            
+            # Check if owner exists
+            owner = None
+            if phone:
+                owner = Owner.query.filter_by(phone=phone, store_id=store_id).first()
+                
+            if not owner and customer_name:
+                # Create a new owner
+                owner = Owner(
+                    name=customer_name,
+                    phone=phone,
+                    store_id=store_id
+                )
+                db.session.add(owner)
+                db.session.flush()
+                
+            # Create a generic dog record if owner exists but no dog found
+            dog = None
+            if owner:
+                dog = Dog.query.filter_by(owner_id=owner.id).first()
+                
+                if not dog:
+                    dog = Dog(
+                        name='Pet',
+                        owner_id=owner.id,
+                        store_id=store_id
+                    )
+                    db.session.add(dog)
+                    db.session.flush()
+            
+            # Create deposit record as a special type of appointment
+            deposit_record = Appointment(
+                dog_id=dog.id if dog else None,
+                appointment_datetime=now,
+                status='deposit-only',  # Special status
+                notes=f"Deposit payment: {notes}",
+                store_id=store_id,
+                is_deposit_record=True  # Add this field to your model
+            )
+            db.session.add(deposit_record)
+            db.session.commit()
+            
+            # Prepare session data for receipt
+            session['checkout_data'] = {
+                'appointment_id': deposit_record.id,
+                'is_deposit': True,
+                'deposit_amount': deposit_amount,
+                'customer_name': customer_name,
+                'pet_name': 'N/A',
+                'line_items': json.dumps([{
+                    'name': 'Deposit payment',
+                    'price': deposit_amount
+                }]),
+                'subtotal': deposit_amount,
+                'tip_amount': 0,
+                'taxes': 0,
+                'total': deposit_amount,
+                'payment_method': 'pending'  # Will be set in payment_selection
+            }
+            
+            # Redirect to payment selection
+            return redirect(url_for('appointments.payment_selection', appointment_id=deposit_record.id))
+    
+    return render_template('deposit_payment.html')
 
-@appointments_bp.route('/checkout/tip/<int:appointment_id>', methods=['GET', 'POST'])
-@subscription_required
-def tip_modal(appointment_id):
-    """
-    Step 2: Customer tip modal. POST submits tip and redirects to payment selection.
-    """
-    invoice = flask_session.get('checkout_invoice')
-    if not invoice or invoice.get('appointment_id') != appointment_id:
-        flash('Missing invoice data. Please start checkout again.', 'danger')
-        return redirect(url_for('appointments.invoice_checkout', appointment_id=appointment_id))
-    initial_total = invoice['total']
-    tax_enabled = invoice.get('tax_enabled', True)
-    if request.method == 'POST':
-        tip_amount = float(request.form.get('tip_amount', 0))
-        final_total = float(request.form.get('final_total', initial_total))
-        flask_session['checkout_tip'] = {
-            'tip_amount': tip_amount,
-            'final_total': final_total
-        }
-        return redirect(url_for('appointments.payment_selection', appointment_id=appointment_id))
-    subtotal = invoice.get('subtotal', initial_total)
-    taxes = invoice.get('taxes', 0)
-    return render_template('customer_tip_modal.html',
-        appointment_id=appointment_id,
-        initial_total=initial_total,
-        tax_enabled=tax_enabled,
-        subtotal=subtotal,
-        taxes=taxes
-    )
-
-@appointments_bp.route('/checkout/payment/<int:appointment_id>', methods=['GET', 'POST'])
+@appointments_bp.route('/payment_selection/<int:appointment_id>', methods=['GET', 'POST'])
 @subscription_required
 def payment_selection(appointment_id):
-    """
-    Step 3: Payment selection. POST records payment method and redirects to preview receipt.
-    """
-    invoice = flask_session.get('checkout_invoice')
-    tip = flask_session.get('checkout_tip')
-    if not invoice or not tip or invoice.get('appointment_id') != appointment_id:
-        flash('Missing checkout data. Please start checkout again.', 'danger')
-        return redirect(url_for('appointments.invoice_checkout', appointment_id=appointment_id))
-    final_total = tip['final_total']
-    tip_amount = tip['tip_amount']
+    """Step 3: Payment selection. POST records payment method and redirects to preview receipt."""
+    if 'store_id' not in session or 'checkout_data' not in session:
+        return redirect(url_for('appointments.checkout_start'))
+        
+    store_id = session['store_id']
+    checkout_data = session['checkout_data']
+    
+    # Validate that the appointment belongs to this store
+    appointment = Appointment.query.filter_by(
+        id=appointment_id,
+        store_id=store_id
+    ).first()
+    
+    if not appointment:
+        abort(404)
+    
     if request.method == 'POST':
         payment_method = request.form.get('payment_method')
-        flask_session['checkout_payment'] = {
-            'payment_method': payment_method
-        }
+        checkout_data['payment_method'] = payment_method
+        session['checkout_data'] = checkout_data
         return redirect(url_for('appointments.preview_receipt', appointment_id=appointment_id))
-    return render_template('payment_selection_screen.html',
-        appointment_id=appointment_id,
-        final_total=final_total,
-        tip_amount=tip_amount
-    )
+        
+    # Check if this is a deposit payment
+    is_deposit = checkout_data.get('is_deposit', False)
+    
+    return render_template('payment_selection_screen.html', 
+                          customer_name=checkout_data.get('customer_name'),
+                          pet_name=checkout_data.get('pet_name'),
+                          total=checkout_data.get('total'),
+                          is_deposit=is_deposit)
 
-@appointments_bp.route('/checkout/preview_receipt/<int:appointment_id>', methods=['GET'])
+@appointments_bp.route('/preview_receipt/<int:appointment_id>', methods=['GET'])
 @subscription_required
 def preview_receipt(appointment_id):
-    """
-    Step 4: Show preview receipt with print/email/finalize options.
-    """
-    appt = Appointment.query.options(db.joinedload(Appointment.dog).joinedload(Dog.owner)).get_or_404(appointment_id)
-    owner = appt.dog.owner if appt.dog else None
-    customer_email = owner.email if owner else ''
-    customer_phone = owner.phone_number if owner else ''
-    # Gather receipt context from session
-    invoice = flask_session.get('checkout_invoice', {})
-    tip = flask_session.get('checkout_tip', {})
-    store = Store.query.get(appt.store_id)
-    receipt_context = dict(
-        appointment_id=appointment_id,
-        customer_email=customer_email,
-        customer_phone=customer_phone,
-        store_name=store.name if store else '',
-        store_email=getattr(store, 'email', ''),
-        store_phone=getattr(store, 'phone_number', ''),
-        date=appt.appointment_datetime.strftime('%B %d, %Y') if appt.appointment_datetime else '',
-        customer_name=owner.name if owner else '',
-        pet_name=appt.dog.name if appt.dog else '',
-        line_items=invoice.get('line_items', []),
-        subtotal=invoice.get('subtotal', 0),
-        taxes=invoice.get('taxes', 0),
-        tip=tip.get('tip_amount', 0),
-        total=tip.get('final_total', invoice.get('total', 0))
-    )
-    response = render_template('receipt_screen.html', **receipt_context)
-    # Do NOT clear session here; only clear after finalization.
-    return response
+    """Step 4: Show preview receipt with print/email/finalize options."""
+    if 'store_id' not in session or 'checkout_data' not in session:
+        return redirect(url_for('appointments.checkout_start'))
+        
+    store_id = session['store_id']
+    checkout_data = session['checkout_data']
+    
+    # Validate that the appointment belongs to this store
+    appointment = Appointment.query.filter_by(
+        id=appointment_id,
+        store_id=store_id
+    ).first()
+    
+    if not appointment:
+        abort(404)
+    
+    # Get user name for receipt
+    user = None
+    if 'user_id' in session:
+        user = User.query.filter_by(id=session['user_id']).first()
+    
+    # Get store info for the receipt
+    store = Store.query.filter_by(id=store_id).first()
+    
+    # Set receipt metadata
+    checkout_data['receipt_date'] = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    checkout_data['employee_name'] = user.username if user else 'Staff'
+    checkout_data['store_name'] = store.name if store else 'Pet Salon'
+    checkout_data['receipt_id'] = f"RCP-{store_id}-{appointment_id}-{int(datetime.datetime.now(timezone.utc).timestamp())}"
+    
+    # Check if this is a deposit payment
+    is_deposit = checkout_data.get('is_deposit', False)
+    
+    session['checkout_data'] = checkout_data
+    
+    return render_template('receipt_screen.html', 
+                          checkout_data=checkout_data,
+                          appointment_id=appointment_id,
+                          is_deposit=is_deposit)
 
-@appointments_bp.route('/checkout/printable_receipt/<int:appointment_id>', methods=['GET'])
-@subscription_required
-def printable_receipt(appointment_id):
-    """
-    Renders the HTML printable receipt (same as the email version) for printing.
-    """
-    appt = Appointment.query.options(db.joinedload(Appointment.dog).joinedload(Dog.owner)).get_or_404(appointment_id)
-    owner = appt.dog.owner if appt.dog else None
-    store = Store.query.get(appt.store_id)
-    invoice = flask_session.get('checkout_invoice', {})
-    tip = flask_session.get('checkout_tip', {})
-    context = {
-        'store_name': store.name if store else '',
-        'date': appt.appointment_datetime.strftime('%B %d, %Y') if appt.appointment_datetime else '',
-        'customer_name': owner.name if owner else '',
-        'pet_name': appt.dog.name if appt.dog else '',
-        'line_items': invoice.get('line_items', []),
-        'subtotal': invoice.get('subtotal', 0),
-        'taxes': invoice.get('taxes', 0),
-        'total': invoice.get('total', 0),
-        'tip_amount': tip.get('tip_amount', 0),
-        'tip': tip.get('tip_amount', 0),
-        'final_total': tip.get('final_total', invoice.get('total', 0)),
-        'store_email': store.email if store and hasattr(store, 'email') else '',
-        'store_phone': store.phone_number if store and hasattr(store, 'phone_number') else ''
-    }
-    return render_template('printable_receipt.html', **context)
-
-@appointments_bp.route('/checkout/finalize/<int:appointment_id>', methods=['POST'])
+@appointments_bp.route('/finalize_checkout/<int:appointment_id>', methods=['GET', 'POST'])
 @subscription_required
 def finalize_checkout(appointment_id):
-    """
-    Finalizes the checkout: marks appointment as completed, saves receipt, clears session.
-    """
-    invoice = flask_session.get('checkout_invoice')
-    tip = flask_session.get('checkout_tip')
-    payment = flask_session.get('checkout_payment')
-    store_id = flask_session.get('store_id')
-    user_id = flask_session.get('user_id')
-    if not invoice or not tip or not payment or not store_id or not user_id:
-        flash('Checkout session expired or incomplete. Please try again.', 'danger')
-        return redirect(url_for('dashboard'))
-    appt = Appointment.query.get_or_404(appointment_id)
-    appt.status = 'Completed'
-    db.session.commit()
-    # Save receipt
-    store = Store.query.get(store_id)
-    receipt_data = {
-        'appointment_id': appointment_id,
-        'store_id': store_id,
-        'user_id': user_id,
-        'customer_name': invoice.get('customer_name', ''),
-        'pet_name': invoice.get('pet_name', ''),
-        'date': appt.appointment_datetime.strftime('%B %d, %Y') if appt.appointment_datetime else '',
-        'line_items': invoice.get('line_items', []),
-        'subtotal': invoice.get('subtotal', 0),
-        'taxes': invoice.get('taxes', 0),
-        'tip': tip.get('tip_amount', 0),
-        'final_total': tip.get('final_total', invoice.get('total', 0)),
-        'store_name': store.name if store else '',
-        'store_email': getattr(store, 'email', ''),
-        'store_phone': getattr(store, 'phone_number', '')
-    }
-    new_receipt = Receipt(
-        appointment_id=appointment_id,
-        store_id=store_id,
-        owner_id=user_id,
-        receipt_json=json.dumps(receipt_data)
-    )
-    db.session.add(new_receipt)
-    db.session.commit()
-    # Clear session
-    flask_session.pop('checkout_invoice', None)
+    """Finalizes the checkout: marks appointment as completed, saves receipt, clears session."""
+    if 'store_id' not in session or 'checkout_data' not in session:
+        return redirect(url_for('appointments.checkout_start'))
+        
+    store_id = session['store_id']
+    checkout_data = session['checkout_data']
     flask_session.pop('checkout_tip', None)
     flask_session.pop('checkout_payment', None)
     flash('Checkout completed and receipt saved!', 'success')
@@ -1158,6 +1238,7 @@ def finalize_checkout(appointment_id):
 
 from models import Receipt
 import json
+import uuid  # For generating unique IDs
 from flask import send_file, make_response
 
 @appointments_bp.route('/receipts', methods=['GET'])

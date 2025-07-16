@@ -1,0 +1,266 @@
+{% extends 'base.html' %}
+
+{% block title %}System Health - Superadmin Tools{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+    .metric-card {
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        text-align: center;
+    }
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #4c6ef5;
+        margin: 0.5rem 0;
+    }
+    .metric-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin: 0;
+    }
+    .system-info-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1.5rem;
+    }
+    .system-info-table th, .system-info-table td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .system-info-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+    }
+    .resource-bar-container {
+        height: 10px;
+        background-color: #e9ecef;
+        border-radius: 5px;
+        overflow: hidden;
+        margin-top: 0.5rem;
+    }
+    .resource-bar {
+        height: 100%;
+        background-color: #4c6ef5;
+    }
+    .resource-bar.warning {
+        background-color: #ffc107;
+    }
+    .resource-bar.danger {
+        background-color: #dc3545;
+    }
+    .status-indicator {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+    }
+    .status-healthy {
+        background-color: #28a745;
+    }
+    .status-warning {
+        background-color: #ffc107;
+    }
+    .status-danger {
+        background-color: #dc3545;
+    }
+    .refresh-button {
+        margin-left: 1rem;
+    }
+    .section {
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .section-title {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid #dee2e6;
+        padding-bottom: 0.75rem;
+    }
+    .section-title h2 {
+        margin: 0;
+        font-size: 1.5rem;
+    }
+    .section-icon {
+        background-color: #f0f4ff;
+        color: #4c6ef5;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.75rem;
+    }
+    .activity-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    .activity-item {
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #eee;
+    }
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+    .timestamp {
+        color: #6c757d;
+        font-size: 0.85rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="logo-image-login">
+    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pawfection Grooming Solutions Logo" style="max-width: 350px; margin-bottom: 1rem; align-items:center;">
+</div>
+<div class="form-wrapper" style="max-width: 1200px;">
+    <div class="form-container" style="padding: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h1 class="form-title">System Health</h1>
+            <div>
+                <a href="/superadmin/tools" class="button button-secondary">Back to Tools</a>
+                <a href="/superadmin/system-health" class="button button-primary refresh-button">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </a>
+            </div>
+        </div>
+        
+        <!-- System Overview -->
+        <div class="section">
+            <div class="section-title">
+                <div class="section-icon"><i class="fas fa-tachometer-alt"></i></div>
+                <h2>System Overview</h2>
+            </div>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <p class="metric-label">Total Stores</p>
+                    <p class="metric-value">{{ total_stores }}</p>
+                </div>
+                <div class="metric-card">
+                    <p class="metric-label">Active Stores</p>
+                    <p class="metric-value">{{ active_stores }}</p>
+                </div>
+                <div class="metric-card">
+                    <p class="metric-label">Total Users</p>
+                    <p class="metric-value">{{ total_users }}</p>
+                </div>
+                <div class="metric-card">
+                    <p class="metric-label">Recent Activity (24h)</p>
+                    <p class="metric-value">{{ recent_activity }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- System Resources -->
+        <div class="section">
+            <div class="section-title">
+                <div class="section-icon"><i class="fas fa-microchip"></i></div>
+                <h2>System Resources</h2>
+            </div>
+            
+            <table class="system-info-table">
+                <tr>
+                    <th width="20%">Resource</th>
+                    <th width="20%">Usage</th>
+                    <th>Status</th>
+                </tr>
+                <tr>
+                    <td>CPU</td>
+                    <td>{{ system_info.cpu_usage }}</td>
+                    <td>
+                        <div class="resource-bar-container">
+                            {% set cpu_value = system_info.cpu_usage|replace('%', '') | float %}
+                            <div class="resource-bar {% if cpu_value > 80 %}danger{% elif cpu_value > 60 %}warning{% endif %}" style="width: {{ cpu_value }}%;"></div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Memory</td>
+                    <td>{{ system_info.memory_usage }}</td>
+                    <td>
+                        <div class="resource-bar-container">
+                            {% set memory_value = system_info.memory_usage|replace('%', '') | float %}
+                            <div class="resource-bar {% if memory_value > 80 %}danger{% elif memory_value > 60 %}warning{% endif %}" style="width: {{ memory_value }}%;"></div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Disk</td>
+                    <td>{{ system_info.disk_usage }}</td>
+                    <td>
+                        <div class="resource-bar-container">
+                            {% set disk_value = system_info.disk_usage|replace('%', '') | float %}
+                            <div class="resource-bar {% if disk_value > 80 %}danger{% elif disk_value > 60 %}warning{% endif %}" style="width: {{ disk_value }}%;"></div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        
+        <!-- System Information -->
+        <div class="section">
+            <div class="section-title">
+                <div class="section-icon"><i class="fas fa-info-circle"></i></div>
+                <h2>System Information</h2>
+            </div>
+            
+            <table class="system-info-table">
+                <tr>
+                    <th width="30%">Property</th>
+                    <th>Value</th>
+                </tr>
+                <tr>
+                    <td>Platform</td>
+                    <td>{{ system_info.platform }}</td>
+                </tr>
+                <tr>
+                    <td>Python Version</td>
+                    <td>{{ system_info.python_version }}</td>
+                </tr>
+                <tr>
+                    <td>Last Updated</td>
+                    <td>{{ system_info.uptime }}</td>
+                </tr>
+            </table>
+        </div>
+        
+        <!-- Recent Activity -->
+        <div class="section">
+            <div class="section-title">
+                <div class="section-icon"><i class="fas fa-history"></i></div>
+                <h2>Recent Logins (Last 24 Hours)</h2>
+            </div>
+            
+            <div class="activity-list">
+                {% if recent_logins %}
+                    {% for login in recent_logins %}
+                    <div class="activity-item">
+                        <span class="timestamp">{{ login.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</span> - 
+                        <strong>{{ login.user.username }}</strong> {{ login.action }}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p>No recent login activity found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
