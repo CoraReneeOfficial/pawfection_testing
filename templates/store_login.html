@@ -48,6 +48,9 @@
                         Sign In to Store
                     </button>
                 </div>
+                <div class="form-link" style="text-align: center; margin-top: 1rem;">
+                    <a href="{{ url_for('auth.forgot_credentials', recovery_type='select', account_type='store') }}" class="link-text">Forgot Username/Password?</a>
+                </div>
             </form>
             <div style="text-align: center; margin-top: 1.5rem;">
                 <a href="{{ url_for('superadmin_login') }}" class="button button-secondary" style="width: 100%;">Superadmin Login</a>

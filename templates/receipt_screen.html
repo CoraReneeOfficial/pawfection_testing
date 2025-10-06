@@ -47,7 +47,7 @@
       </div>
       <div class="line-items" style="margin-bottom:1.2rem;">
         <h3 style="margin-bottom:0.4em;">{% if is_deposit %}Deposit Information{% else %}Services & Products{% endif %}</h3>
-        {% set items = checkout_data.line_items|tojson|from_json if checkout_data.line_items is string else checkout_data.line_items %}
+        {% set items = checkout_data.line_items %}
         {% for item in items %}
         <div class="line-item" style="display:flex;justify-content:space-between;margin-bottom:0.4em;">
           <span>{{ item.name }}</span>

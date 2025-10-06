@@ -1,0 +1,676 @@
+{% extends 'base.html' %}
+
+{% block title %}Store Management - Superadmin Tools{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+    .store-section {
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .section-title {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid #dee2e6;
+        padding-bottom: 0.75rem;
+    }
+    .section-title h2 {
+        margin: 0;
+        font-size: 1.5rem;
+    }
+    .section-icon {
+        background-color: #f0f4ff;
+        color: #4c6ef5;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.75rem;
+    }
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+    .form-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+    }
+    .form-column {
+        flex: 1;
+        min-width: 200px;
+    }
+    .input-field {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 1rem;
+    }
+    .input-field:focus {
+        border-color: #4c6ef5;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(76, 110, 245, 0.25);
+    }
+    .store-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 1.5rem;
+    }
+    .store-table th,
+    .store-table td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid #e9ecef;
+        vertical-align: middle;
+    }
+    .store-table th {
+        background-color: #f8f9fa;
+        font-weight: 500;
+        color: #495057;
+    }
+    .store-table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    .status-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        display: inline-block;
+    }
+    .status-active {
+        background-color: #d1e7dd;
+        color: #0f5132;
+    }
+    .status-inactive {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    .status-pending {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    .status-expired {
+        background-color: #e2e3e5;
+        color: #383d41;
+    }
+    .status-cancelled {
+        background-color: #d3d3d4;
+        color: #343a40;
+    }
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .button-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    .subscription-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    .subscription-plan {
+        font-weight: 500;
+        text-transform: capitalize;
+    }
+    .subscription-expires {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+    .modal-content {
+        background-color: #ffffff;
+        margin: 10% auto;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        width: 80%;
+        max-width: 600px;
+    }
+    .close-modal {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    .close-modal:hover,
+    .close-modal:focus {
+        color: #000;
+        text-decoration: none;
+        cursor: pointer;
+    }
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid #dee2e6;
+        padding-bottom: 1rem;
+    }
+    .modal-header h2 {
+        margin: 0;
+        font-size: 1.5rem;
+    }
+    .tab-container {
+        margin-top: 1.5rem;
+    }
+    .tab-buttons {
+        display: flex;
+        border-bottom: 1px solid #dee2e6;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+    .tab-button {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 500;
+        color: #495057;
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        cursor: pointer;
+    }
+    .tab-button.active {
+        color: #4c6ef5;
+        border-bottom-color: #4c6ef5;
+    }
+    .tab-content {
+        display: none;
+    }
+    .tab-content.active {
+        display: block;
+    }
+    .search-container {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .search-container .input-field {
+        flex: 1;
+    }
+    .filter-dropdown {
+        min-width: 150px;
+    }
+    .store-count {
+        margin-bottom: 1rem;
+        color: #6c757d;
+    }
+    .alert {
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        border-radius: 4px;
+        border-left: 4px solid;
+    }
+    .alert-success {
+        background-color: #d1e7dd;
+        color: #0f5132;
+        border-left-color: #198754;
+    }
+    .alert-danger {
+        background-color: #f8d7da;
+        color: #721c24;
+        border-left-color: #dc3545;
+    }
+    .alert-icon {
+        margin-right: 0.5rem;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: #6c757d;
+    }
+    .empty-state-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        color: #adb5bd;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="logo-image-login">
+    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pawfection Grooming Solutions Logo" style="max-width: 350px; margin-bottom: 1rem; align-items:center;">
+</div>
+<div class="form-wrapper" style="max-width: 1200px;">
+    <div class="form-container" style="padding: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h1 class="form-title">Store Management</h1>
+            <div>
+                <a href="/superadmin/tools" class="button button-secondary">Back to Tools</a>
+            </div>
+        </div>
+        
+        {% if error %}
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-circle alert-icon"></i> {{ error }}
+        </div>
+        {% endif %}
+        
+        {% if success %}
+        <div class="alert alert-success">
+            <i class="fas fa-check-circle alert-icon"></i> {{ success }}
+        </div>
+        {% endif %}
+        
+        <div class="store-section">
+            {% if store_to_edit %}
+            <!-- Edit Store Form -->
+            <div class="section-title">
+                <div class="section-icon"><i class="fas fa-edit"></i></div>
+                <h2>Edit Store</h2>
+            </div>
+            
+            <form action="/superadmin/stores" method="POST">
+                <input type="hidden" name="action" value="update_store">
+                <input type="hidden" name="store_id" value="{{ store_to_edit.id }}">
+                
+                <div class="form-row">
+                    <div class="form-column">
+                        <label for="name" class="form-label">Store Name *</label>
+                        <input type="text" id="name" name="name" class="input-field" value="{{ store_to_edit.name }}" required>
+                    </div>
+                    <div class="form-column">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" id="email" name="email" class="input-field" value="{{ store_to_edit.email }}">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-column">
+                        <label for="phone" class="form-label">Phone</label>
+                        <input type="tel" id="phone" name="phone" class="input-field" value="{{ store_to_edit.phone }}">
+                    </div>
+                    <div class="form-column">
+                        <label for="address" class="form-label">Address</label>
+                        <input type="text" id="address" name="address" class="input-field" value="{{ store_to_edit.address }}">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-column">
+                        <label for="city" class="form-label">City</label>
+                        <input type="text" id="city" name="city" class="input-field" value="{{ store_to_edit.city }}">
+                    </div>
+                    <div class="form-column">
+                        <label for="state" class="form-label">State</label>
+                        <select id="state" name="state" class="input-field">
+                            <option value="">-- Select State --</option>
+                            {% for state_code in us_states %}
+                            <option value="{{ state_code }}" {% if store_to_edit.state == state_code %}selected{% endif %}>{{ state_code }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-column">
+                        <label for="zip_code" class="form-label">Zip Code</label>
+                        <input type="text" id="zip_code" name="zip_code" class="input-field" value="{{ store_to_edit.zip_code }}">
+                    </div>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; margin-top: 1.5rem;">
+                    <a href="/superadmin/stores" class="button button-secondary">Cancel</a>
+                    <button type="submit" class="button button-primary">Update Store</button>
+                </div>
+            </form>
+            
+            {% else %}
+            <!-- Store List View -->
+            <div class="section-title">
+                <div class="section-icon"><i class="fas fa-store"></i></div>
+                <h2>Stores</h2>
+            </div>
+            
+            <div class="search-container">
+                <input type="text" id="store-search" class="input-field" placeholder="Search stores by name, city, or email...">
+                <select id="status-filter" class="input-field filter-dropdown">
+                    <option value="">All Statuses</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="pending">Pending</option>
+                    <option value="expired">Expired</option>
+                    <option value="cancelled">Cancelled</option>
+                </select>
+                <button type="button" class="button button-primary" onclick="openCreateStoreModal()">Add New Store</button>
+            </div>
+            
+            <div class="store-count">
+                <strong>{{ stores|length }}</strong> stores found
+            </div>
+            
+            {% if stores %}
+            <div class="table-responsive">
+                <table class="store-table">
+                    <thead>
+                        <tr>
+                            <th>Store Name</th>
+                            <th>Location</th>
+                            <th>Contact</th>
+                            <th>Subscription</th>
+                            <th>Appts</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="store-table-body">
+                        {% for store in stores %}
+                        <tr data-status="{{ store.subscription.status }}">
+                            <td>
+                                <strong>{{ store.name }}</strong><br>
+                                <small class="text-muted">ID: {{ store.id }}</small>
+                            </td>
+                            <td>
+                                {% if store.city and store.state %}
+                                {{ store.city }}, {{ store.state }}
+                                {% elif store.city %}
+                                {{ store.city }}
+                                {% elif store.state %}
+                                {{ store.state }}
+                                {% else %}
+                                <em>No location</em>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if store.email %}
+                                {{ store.email }}<br>
+                                {% endif %}
+                                {% if store.phone %}
+                                {{ store.phone }}
+                                {% endif %}
+                                {% if not store.email and not store.phone %}
+                                <em>No contact info</em>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="subscription-info">
+                                    <span class="status-badge status-{{ store.subscription.status }}">
+                                        {{ store.subscription.status|title }}
+                                    </span>
+                                    {% if store.subscription.plan %}
+                                    <span class="subscription-plan">{{ store.subscription.plan|title }}</span>
+                                    {% endif %}
+                                    {% if store.subscription.expires_at %}
+                                    <span class="subscription-expires">
+                                        Expires: {{ store.subscription.expires_at.strftime('%Y-%m-%d') }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>{{ store.appointment_count }}</td>
+                            <td>
+                                <div class="action-buttons">
+                                    <a href="/superadmin/impersonate/{{ store.id }}" class="button button-sm button-primary" title="Impersonate">
+                                        <i class="fas fa-user-secret"></i>
+                                    </a>
+                                    <button type="button" class="button button-sm button-secondary" onclick="openEditStoreForm('{{ store.id }}')" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="button button-sm button-info" onclick="openSubscriptionModal('{{ store.id }}', '{{ store.name|e }}', '{{ store.subscription.plan }}', '{{ store.subscription.status }}')" title="Subscription">
+                                        <i class="fas fa-tag"></i>
+                                    </button>
+                                    <button type="button" class="button button-sm button-danger {% if store.appointment_count > 0 %}disabled{% endif %}" onclick="confirmDeleteStore('{{ store.id }}', '{{ store.name|e }}', {{ store.appointment_count }})" title="Delete" {% if store.appointment_count > 0 %}disabled{% endif %}>
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-state-icon"><i class="fas fa-store-slash"></i></div>
+                <h3>No stores found</h3>
+                <p>No stores have been created yet. Click "Add New Store" to create your first store.</p>
+                <button type="button" class="button button-primary" onclick="openCreateStoreModal()">Add New Store</button>
+            </div>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Create Store Modal -->
+<div id="create-store-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Create New Store</h2>
+            <span class="close-modal" onclick="closeModals()">&times;</span>
+        </div>
+        
+        <form action="/superadmin/stores" method="POST">
+            <input type="hidden" name="action" value="create_store">
+            
+            <div class="form-row">
+                <div class="form-column">
+                    <label for="new_name" class="form-label">Store Name *</label>
+                    <input type="text" id="new_name" name="name" class="input-field" required>
+                </div>
+                <div class="form-column">
+                    <label for="new_email" class="form-label">Email</label>
+                    <input type="email" id="new_email" name="email" class="input-field">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-column">
+                    <label for="new_phone" class="form-label">Phone</label>
+                    <input type="tel" id="new_phone" name="phone" class="input-field">
+                </div>
+                <div class="form-column">
+                    <label for="new_address" class="form-label">Address</label>
+                    <input type="text" id="new_address" name="address" class="input-field">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-column">
+                    <label for="new_city" class="form-label">City</label>
+                    <input type="text" id="new_city" name="city" class="input-field">
+                </div>
+                <div class="form-column">
+                    <label for="new_state" class="form-label">State</label>
+                    <select id="new_state" name="state" class="input-field">
+                        <option value="">-- Select State --</option>
+                        {% for state_code in us_states %}
+                        <option value="{{ state_code }}">{{ state_code }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-column">
+                    <label for="new_zip_code" class="form-label">Zip Code</label>
+                    <input type="text" id="new_zip_code" name="zip_code" class="input-field">
+                </div>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; margin-top: 1.5rem;">
+                <button type="button" class="button button-secondary" onclick="closeModals()">Cancel</button>
+                <button type="submit" class="button button-primary">Create Store</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Subscription Modal -->
+<div id="subscription-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Manage Subscription</h2>
+            <span class="close-modal" onclick="closeModals()">&times;</span>
+        </div>
+        
+        <div id="subscription-store-name" style="margin-bottom: 1.5rem;"></div>
+        
+        <form action="/superadmin/stores" method="POST">
+            <input type="hidden" name="action" value="update_subscription">
+            <input type="hidden" id="subscription_store_id" name="store_id" value="">
+            
+            <div class="form-row">
+                <div class="form-column">
+                    <label for="subscription_plan" class="form-label">Subscription Plan *</label>
+                    <select id="subscription_plan" name="plan" class="input-field" required>
+                        <option value="">-- Select Plan --</option>
+                        {% for plan in subscription_plans %}
+                        <option value="{{ plan }}">{{ plan|title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-column">
+                    <label for="subscription_status" class="form-label">Status *</label>
+                    <select id="subscription_status" name="status" class="input-field" required>
+                        <option value="">-- Select Status --</option>
+                        {% for status in subscription_statuses %}
+                        <option value="{{ status }}">{{ status|title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="duration_months" class="form-label">Duration (months) *</label>
+                <input type="number" id="duration_months" name="duration_months" class="input-field" min="1" max="60" value="1" required>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; margin-top: 1.5rem;">
+                <button type="button" class="button button-secondary" onclick="closeModals()">Cancel</button>
+                <button type="submit" class="button button-primary">Update Subscription</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Store Form -->
+<form id="delete-store-form" action="/superadmin/stores" method="POST" style="display: none;">
+    <input type="hidden" name="action" value="delete_store">
+    <input type="hidden" id="delete_store_id" name="store_id" value="">
+</form>
+
+<!-- Edit Store Form -->
+<form id="edit-store-form" action="/superadmin/stores" method="POST" style="display: none;">
+    <input type="hidden" name="action" value="edit_store">
+    <input type="hidden" id="edit_store_id" name="store_id" value="">
+</form>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Search functionality
+        document.getElementById('store-search').addEventListener('input', filterStores);
+        document.getElementById('status-filter').addEventListener('change', filterStores);
+        
+        function filterStores() {
+            const searchText = document.getElementById('store-search').value.toLowerCase();
+            const statusFilter = document.getElementById('status-filter').value.toLowerCase();
+            const rows = document.querySelectorAll('#store-table-body tr');
+            
+            rows.forEach(row => {
+                const name = row.querySelector('td:nth-child(1)').textContent.toLowerCase();
+                const location = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                const contact = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+                const status = row.getAttribute('data-status').toLowerCase();
+                
+                const matchesSearch = name.includes(searchText) || location.includes(searchText) || contact.includes(searchText);
+                const matchesStatus = !statusFilter || status === statusFilter;
+                
+                row.style.display = (matchesSearch && matchesStatus) ? '' : 'none';
+            });
+        }
+    });
+    
+    // Modal management
+    function openCreateStoreModal() {
+        document.getElementById('create-store-modal').style.display = 'block';
+    }
+    
+    function openSubscriptionModal(storeId, storeName, plan, status) {
+        document.getElementById('subscription_store_id').value = storeId;
+        document.getElementById('subscription-store-name').innerHTML = `<strong>Store:</strong> ${storeName}`;
+        
+        const planSelect = document.getElementById('subscription_plan');
+        const statusSelect = document.getElementById('subscription_status');
+        
+        // Set current values if available
+        if (plan) {
+            for (let i = 0; i < planSelect.options.length; i++) {
+                if (planSelect.options[i].value === plan) {
+                    planSelect.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+        
+        if (status) {
+            for (let i = 0; i < statusSelect.options.length; i++) {
+                if (statusSelect.options[i].value === status) {
+                    statusSelect.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+        
+        document.getElementById('subscription-modal').style.display = 'block';
+    }
+    
+    function closeModals() {
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            modal.style.display = 'none';
+        });
+    }
+    
+    // Delete store confirmation
+    function confirmDeleteStore(storeId, storeName, appointmentCount) {
+        if (appointmentCount > 0) {
+            alert(`Cannot delete store "${storeName}" because it has ${appointmentCount} appointments. Delete all appointments first.`);
+            return;
+        }
+        
+        if (confirm(`Are you sure you want to delete store "${storeName}"? This action cannot be undone.`)) {
+            document.getElementById('delete_store_id').value = storeId;
+            document.getElementById('delete-store-form').submit();
+        }
+    }
+    
+    // Edit store
+    function openEditStoreForm(storeId) {
+        document.getElementById('edit_store_id').value = storeId;
+        document.getElementById('edit-store-form').submit();
+    }
+    
+    // Close modals when clicking outside
+    window.onclick = function(event) {
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        });
+    }
+</script>
+{% endblock %}

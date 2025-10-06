@@ -1,0 +1,632 @@
+{% extends 'base.html' %}
+
+{% block title %}Configuration Settings - Superadmin Tools{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+    .config-section {
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .section-title {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid #dee2e6;
+        padding-bottom: 0.75rem;
+    }
+    .section-title h2 {
+        margin: 0;
+        font-size: 1.5rem;
+    }
+    .section-icon {
+        background-color: #f0f4ff;
+        color: #4c6ef5;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.75rem;
+    }
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+    .form-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+    }
+    .form-column {
+        flex: 1;
+        min-width: 200px;
+    }
+    .form-text {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    .form-switch {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 24px;
+    }
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 24px;
+    }
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+    input:checked + .slider {
+        background-color: #4c6ef5;
+    }
+    input:focus + .slider {
+        box-shadow: 0 0 1px #4c6ef5;
+    }
+    input:checked + .slider:before {
+        transform: translateX(26px);
+    }
+    .tab-container {
+        margin-top: 1.5rem;
+    }
+    .tab-buttons {
+        display: flex;
+        border-bottom: 1px solid #dee2e6;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+    .tab-button {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 500;
+        color: #495057;
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        cursor: pointer;
+    }
+    .tab-button.active {
+        color: #4c6ef5;
+        border-bottom-color: #4c6ef5;
+    }
+    .tab-content {
+        display: none;
+    }
+    .tab-content.active {
+        display: block;
+    }
+    .input-field {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 1rem;
+    }
+    .input-field:focus {
+        border-color: #4c6ef5;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(76, 110, 245, 0.25);
+    }
+    .config-alert {
+        background-color: #fff3cd;
+        color: #856404;
+        border-radius: 4px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid #ffc107;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="logo-image-login">
+    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pawfection Grooming Solutions Logo" style="max-width: 350px; margin-bottom: 1rem; align-items:center;">
+</div>
+<div class="form-wrapper" style="max-width: 1200px;">
+    <div class="form-container" style="padding: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h1 class="form-title">Configuration Settings</h1>
+            <div>
+                <a href="/superadmin/tools" class="button button-secondary">Back to Tools</a>
+            </div>
+        </div>
+        
+        <div class="config-alert">
+            <strong><i class="fas fa-exclamation-triangle"></i> Important:</strong> Changes to system configuration will affect how the application operates. Please make changes carefully.
+        </div>
+        
+        {% if error %}
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-circle"></i> {{ error }}
+        </div>
+        {% endif %}
+        
+        {% if success %}
+        <div class="alert alert-success">
+            <i class="fas fa-check-circle"></i> {{ success }}
+        </div>
+        {% endif %}
+        
+        {% if last_updated %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> Last updated: {{ last_updated }}
+        </div>
+        {% endif %}
+        
+        <div class="tab-container">
+            <div class="tab-buttons">
+                <button type="button" class="tab-button active" data-tab="app-settings-tab">App Settings</button>
+                <button type="button" class="tab-button" data-tab="notification-tab">Notifications</button>
+                <button type="button" class="tab-button" data-tab="security-tab">Security</button>
+                <button type="button" class="tab-button" data-tab="feature-tab">Features</button>
+                <button type="button" class="tab-button" data-tab="api-tab">API</button>
+            </div>
+                
+                <!-- App Settings Tab -->
+                <div id="app-settings-tab" class="tab-content active">
+                    <div class="config-section">
+                        <div class="section-title">
+                            <div class="section-icon"><i class="fas fa-cogs"></i></div>
+                            <h2>Application Settings</h2>
+                        </div>
+                        
+                        <form action="/superadmin/global-configuration" method="POST">
+                            <input type="hidden" name="action" value="update_config">
+                            <input type="hidden" name="category" value="app_settings">
+                        
+                            <div class="form-row">
+                                <div class="form-column">
+                                    <label for="app_settings_site_name" class="form-label">Site Name</label>
+                                    <input type="text" id="app_settings_site_name" name="app_settings_site_name" class="input-field" value="{{ config.app_settings.site_name }}">
+                                    <div class="form-text">The name displayed throughout the application.</div>
+                                </div>
+                                
+                                <div class="form-column">
+                                    <label for="app_settings_contact_email" class="form-label">Contact Email</label>
+                                    <input type="email" id="app_settings_contact_email" name="app_settings_contact_email" class="input-field" value="{{ config.app_settings.contact_email }}">
+                                    <div class="form-text">Primary contact email for the site.</div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-column">
+                                    <label for="app_settings_support_phone" class="form-label">Support Phone</label>
+                                    <input type="tel" id="app_settings_support_phone" name="app_settings_support_phone" class="input-field" value="{{ config.app_settings.support_phone }}">
+                                </div>
+                                
+                                <div class="form-column">
+                                    <label for="app_settings_timezone" class="form-label">Timezone</label>
+                                    <input type="text" id="app_settings_timezone" name="app_settings_timezone" class="input-field" value="{{ config.app_settings.timezone }}">
+                                    <div class="form-text">Default timezone for the application (e.g., America/New_York).</div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-column">
+                                    <label for="app_settings_date_format" class="form-label">Date Format</label>
+                                    <input type="text" id="app_settings_date_format" name="app_settings_date_format" class="input-field" value="{{ config.app_settings.date_format }}">
+                                    <div class="form-text">Format for displaying dates (e.g., %Y-%m-%d).</div>
+                                </div>
+                                
+                                <div class="form-column">
+                                    <label for="app_settings_time_format" class="form-label">Time Format</label>
+                                    <select id="app_settings_time_format" name="app_settings_time_format" class="input-field">
+                                        <option value="12h" {% if config.app_settings.time_format == '12h' %}selected{% endif %}>12-hour (AM/PM)</option>
+                                        <option value="24h" {% if config.app_settings.time_format == '24h' %}selected{% endif %}>24-hour</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-column">
+                                    <label for="app_settings_items_per_page" class="form-label">Items Per Page</label>
+                                    <input type="number" id="app_settings_items_per_page" name="app_settings_items_per_page" class="input-field" value="{{ config.app_settings.items_per_page }}" min="10" max="100">
+                                    <div class="form-text">Number of items to display in paginated lists.</div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <div class="form-switch">
+                                    <label class="switch">
+                                        <input type="checkbox" id="app_settings_maintenance_mode" name="app_settings_maintenance_mode" value="true" {% if config.app_settings.maintenance_mode %}checked{% endif %}>
+                                        <span class="slider"></span>
+                                    </label>
+                                    <span>Maintenance Mode</span>
+                                </div>
+                                <div class="form-text">When enabled, only superadmins can access the system.</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <div class="form-switch">
+                                    <label class="switch">
+                                        <input type="checkbox" id="app_settings_allow_registration" name="app_settings_allow_registration" value="true" {% if config.app_settings.allow_registration %}checked{% endif %}>
+                                        <span class="slider"></span>
+                                    </label>
+                                    <span>Allow Registration</span>
+                                </div>
+                                <div class="form-text">Allow new stores to register through the public registration page.</div>
+                            </div>
+                            
+                            <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
+                                <button type="submit" name="action" value="reset_defaults" class="button button-secondary">Reset to Defaults</button>
+                                <button type="submit" class="button button-primary">Save Settings</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Notification Settings Tab -->
+                <div id="notification-tab" class="tab-content">
+                    <div class="config-section">
+                        <div class="section-title">
+                            <div class="section-icon"><i class="fas fa-bell"></i></div>
+                            <h2>Notification Settings</h2>
+                        </div>
+                        
+                        <form action="/superadmin/global-configuration" method="POST">
+                            <input type="hidden" name="action" value="update_config">
+                            <input type="hidden" name="category" value="notification_settings">
+                            
+                            <div class="form-group">
+                                <div class="form-switch">
+                                    <label class="switch">
+                                        <input type="checkbox" id="notification_settings_enable_email_notifications" name="notification_settings_enable_email_notifications" value="true" {% if config.notification_settings.enable_email_notifications %}checked{% endif %}>
+                                        <span class="slider"></span>
+                                    </label>
+                                    <span>Enable Email Notifications</span>
+                                </div>
+                                <div class="form-text">Send automatic email notifications for appointments, customer accounts, etc.</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <div class="form-switch">
+                                    <label class="switch">
+                                        <input type="checkbox" id="notification_settings_enable_sms_notifications" name="notification_settings_enable_sms_notifications" value="true" {% if config.notification_settings.enable_sms_notifications %}checked{% endif %}>
+                                        <span class="slider"></span>
+                                    </label>
+                                    <span>Enable SMS Notifications</span>
+                                </div>
+                                <div class="form-text">Send automatic SMS notifications for appointments and reminders (requires SMS provider).</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <div class="form-switch">
+                                    <label class="switch">
+                                        <input type="checkbox" id="notification_settings_send_welcome_email" name="notification_settings_send_welcome_email" value="true" {% if config.notification_settings.send_welcome_email %}checked{% endif %}>
+                                        <span class="slider"></span>
+                                    </label>
+                                    <span>Send Welcome Email</span>
+                                </div>
+                                <div class="form-text">Send a welcome email when new customers register.</div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-column">
+                                    <label for="notification_settings_appointment_reminder_hours" class="form-label">Appointment Reminder Hours</label>
+                                    <input type="number" id="notification_settings_appointment_reminder_hours" name="notification_settings_appointment_reminder_hours" class="input-field" value="{{ config.notification_settings.appointment_reminder_hours }}" min="1" max="72">
+                                    <div class="form-text">Hours before appointment to send reminder notifications.</div>
+                                </div>
+                            </div>
+                            
+                            <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
+                                <button type="submit" name="action" value="reset_defaults" class="button button-secondary">Reset to Defaults</button>
+                                <button type="submit" class="button button-primary">Save Settings</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Feature Flags Tab -->
+                <div id="feature-tab" class="tab-content">
+                    <div class="config-section">
+                        <div class="section-title">
+                            <div class="section-icon"><i class="fas fa-toggle-on"></i></div>
+                            <h2>Feature Flags</h2>
+                        </div>
+                        
+                        <form action="/superadmin/global-configuration" method="POST">
+                            <input type="hidden" name="action" value="update_config">
+                            <input type="hidden" name="category" value="feature_flags">
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> Feature flags control which features are available in the application. Use these to gradually roll out new functionality.
+                            </div>
+                            
+                            <div class="form-group">
+                                <div class="form-switch">
+                                    <label class="switch">
+                                        <input type="checkbox" id="feature_flags_enable_online_booking" name="feature_flags_enable_online_booking" value="true" {% if config.feature_flags.enable_online_booking %}checked{% endif %}>
+                                        <span class="slider"></span>
+                                    </label>
+                                    <span>Online Booking</span>
+                                </div>
+                                <div class="form-text">Allow customers to book appointments online.</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <div class="form-switch">
+                                    <label class="switch">
+                                        <input type="checkbox" id="feature_flags_enable_customer_profiles" name="feature_flags_enable_customer_profiles" value="true" {% if config.feature_flags.enable_customer_profiles %}checked{% endif %}>
+                                        <span class="slider"></span>
+                                    </label>
+                                    <span>Customer Profiles</span>
+                                </div>
+                                <div class="form-text">Enable detailed customer profiles and pet information.</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <div class="form-switch">
+                                    <label class="switch">
+                                        <input type="checkbox" id="feature_flags_enable_inventory_management" name="feature_flags_enable_inventory_management" value="true" {% if config.feature_flags.enable_inventory_management %}checked{% endif %}>
+                                        <span class="slider"></span>
+                                    </label>
+                                    <span>Inventory Management</span>
+                                </div>
+                                <div class="form-text">Enable inventory tracking and management features.</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <div class="form-switch">
+                                    <label class="switch">
+                                        <input type="checkbox" id="feature_flags_enable_reporting" name="feature_flags_enable_reporting" value="true" {% if config.feature_flags.enable_reporting %}checked{% endif %}>
+                                        <span class="slider"></span>
+                                    </label>
+                                    <span>Advanced Reporting</span>
+                                </div>
+                                <div class="form-text">Enable enhanced reporting and analytics features.</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <div class="form-switch">
+                                    <label class="switch">
+                                        <input type="checkbox" id="feature_flags_enable_marketing_tools" name="feature_flags_enable_marketing_tools" value="true" {% if config.feature_flags.enable_marketing_tools %}checked{% endif %}>
+                                        <span class="slider"></span>
+                                    </label>
+                                    <span>Marketing Tools</span>
+                                </div>
+                                <div class="form-text">Enable marketing features like email campaigns and promotions.</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <div class="form-switch">
+                                    <label class="switch">
+                                        <input type="checkbox" id="feature_flags_beta_features" name="feature_flags_beta_features" value="true" {% if config.feature_flags.beta_features %}checked{% endif %}>
+                                        <span class="slider"></span>
+                                    </label>
+                                    <span>Beta Features</span>
+                                </div>
+                                <div class="form-text">Enable experimental features that are still in testing.</div>
+                            </div>
+                            
+                            <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
+                                <button type="submit" name="action" value="reset_defaults" class="button button-secondary">Reset to Defaults</button>
+                                <button type="submit" class="button button-primary">Save Settings</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- API Settings Tab -->
+                <div id="api-tab" class="tab-content">
+                    <div class="config-section">
+                        <div class="section-title">
+                            <div class="section-icon"><i class="fas fa-code"></i></div>
+                            <h2>API Settings</h2>
+                        </div>
+                        
+                        <form action="/superadmin/global-configuration" method="POST">
+                            <input type="hidden" name="action" value="update_config">
+                            <input type="hidden" name="category" value="api_settings">
+                            
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i> Caution: API settings control access to system data. Make changes carefully to avoid security risks.
+                            </div>
+                            
+                            <div class="form-group">
+                                <div class="form-switch">
+                                    <label class="switch">
+                                        <input type="checkbox" id="api_settings_enable_api" name="api_settings_enable_api" value="true" {% if config.api_settings.enable_api %}checked{% endif %}>
+                                        <span class="slider"></span>
+                                    </label>
+                                    <span>Enable API</span>
+                                </div>
+                                <div class="form-text">Enable API endpoints for third-party integrations.</div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-column">
+                                    <label for="api_settings_rate_limit_per_minute" class="form-label">Rate Limit (requests per minute)</label>
+                                    <input type="number" id="api_settings_rate_limit_per_minute" name="api_settings_rate_limit_per_minute" class="input-field" value="{{ config.api_settings.rate_limit_per_minute }}" min="10" max="1000">
+                                    <div class="form-text">Maximum API requests per minute per client.</div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <div class="form-switch">
+                                    <label class="switch">
+                                        <input type="checkbox" id="api_settings_require_api_keys" name="api_settings_require_api_keys" value="true" {% if config.api_settings.require_api_keys %}checked{% endif %}>
+                                        <span class="slider"></span>
+                                    </label>
+                                    <span>Require API Keys</span>
+                                </div>
+                                <div class="form-text">Require valid API keys for all API access.</div>
+                            </div>
+                            
+                            <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
+                                <button type="submit" name="action" value="reset_defaults" class="button button-secondary">Reset to Defaults</button>
+                                <button type="submit" class="button button-primary">Save Settings</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Security Settings Tab -->
+                <div id="security-tab" class="tab-content">
+                    <div class="config-section">
+                        <div class="section-title">
+                            <div class="section-icon"><i class="fas fa-shield-alt"></i></div>
+                            <h2>Security Settings</h2>
+                        </div>
+                        
+                        <form action="/superadmin/global-configuration" method="POST">
+                            <input type="hidden" name="action" value="update_config">
+                            <input type="hidden" name="category" value="security_settings">
+                            
+                            <div class="form-row">
+                                <div class="form-column">
+                                    <label for="security_settings_password_min_length" class="form-label">Minimum Password Length</label>
+                                    <input type="number" id="security_settings_password_min_length" name="security_settings_password_min_length" class="input-field" value="{{ config.security_settings.password_min_length }}" min="6" max="32">
+                                    <div class="form-text">Minimum number of characters required for passwords.</div>
+                                </div>
+                                
+                                <div class="form-column">
+                                    <label for="security_settings_session_timeout_minutes" class="form-label">Session Timeout (minutes)</label>
+                                    <input type="number" id="security_settings_session_timeout_minutes" name="security_settings_session_timeout_minutes" class="input-field" value="{{ config.security_settings.session_timeout_minutes }}" min="5" max="1440">
+                                    <div class="form-text">Time in minutes before user sessions expire.</div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-column">
+                                    <label for="security_settings_failed_login_attempts" class="form-label">Failed Login Attempts Limit</label>
+                                    <input type="number" id="security_settings_failed_login_attempts" name="security_settings_failed_login_attempts" class="input-field" value="{{ config.security_settings.failed_login_attempts }}" min="1" max="10">
+                                    <div class="form-text">Number of failed login attempts before account lockout.</div>
+                                </div>
+                                
+                                <div class="form-column">
+                                    <label for="security_settings_account_lockout_minutes" class="form-label">Account Lockout Duration (minutes)</label>
+                                    <input type="number" id="security_settings_account_lockout_minutes" name="security_settings_account_lockout_minutes" class="input-field" value="{{ config.security_settings.account_lockout_minutes }}" min="5" max="1440">
+                                    <div class="form-text">Duration of account lockout after exceeding failed login attempts.</div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <div class="form-switch">
+                                    <label class="switch">
+                                        <input type="checkbox" id="security_settings_require_special_chars" name="security_settings_require_special_chars" value="true" {% if config.security_settings.require_special_chars %}checked{% endif %}>
+                                        <span class="slider"></span>
+                                    </label>
+                                    <span>Require Special Characters</span>
+                                </div>
+                                <div class="form-text">Require passwords to contain special characters.</div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <div class="form-switch">
+                                    <label class="switch">
+                                        <input type="checkbox" id="security_settings_enable_two_factor" name="security_settings_enable_two_factor" value="true" {% if config.security_settings.enable_two_factor %}checked{% endif %}>
+                                        <span class="slider"></span>
+                                    </label>
+                                    <span>Enable Two-Factor Authentication</span>
+                                </div>
+                                <div class="form-text">Require two-factor authentication for login (when available).</div>
+                            </div>
+                            
+                            <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
+                                <button type="submit" name="action" value="reset_defaults" class="button button-secondary">Reset to Defaults</button>
+                                <button type="submit" class="button button-primary">Save Settings</button>
+                            </div>
+                        </form>
+                        
+                        <div class="form-row">
+                            <div class="form-column">
+                                <label for="password_expiry_days" class="form-label">Password Expiry (days)</label>
+                                <input type="number" id="password_expiry_days" name="password_expiry_days" class="input-field" value="{{ config.security.password_expiry_days }}" min="0" max="365">
+                                <div class="form-text">Days before passwords expire (0 for never).</div>
+                            </div>
+                            
+                            <div class="form-column">
+                                <div class="form-switch" style="margin-top: 2rem;">
+                                    <label class="switch">
+                                        <input type="checkbox" name="require_2fa" {% if config.security.require_2fa %}checked{% endif %}>
+                                        <span class="slider"></span>
+                                    </label>
+                                    <span>Require Two-Factor Authentication</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
+                <button type="reset" class="button button-secondary">Reset Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    // Tab functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabButtons.forEach(function(button) {
+            button.addEventListener('click', function() {
+                // Remove active class from all buttons and contents
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+                
+                // Add active class to current button
+                this.classList.add('active');
+                
+                // Show the corresponding tab content
+                const tabId = this.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+        
+        // Confirmation before form submission
+        const forms = document.querySelectorAll('form');
+        forms.forEach(function(form) {
+            form.addEventListener('submit', function(e) {
+                if (!confirm('Are you sure you want to save these configuration changes? This may affect system behavior.')) {
+                    e.preventDefault();
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

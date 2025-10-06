@@ -43,6 +43,39 @@
                     {% if mode == 'edit' %}Only required if changing the password.{% else %}Required.{% endif %}
                  </small>
             </div>
+            
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" class="form-input" value="{{ user_data.email or '' }}">
+                <small class="text-muted" style="display: block; margin-top: 0.2rem;">
+                    Used for account recovery. Recommended for password resets.
+                </small>
+            </div>
+
+            <div class="form-group">
+                <label for="security_question">Security Question</label>
+                <select id="security_question" name="security_question" class="form-input" {{ 'required' if mode == 'add' else '' }}>
+                    <option value="">-- Select a Question --</option>
+                    <option value="What was your first pet's name?" {% if user_data.security_question == "What was your first pet's name?" %}selected{% endif %}>What was your first pet's name?</option>
+                    <option value="What was the name of your elementary school?" {% if user_data.security_question == "What was the name of your elementary school?" %}selected{% endif %}>What was the name of your elementary school?</option>
+                    <option value="In what city were you born?" {% if user_data.security_question == "In what city were you born?" %}selected{% endif %}>In what city were you born?</option>
+                    <option value="What is your mother's maiden name?" {% if user_data.security_question == "What is your mother's maiden name?" %}selected{% endif %}>What is your mother's maiden name?</option>
+                    <option value="What was the make of your first car?" {% if user_data.security_question == "What was the make of your first car?" %}selected{% endif %}>What was the make of your first car?</option>
+                    <option value="What is the name of your favorite childhood friend?" {% if user_data.security_question == "What is the name of your favorite childhood friend?" %}selected{% endif %}>What is the name of your favorite childhood friend?</option>
+                    <option value="What is your favorite movie?" {% if user_data.security_question == "What is your favorite movie?" %}selected{% endif %}>What is your favorite movie?</option>
+                    <option value="What street did you grow up on?" {% if user_data.security_question == "What street did you grow up on?" %}selected{% endif %}>What street did you grow up on?</option>
+                    <option value="What is your favorite book?" {% if user_data.security_question == "What is your favorite book?" %}selected{% endif %}>What is your favorite book?</option>
+                </select>
+                <small class="text-muted" style="display: block; margin-top: 0.2rem;">This will be used for account recovery if you forget your password.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="security_answer">Answer to Security Question</label>
+                <input type="text" id="security_answer" name="security_answer" class="form-input" {{ 'required' if mode == 'add' else '' }}>
+                <small class="text-muted" style="display: block; margin-top: 0.2rem;">
+                    {% if mode == 'edit' %}Leave blank to keep current answer.{% else %}Required.{% endif %}
+                </small>
+            </div>
 
             <div class="form-group form-group-inline">
                 <input type="checkbox" id="is_admin" name="is_admin" value="true" {% if user_data.is_admin %}checked{% endif %} style="width: auto; height: auto;">

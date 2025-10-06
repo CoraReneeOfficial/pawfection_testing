@@ -29,15 +29,42 @@
     <form id="invoice-form" method="POST" action="{{ url_for('appointments.invoice_checkout', appointment_id=appointment_id) }}">
       <input type="hidden" name="appointment_id" value="{{ appointment_id }}">
       <input type="hidden" id="line-items-json" name="line_items" value=''>
+      <input type="hidden" id="subtotal-input" name="subtotal" value="0">
+      <input type="hidden" id="taxes-input" name="taxes" value="0">
+      <input type="hidden" id="total-input" name="total" value="0">
+      <input type="hidden" id="tip-amount-input" name="tip_amount" value="0">
 
       <div class="form-group">
         <label>Customer:</label> <span id="customer-name">{{ customer_name or 'Customer' }}</span><br>
         <label>Pet:</label> <span id="pet-name-inline">{{ pet_name or 'Pet' }}</span>
       </div>
       <h2>Line Items</h2>
-      <div id="line-items-list">
-  <!-- Line items will be rendered here by JS -->
-</div>
+      
+      <!-- Services Section -->
+      <div id="services-section" style="margin-bottom:1rem;">
+        <h3 style="font-size:1.1em;margin-bottom:0.5em;color:#333;">Services</h3>
+        <div id="services-list" class="line-items-container">
+          <!-- Services will be rendered here by JS -->
+        </div>
+      </div>
+      
+      <!-- Fees Section -->
+      <div id="fees-section" style="margin-bottom:1rem;">
+        <h3 style="font-size:1.1em;margin-bottom:0.5em;color:#333;">Fees</h3>
+        <div id="fees-list" class="line-items-container">
+          <!-- Fees will be rendered here by JS -->
+        </div>
+      </div>
+      
+      <!-- Custom Items Section -->
+      <div id="custom-section" style="margin-bottom:1rem;">
+        <h3 style="font-size:1.1em;margin-bottom:0.5em;color:#333;">Additional Items</h3>
+        <div id="custom-list" class="line-items-container">
+          <!-- Custom items will be rendered here by JS -->
+        </div>
+      </div>
+      
+      <div id="no-items-message" style="text-align:center;color:#888;margin:1rem 0;display:none;">No items added yet</div>
       <div class="form-group">
   <h3>Services</h3>
   <div class="addon-grid">
@@ -125,22 +152,69 @@
 function addServiceOrFee(btn) {
   const name = btn.getAttribute('data-name');
   const price = parseFloat(btn.getAttribute('data-price'));
-  addItem({ name, price });
+  const itemType = btn.closest('.form-group').querySelector('h3').textContent.toLowerCase().trim().replace(/s$/, '');
+  addItem({ name, price, type: itemType });
 }
 
-// State
-let lineItems = {{ line_items|tojson|safe }};
-let subtotal = {{ subtotal|default(0)|float }};
-let taxes = {{ taxes|default(0)|float }};
-let total = {{ total|default(0)|float }};
-let discount = { name: '', type: 'amount', value: 0, amount: 0 }; // New discount object
+/* Initialize global variables with template data */
+// Wrap in a script tag with a specific type to avoid linting errors in the template variables
+</script>
+
+<!-- Data initialization script - separated to avoid linting errors with template variables -->
+<script type="text/template" id="template-data">
+{
+  "lineItems": {{ line_items|tojson|safe if line_items else '[]' }},
+  "subtotal": {{ subtotal|default(0)|float }},
+  "taxes": {{ taxes|default(0)|float }},
+  "total": {{ total|default(0)|float }},
+  "appointment_id": {{ appointment_id|default(0)|tojson }},
+  "customer_name": {{ customer_name|default('Customer')|tojson }},
+  "tax_enabled": {{ tax_enabled|default(true)|tojson|safe }},
+  "base_url": {{ base_url|default('')|tojson }},
+  "tax_rate": {{ tax_rate|default(0.07)|float }}
+}
+</script>
+
+<!-- Main application script -->
+<script>
+// Initialize global variables from template data
+(function() {
+  // Parse the template data from the script tag
+  var templateDataElement = document.getElementById('template-data');
+  var templateData = JSON.parse(templateDataElement.textContent);
+  
+  // Set global variables from template data
+  window.lineItems = templateData.lineItems || [];
+  
+  // Process line items to ensure all have types
+  if (window.lineItems && window.lineItems.length) {
+    window.lineItems = window.lineItems.map(function(item) {
+      if (!item.type) {
+        item.type = 'custom'; // Default type for legacy items
+      }
+      return item;
+    });
+  }
+  
+  // Set other globals
+  window.subtotal = templateData.subtotal || 0;
+  window.taxes = templateData.taxes || 0;
+  window.total = templateData.total || 0;
+  window.appointment_id = templateData.appointment_id;
+  window.customer_name = templateData.customer_name || 'Customer';
+  window.tax_enabled = templateData.tax_enabled;
+  window.base_url = templateData.base_url;
+  window.taxRate = templateData.tax_rate || 0.07;
+})();
+
+// Tax and discount configuration
+var discount = { name: '', type: 'amount', value: 0, amount: 0 }; // New discount object
 var taxEnabled = (function() {
-  var val = {{ tax_enabled|tojson|safe if tax_enabled is defined else 'true' }};
+  var val = window.tax_enabled;
   if (typeof val === 'boolean') return val;
   if (typeof val === 'string') return val === 'true';
   return !!val;
 })();
-const taxRate = {{ tax_rate|default(0.07)|float }};
 
 function updateTotals() {
   // Calculate raw subtotal from line items
@@ -190,26 +264,85 @@ function updateTotals() {
 }
 
 function renderLineItems() {
-  const container = document.getElementById('line-items-list');
-  container.innerHTML = '';
-  lineItems.forEach((item, idx) => {
-    const row = document.createElement('div');
-    row.className = 'line-item-row';
-    row.innerHTML = '<span>' + item.name + '</span> <span>$' + parseFloat(item.price).toFixed(2) + '</span> <button type="button" class="remove-btn" title="Delete item" onclick="removeItem(' + idx + ')" style="margin-left:8px;"><i class="fas fa-trash-alt"></i> Void</button>';
-    console.log('Rendered Void button for item', item.name, idx);
-    container.appendChild(row);
+  // Clear all containers
+  document.getElementById('services-list').innerHTML = '';
+  document.getElementById('fees-list').innerHTML = '';
+  document.getElementById('custom-list').innerHTML = '';
+  
+  // Categorize items by type
+  var services = [];
+  var fees = [];
+  var customItems = [];
+  
+  window.lineItems.forEach(function(item, idx) {
+    var itemWithIndex = Object.assign({}, item, {originalIndex: idx});
+    
+    if (item.type === 'service') {
+      services.push(itemWithIndex);
+    } else if (item.type === 'fee') {
+      fees.push(itemWithIndex);
+    } else {
+      customItems.push(itemWithIndex);
+    }
   });
+  
+  // Render services
+  if (services.length > 0) {
+    document.getElementById('services-section').style.display = 'block';
+    services.forEach(function(item) {
+      var row = document.createElement('div');
+      row.className = 'line-item-row';
+      row.innerHTML = '<span>' + item.name + '</span> <span>$' + parseFloat(item.price).toFixed(2) + '</span> <button type="button" class="remove-btn" title="Delete item" onclick="removeItem(' + item.originalIndex + ')" style="margin-left:8px;"><i class="fas fa-trash-alt"></i> Void</button>';
+      document.getElementById('services-list').appendChild(row);
+    });
+  } else {
+    document.getElementById('services-section').style.display = 'none';
+  }
+  
+  // Render fees
+  if (fees.length > 0) {
+    document.getElementById('fees-section').style.display = 'block';
+    fees.forEach(function(item) {
+      var row = document.createElement('div');
+      row.className = 'line-item-row';
+      row.innerHTML = '<span>' + item.name + '</span> <span>$' + parseFloat(item.price).toFixed(2) + '</span> <button type="button" class="remove-btn" title="Delete item" onclick="removeItem(' + item.originalIndex + ')" style="margin-left:8px;"><i class="fas fa-trash-alt"></i> Void</button>';
+      document.getElementById('fees-list').appendChild(row);
+    });
+  } else {
+    document.getElementById('fees-section').style.display = 'none';
+  }
+  
+  // Render custom items
+  if (customItems.length > 0) {
+    document.getElementById('custom-section').style.display = 'block';
+    customItems.forEach(function(item) {
+      var row = document.createElement('div');
+      row.className = 'line-item-row';
+      row.innerHTML = '<span>' + item.name + '</span> <span>$' + parseFloat(item.price).toFixed(2) + '</span> <button type="button" class="remove-btn" title="Delete item" onclick="removeItem(' + item.originalIndex + ')" style="margin-left:8px;"><i class="fas fa-trash-alt"></i> Void</button>';
+      document.getElementById('custom-list').appendChild(row);
+    });
+  } else {
+    document.getElementById('custom-section').style.display = 'none';
+  }
+  
+  // Show/hide no items message
+  if (window.lineItems.length === 0) {
+    document.getElementById('no-items-message').style.display = 'block';
+  } else {
+    document.getElementById('no-items-message').style.display = 'none';
+  }
+  
   updateTotals();
 }
 
 function addItem(item) {
-  lineItems.push(item);
+  window.lineItems.push(item);
   renderLineItems();
 }
 
 function removeItem(idx) {
   console.log('removeItem called for idx', idx);
-  lineItems.splice(idx, 1);
+  window.lineItems.splice(idx, 1);
   renderLineItems();
 }
 
@@ -227,7 +360,7 @@ function addCustomItem() {
   const name = document.getElementById('custom-item-name').value.trim();
   const price = parseFloat(document.getElementById('custom-item-price').value);
   if (!name || isNaN(price) || price < 0) { alert('Enter valid name and price.'); return; }
-  addItem({ name, price });
+  addItem({ name, price, type: 'custom' });
   hideCustomModal();
 }
 
@@ -278,14 +411,17 @@ function applyDiscount() {
   hideDiscountModal();
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
   renderLineItems();
   // Serialize line items before submitting the form
   document.getElementById('invoice-form').addEventListener('submit', function(e) {
     console.log('Form submit triggered');
+    console.log('DEBUG: lineItems array at submission:', window.lineItems);
+    console.log('DEBUG: lineItems length:', window.lineItems.length);
+    console.log('DEBUG: window.lineItems:', window.lineItems);
     
     // Create a copy of the line items array
-    var itemsToSubmit = lineItems.slice();
+    var itemsToSubmit = window.lineItems.slice();
     
     // If there's a discount, add it as a negative line item
     if (discount.amount > 0) {
@@ -295,12 +431,25 @@ document.addEventListener('DOMContentLoaded', () => {
       // Add the discount as a negative line item
       itemsToSubmit.push({
         name: discountName,
-        price: -discount.amount
+        price: -discount.amount,
+        type: 'discount'
       });
     }
     
-    // Submit just the array of line items (including the discount as a line item)
+    // Create hidden fields for each line item with their types
     document.getElementById('line-items-json').value = JSON.stringify(itemsToSubmit);
+    
+    // Populate the hidden inputs with calculated totals
+    document.getElementById('subtotal-input').value = window.subtotal.toFixed(2);
+    document.getElementById('taxes-input').value = window.taxes.toFixed(2);
+    document.getElementById('total-input').value = window.total.toFixed(2);
+    document.getElementById('tip-amount-input').value = '0'; // No tip at this stage
+    
+    console.log('Form data being submitted:');
+    console.log('  subtotal:', window.subtotal);
+    console.log('  taxes:', window.taxes);
+    console.log('  total:', window.total);
+    console.log('  line_items:', itemsToSubmit);
   });
 });
 

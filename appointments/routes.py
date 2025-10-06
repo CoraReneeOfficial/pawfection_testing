@@ -920,10 +920,101 @@ def checkout_start():
     # Get all scheduled appointments for this store that can be checked out
     appointments = Appointment.query.filter_by(
         store_id=store_id,
-        status='scheduled'
+        status='Scheduled'
     ).all()
     
     return render_template('select_checkout_appointment.html', appointments=appointments)
+
+
+@appointments_bp.route('/invoice_checkout/<int:appointment_id>', methods=['GET', 'POST'])
+@subscription_required
+def invoice_checkout(appointment_id):
+    """Step 2: Show invoice builder for a selected appointment."""
+    if 'store_id' not in session:
+        return redirect(url_for('auth.login'))
+        
+    store_id = session['store_id']
+    
+    # Get the appointment
+    appointment = Appointment.query.filter_by(id=appointment_id, store_id=store_id).first_or_404()
+    
+    if request.method == 'POST':
+        # Process form data for invoice
+        subtotal = float(request.form.get('subtotal', 0))
+        tip_amount = float(request.form.get('tip_amount', 0))
+        
+        # Get store settings
+        store = Store.query.get(store_id)
+        tax_enabled = store.tax_enabled if store else False
+        
+        # Force taxes to 0 when tax_enabled is False
+        if not tax_enabled:
+            taxes = 0.0
+            total = subtotal  # Don't include tip_amount in the base total
+        else:
+            taxes = float(request.form.get('taxes', 0))
+            total = subtotal + taxes  # Calculate total as subtotal + taxes, no tip yet
+        
+        # Get line items from form (JSON format)
+        line_items = []
+        line_items_json = request.form.get('line_items', '[]')
+        try:
+            line_items = json.loads(line_items_json)
+        except json.JSONDecodeError:
+            print(f"ERROR: Failed to parse line_items JSON: {line_items_json}")
+            line_items = []
+        
+        print(f"DEBUG: Parsed line_items: {line_items}")
+        print(f"DEBUG: Line items count: {len(line_items)}")
+        print(f"DEBUG: Raw line_items_json: {line_items_json}")
+        
+        # Store checkout data in session
+        session['checkout_data'] = {
+            'appointment_id': appointment.id,
+            'customer_name': appointment.dog.owner.name if appointment.dog and appointment.dog.owner else 'Customer',
+            'pet_name': appointment.dog.name if appointment.dog else 'Pet',
+            'line_items': line_items,
+            'subtotal': subtotal,
+            'tip_amount': tip_amount,
+            'taxes': taxes, 
+            'total': total,
+            'payment_method': 'pending'
+        }
+        
+        # Redirect to tip screen
+        return redirect(url_for('appointments.tip_screen', appointment_id=appointment.id))
+    
+    # Get services and fees for this store
+    services = Service.query.filter_by(store_id=store_id, item_type='service').all()
+    fees = Service.query.filter_by(store_id=store_id, item_type='fee').all()
+    
+    # Get customer and pet info for the template
+    customer_name = appointment.dog.owner.name if appointment.dog and appointment.dog.owner else 'Customer'
+    pet_name = appointment.dog.name if appointment.dog else 'Pet'
+    
+    # Get store settings
+    store = Store.query.get(store_id)
+    tax_enabled = store.tax_enabled if store else False
+    tax_rate = 0.07  # Default tax rate - could be moved to store settings in the future
+    
+    # Get base URL for JavaScript access
+    base_url = request.url_root.rstrip('/')
+    
+    return render_template('invoice_screen.html', 
+                          appointment=appointment,
+                          appointment_id=appointment_id,
+                          customer_name=customer_name,
+                          pet_name=pet_name,
+                          services=services,
+                          fees=fees,
+                          subtotal=0,
+                          taxes=0,
+                          total=0,
+                          line_items=[],
+                          tax_enabled=tax_enabled,
+                          taxEnabled=tax_enabled,  # Keep for backward compatibility
+                          tax_rate=tax_rate,
+                          base_url=base_url)
 
 
 @appointments_bp.route('/walk_in_appointment', methods=['GET', 'POST'])
@@ -1143,6 +1234,73 @@ def deposit_payment():
     
     return render_template('deposit_payment.html')
 
+@appointments_bp.route('/tip_screen/<int:appointment_id>', methods=['GET', 'POST'])
+@subscription_required
+def tip_screen(appointment_id):
+    """Step 3: Show tip modal and process tip amount before payment selection."""
+    if 'store_id' not in session or 'checkout_data' not in session:
+        return redirect(url_for('appointments.checkout_start'))
+        
+    store_id = session['store_id']
+    checkout_data = session['checkout_data']
+    
+    # Validate that the appointment belongs to this store
+    appointment = Appointment.query.filter_by(
+        id=appointment_id,
+        store_id=store_id
+    ).first()
+    
+    if not appointment:
+        abort(404)
+    
+    if request.method == 'POST':
+        # Process the tip form
+        tip_amount = float(request.form.get('tip_amount', 0))
+        total = checkout_data['total']
+        
+        # Update the total with tip amount
+        final_total = total + tip_amount
+        
+        # Update checkout data with tip and final total
+        checkout_data['tip_amount'] = tip_amount
+        checkout_data['total'] = final_total  # Update total to include tip
+        session['checkout_data'] = checkout_data
+        
+        # Redirect to payment selection
+        return redirect(url_for('appointments.payment_selection', appointment_id=appointment_id))
+    
+    # Get store settings
+    store = Store.query.get(store_id)
+    tax_enabled = store.tax_enabled if store else False
+    
+    # Parse line items if stored as JSON string
+    line_items = []
+    if 'line_items' in checkout_data:
+        if isinstance(checkout_data['line_items'], str):
+            try:
+                line_items = json.loads(checkout_data['line_items'])
+            except json.JSONDecodeError:
+                line_items = []
+        else:
+            line_items = checkout_data['line_items']
+    
+    # Debug: Print the values being passed to template
+    print(f"DEBUG - Tip Modal Data:")
+    print(f"  initial_total: {checkout_data['total']}")
+    print(f"  subtotal: {checkout_data['subtotal']}")
+    print(f"  taxes: {checkout_data['taxes']}")
+    print(f"  taxEnabled: {tax_enabled}")
+    print(f"  line_items count: {len(line_items)}")
+    
+    # Pass values needed for the tip modal
+    return render_template('customer_tip_modal.html',
+                          initial_total=checkout_data['total'],
+                          subtotal=checkout_data['subtotal'],
+                          taxes=checkout_data['taxes'],
+                          taxEnabled=tax_enabled,
+                          line_items=line_items,
+                          appointment_id=appointment_id)
+
 @appointments_bp.route('/payment_selection/<int:appointment_id>', methods=['GET', 'POST'])
 @subscription_required
 def payment_selection(appointment_id):
@@ -1174,7 +1332,9 @@ def payment_selection(appointment_id):
     return render_template('payment_selection_screen.html', 
                           customer_name=checkout_data.get('customer_name'),
                           pet_name=checkout_data.get('pet_name'),
-                          total=checkout_data.get('total'),
+                          final_total=checkout_data.get('total'),
+                          tip_amount=checkout_data.get('tip_amount', 0),
+                          appointment_id=appointment_id,
                           is_deposit=is_deposit)
 
 @appointments_bp.route('/preview_receipt/<int:appointment_id>', methods=['GET'])
@@ -1229,8 +1389,21 @@ def finalize_checkout(appointment_id):
         
     store_id = session['store_id']
     checkout_data = session['checkout_data']
+    
+    # Get the appointment and mark it as completed
+    appointment = Appointment.query.filter_by(id=appointment_id, store_id=store_id).first()
+    if appointment:
+        appointment.status = 'Completed'
+        db.session.commit()
+        print(f"DEBUG: Appointment {appointment_id} marked as completed")
+    else:
+        print(f"ERROR: Appointment {appointment_id} not found for store {store_id}")
+    
+    # Clear session data
+    flask_session.pop('checkout_data', None)
     flask_session.pop('checkout_tip', None)
     flask_session.pop('checkout_payment', None)
+    
     flash('Checkout completed and receipt saved!', 'success')
     return redirect(url_for('dashboard'))
 

@@ -89,6 +89,27 @@
             <small style="color: #888;">Leave blank to keep current password.</small>
         </div>
         <div class="form-group">
+            <label class="form-label" for="security_question">Security Question</label>
+            <select class="form-input" id="security_question" name="security_question">
+                <option value="">-- Select a Question --</option>
+                <option value="What was your first pet's name?" {% if store.security_question == "What was your first pet's name?" %}selected{% endif %}>What was your first pet's name?</option>
+                <option value="What was the name of your elementary school?" {% if store.security_question == "What was the name of your elementary school?" %}selected{% endif %}>What was the name of your elementary school?</option>
+                <option value="In what city were you born?" {% if store.security_question == "In what city were you born?" %}selected{% endif %}>In what city were you born?</option>
+                <option value="What is your mother's maiden name?" {% if store.security_question == "What is your mother's maiden name?" %}selected{% endif %}>What is your mother's maiden name?</option>
+                <option value="What was the make of your first car?" {% if store.security_question == "What was the make of your first car?" %}selected{% endif %}>What was the make of your first car?</option>
+                <option value="What is the name of your favorite childhood friend?" {% if store.security_question == "What is the name of your favorite childhood friend?" %}selected{% endif %}>What is the name of your favorite childhood friend?</option>
+                <option value="What is your favorite movie?" {% if store.security_question == "What is your favorite movie?" %}selected{% endif %}>What is your favorite movie?</option>
+                <option value="What street did you grow up on?" {% if store.security_question == "What street did you grow up on?" %}selected{% endif %}>What street did you grow up on?</option>
+                <option value="What is your favorite book?" {% if store.security_question == "What is your favorite book?" %}selected{% endif %}>What is your favorite book?</option>
+            </select>
+            <small style="color: #888;">Used for account recovery.</small>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="security_answer">Answer to Security Question</label>
+            <input class="form-input" type="text" id="security_answer" name="security_answer">
+            <small style="color: #888;">Leave blank to keep current answer. Entering a new answer will update it.</small>
+        </div>
+        <div class="form-group">
             <label class="form-label" for="address">Address</label>
             <input class="form-input" type="text" id="address" name="address" value="{{ store.address or '' }}">
         </div>

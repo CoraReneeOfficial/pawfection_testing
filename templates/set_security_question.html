@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Set Security Question - Pawfection Grooming Solutions{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="content-wrapper">
+        <div class="form-container">
+            <h1 class="page-title">Set Security Question</h1>
+            <p class="form-subtitle">Set a security question and answer to help recover your account if you forget your password.</p>
+
+            <form method="POST" action="{{ url_for('auth.set_security_question') }}" novalidate>
+                <div class="form-group">
+                    <label for="security_question">Choose a Security Question</label>
+                    <select id="security_question" name="security_question" class="form-input" required>
+                        <option value="">-- Select a Question --</option>
+                        <option value="What was your first pet's name?">What was your first pet's name?</option>
+                        <option value="What was the name of your elementary school?">What was the name of your elementary school?</option>
+                        <option value="In what city were you born?">In what city were you born?</option>
+                        <option value="What is your mother's maiden name?">What is your mother's maiden name?</option>
+                        <option value="What was the make of your first car?">What was the make of your first car?</option>
+                        <option value="What is the name of your favorite childhood friend?">What is the name of your favorite childhood friend?</option>
+                        <option value="What is your favorite movie?">What is your favorite movie?</option>
+                        <option value="What street did you grow up on?">What street did you grow up on?</option>
+                        <option value="What is your favorite book?">What is your favorite book?</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="security_answer">Your Answer</label>
+                    <input type="text" id="security_answer" name="security_answer" class="form-input" required>
+                    <small class="form-help">Remember your answer exactly as you type it here.</small>
+                </div>
+
+                <div class="form-button-wrapper">
+                    <button type="submit" class="button button-primary">Save Security Question</button>
+                    <a href="{{ url_for('dashboard') }}" class="button button-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

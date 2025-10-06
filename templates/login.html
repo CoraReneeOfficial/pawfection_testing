@@ -60,6 +60,9 @@
                         Sign In
                     </button>
                 </div>
+                <div class="form-link" style="text-align: center; margin-top: 1rem;">
+                    <a href="{{ url_for('auth.forgot_credentials', recovery_type='select', account_type='user') }}" class="link-text">Forgot Username/Password?</a>
+                </div>
             </form>
             
             <div class="form-link" style="text-align: center; margin-top: 1.5rem;">

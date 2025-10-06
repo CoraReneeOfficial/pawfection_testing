@@ -18,77 +18,178 @@
 <div class="container modal-centered">
   <div class="tip-modal">
     <h2>Add a Tip?</h2>
-    <div style="margin-bottom:1.2rem;">
-      <span style="font-size:1.2em;">Total: <b id="initial-total">${{ '%.2f'|format(initial_total) }}</b></span>
-      {% if taxes == 0 %}
-      <div style="color:var(--danger-color);font-size:0.97em;margin-top:0.4em;">No taxes included (taxes are disabled for this store)</div>
+        <!-- Services Section -->
+    {% set services = line_items|selectattr('type', 'equalto', 'service')|list %}
+    {% if services|length > 0 %}
+    <div style="margin-bottom:0.8rem;">
+      <h3 style="font-size:1.1em;margin-bottom:0.4em;">Services</h3>
+      <div class="line-items" style="max-height:120px;overflow-y:auto;margin-bottom:0.8rem;border:1px solid #eee;border-radius:4px;padding:0.5rem;">
+        {% for item in services %}
+        <div style="display:flex;justify-content:space-between;margin-bottom:0.3em;">
+          <span>{{ item.name }}</span>
+          <span>${{ '%.2f'|format(item.price|float) }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    
+    <!-- Fees Section -->
+    {% set fees = line_items|selectattr('type', 'equalto', 'fee')|list %}
+    {% if fees|length > 0 %}
+    <div style="margin-bottom:0.8rem;">
+      <h3 style="font-size:1.1em;margin-bottom:0.4em;">Fees</h3>
+      <div class="line-items" style="max-height:80px;overflow-y:auto;margin-bottom:0.8rem;border:1px solid #eee;border-radius:4px;padding:0.5rem;">
+        {% for item in fees %}
+        <div style="display:flex;justify-content:space-between;margin-bottom:0.3em;">
+          <span>{{ item.name }}</span>
+          <span>${{ '%.2f'|format(item.price|float) }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    
+    <!-- Custom Items/Other Section -->
+    {% set custom_items = line_items|reject('in', services + fees)|list %}
+    {% if custom_items|length > 0 %}
+    <div style="margin-bottom:0.8rem;">
+      <h3 style="font-size:1.1em;margin-bottom:0.4em;">Additional Items</h3>
+      <div class="line-items" style="max-height:80px;overflow-y:auto;margin-bottom:0.8rem;border:1px solid #eee;border-radius:4px;padding:0.5rem;">
+        {% for item in custom_items %}
+        <div style="display:flex;justify-content:space-between;margin-bottom:0.3em;">
+          <span>{{ item.name }}</span>
+          <span>${{ '%.2f'|format(item.price|float) }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    
+    {% if line_items|length == 0 %}
+    <div style="text-align:center;color:#888;margin-bottom:1rem;">No items</div>
+    {% endif %}
+
+    <div class="totals-section" style="margin-bottom:1.2rem;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:0.2em;">
+        <span>Subtotal:</span><span>${{ '%.2f'|format(subtotal) }}</span>
+      </div>
+      {% if taxEnabled %}
+      <div style="display:flex;justify-content:space-between;margin-bottom:0.2em;">
+        <span>Taxes:</span><span>${{ '%.2f'|format(taxes) }}</span>
+      </div>
+      {% else %}
+      <div style="color:var(--danger-color);font-size:0.97em;margin-bottom:0.4em;">No taxes included (taxes are disabled for this store)</div>
       {% endif %}
+      <div style="font-weight:bold;font-size:1.1em;display:flex;justify-content:space-between;">
+        <span>Total:</span><span id="initial-total">${{ '%.2f'|format(initial_total) }}</span>
+      </div>
     </div>
+    <form id="tip-form" method="POST" action="{{ url_for('appointments.tip_screen', appointment_id=appointment_id) }}">
+    <input type="hidden" id="tip-amount-input" name="tip_amount" value="0">
+    <input type="hidden" id="final-total-input" name="final_total" value="{{ initial_total }}">
+    
     <div class="tip-btn-grid">
-      <button type="button" class="button button-primary tip-btn" onclick="setTipPercent(0.18)">18%</button>
-      <button type="button" class="button button-primary tip-btn" onclick="setTipPercent(0.20)">20%</button>
-      <button type="button" class="button button-primary tip-btn" onclick="setTipPercent(0.25)">25%</button>
-      <button type="button" class="button button-secondary tip-btn" onclick="showCustomInput()">Custom</button>
-      <button type="button" class="button button-secondary tip-btn" onclick="setTipAmount(0)">No Tip</button>
+      <button type="button" id="tip-15" class="button button-primary tip-btn">15%</button>
+      <button type="button" id="tip-18" class="button button-primary tip-btn">18%</button>
+      <button type="button" id="tip-20" class="button button-primary tip-btn">20%</button>
+      <button type="button" id="tip-25" class="button button-primary tip-btn">25%</button>
+      <button type="button" id="tip-custom" class="button button-secondary tip-btn">Custom</button>
+      <button type="button" id="no-tip" class="button button-secondary tip-btn">No Tip</button>
     </div>
+    
     <div class="custom-tip-row" id="custom-tip-row" style="display:none;">
       <input type="number" id="custom-tip-input" class="form-input" min="0" step="0.01" placeholder="Enter tip amount">
-      <button type="button" class="button button-primary" onclick="applyCustomTip()">Apply</button>
+      <button type="button" id="apply-custom-tip" class="button button-primary">Apply</button>
     </div>
+    
     <div class="final-total">Final Total: <span id="final-total-display">${{ '%.2f'|format(initial_total) }}</span></div>
-    <button type="button" class="button button-primary" style="width:100%;font-size:1.1em;" onclick="confirmTip()">
-      Confirm Total: <span id="confirm-total-btn">${{ '%.2f'|format(initial_total) }}</span>
+    
+    <button type="button" id="confirm-total-btn" class="button button-primary" style="width:100%;font-size:1.1em;">
+      Confirm Total: ${{ '%.2f'|format(initial_total) }}
     </button>
-    <button type="button" class="button button-secondary" style="width:100%;margin-top:0.7rem;" onclick="window.history.back()">Cancel</button>
+  </form>
+  
+  <button type="button" class="button button-secondary" style="width:100%;margin-top:0.7rem;" onclick="window.history.back()">Cancel</button>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-const subtotal = {{ subtotal|float if subtotal is defined else initial_total|float }};
-const taxes = {{ taxes|float if taxes is defined else 0 }};
-const total = {{ initial_total|float }};
-let tipAmount = 0;
-let finalTotal = total;
+// Use IIFE to avoid polluting global scope and prevent linting errors
+(function() {
+  // Wait until DOM is fully loaded
+  document.addEventListener('DOMContentLoaded', function() {
+    // Initialize variables within function scope
+    var subtotal = {{ subtotal|float }};
+    var taxes = {{ taxes|float }};
+    var initialTotal = {{ initial_total|float }};
+    var tipAmount = 0;
+    var finalTotal = initialTotal;
 
-function setTipPercent(percent) {
-  tipAmount = +(total * percent).toFixed(2);
-  updateFinalTotal();
-  hideCustomInput();
-}
-function setTipAmount(amount) {
-  tipAmount = +amount;
-  updateFinalTotal();
-  hideCustomInput();
-}
-function showCustomInput() {
-  document.getElementById('custom-tip-row').style.display = 'block';
-}
-function hideCustomInput() {
-  document.getElementById('custom-tip-row').style.display = 'none';
-}
-function applyCustomTip() {
-  const val = parseFloat(document.getElementById('custom-tip-input').value);
-  if (isNaN(val) || val < 0) { alert('Enter a valid tip.'); return; }
-  setTipAmount(val);
-}
-function updateFinalTotal() {
-  finalTotal = +(total + tipAmount).toFixed(2);
-  document.getElementById('final-total-display').textContent = `$${finalTotal.toFixed(2)}`;
-  document.getElementById('confirm-total-btn').textContent = `$${finalTotal.toFixed(2)}`;
-}
+    // Function to set tip as a percentage of the total
+    function setTipPercent(percent) {
+      tipAmount = Math.round(initialTotal * percent * 100) / 100;
+      updateFinalTotal();
+      hideCustomInput();
+    }
 
-// On load, ensure correct initial value
-updateFinalTotal();
-function confirmTip() {
-  // For Flask: submit via POST or redirect with params, depending on your backend setup
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = '{{ url_for('appointments.tip_modal', appointment_id=appointment_id) }}';
-  form.innerHTML = `<input type="hidden" name="tip_amount" value="${tipAmount}"><input type="hidden" name="final_total" value="${finalTotal}">`;
-  document.body.appendChild(form);
-  form.submit();
-}
+    // Function to set tip as a specific amount
+    function setTipAmount(amount) {
+      tipAmount = Math.round(amount * 100) / 100;
+      updateFinalTotal();
+      hideCustomInput();
+    }
+
+    // Show the custom tip input row
+    function showCustomInput() {
+      document.getElementById('custom-tip-row').style.display = 'block';
+    }
+
+    // Hide the custom tip input row
+    function hideCustomInput() {
+      document.getElementById('custom-tip-row').style.display = 'none';
+    }
+
+    // Apply the custom tip amount from the input field
+    function applyCustomTip() {
+      var val = parseFloat(document.getElementById('custom-tip-input').value);
+      if (isNaN(val) || val < 0) { 
+        alert('Please enter a valid tip amount.'); 
+        return; 
+      }
+      setTipAmount(val);
+    }
+
+    // Update the final total display
+    function updateFinalTotal() {
+      finalTotal = Math.round((initialTotal + tipAmount) * 100) / 100;
+      document.getElementById('final-total-display').textContent = '$' + finalTotal.toFixed(2);
+      document.getElementById('confirm-total-btn').textContent = 'Confirm Total: $' + finalTotal.toFixed(2);
+      // Update hidden input fields
+      document.getElementById('tip-amount-input').value = tipAmount.toFixed(2);
+      document.getElementById('final-total-input').value = finalTotal.toFixed(2);
+    }
+
+    // Form submission function
+    function confirmTip() {
+      document.getElementById('tip-form').submit();
+    }
+
+    // Set up event listeners
+    document.getElementById('tip-15').addEventListener('click', function() { setTipPercent(0.15); });
+    document.getElementById('tip-18').addEventListener('click', function() { setTipPercent(0.18); });
+    document.getElementById('tip-20').addEventListener('click', function() { setTipPercent(0.20); });
+    document.getElementById('tip-25').addEventListener('click', function() { setTipPercent(0.25); });
+    document.getElementById('tip-custom').addEventListener('click', showCustomInput);
+    document.getElementById('apply-custom-tip').addEventListener('click', applyCustomTip);
+    document.getElementById('no-tip').addEventListener('click', function() { setTipAmount(0); });
+    document.getElementById('confirm-total-btn').addEventListener('click', confirmTip);
+
+    // Initialize the display on page load
+    updateFinalTotal();
+  });
+})();
 </script>
 {% endblock %}

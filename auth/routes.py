@@ -11,6 +11,9 @@ import os
 from authlib.integrations.flask_client import OAuth
 import base64
 import json
+import secrets
+import time
+from flask_login import login_required
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -232,6 +235,263 @@ def google_debug_redirect_uri():
     return jsonify({
         'google_callback_url': url_for('auth.google_callback', _external=True)
     })
+
+# Dictionary to store password reset tokens with their creation time and associated username
+# Format: {token: {'username': username, 'timestamp': timestamp, 'account_type': account_type}}
+reset_tokens = {}
+
+@auth_bp.route('/forgot-credentials/<string:recovery_type>/<string:account_type>', methods=['GET', 'POST'])
+def forgot_credentials(recovery_type, account_type):
+    """
+    Handles the initial step of the forgot credentials process.
+    - recovery_type: 'username', 'password', or 'select'
+    - account_type: 'user', 'store', or 'superadmin'
+    """
+    if recovery_type not in ['username', 'password', 'select']:
+        flash('Invalid recovery type.', 'danger')
+        return redirect(url_for('home'))
+    
+    if account_type not in ['user', 'store', 'superadmin']:
+        flash('Invalid account type.', 'danger')
+        return redirect(url_for('home'))
+    
+    # For GET requests, show the appropriate form
+    if request.method == 'GET':
+        return render_template('forgot_credentials.html', 
+                            recovery_type=recovery_type, 
+                            account_type=account_type)
+    
+    # Process POST requests based on recovery type
+    if recovery_type == 'username':
+        # Handle username recovery
+        email = request.form.get('email', '').strip().lower()
+        if not email:
+            flash('Email is required.', 'danger')
+            return render_template('forgot_credentials.html', 
+                                recovery_type=recovery_type, 
+                                account_type=account_type)
+        
+        # Find user or store based on account_type
+        if account_type == 'store':
+            account = Store.query.filter_by(email=email).first()
+        else:  # 'user' or 'superadmin'
+            if account_type == 'superadmin':
+                account = User.query.filter_by(email=email, role='superadmin').first()
+            else:
+                account = User.query.filter_by(email=email).filter(User.role != 'superadmin').first()
+        
+        if account:
+            username = account.username
+            # In a real app, you might want to send this via email
+            # For this implementation, we'll just display it
+            flash(f'Your username is: {username}', 'success')
+            if account_type == 'store':
+                return redirect(url_for('store_login'))
+            elif account_type == 'superadmin':
+                return redirect(url_for('superadmin_login'))
+            else:
+                return redirect(url_for('auth.login'))
+        else:
+            flash('No account found with that email address.', 'danger')
+            return render_template('forgot_credentials.html', 
+                                recovery_type=recovery_type, 
+                                account_type=account_type)
+    
+    elif recovery_type == 'password':
+        # Handle password recovery
+        username = request.form.get('username', '').strip()
+        if not username:
+            flash('Username is required.', 'danger')
+            return render_template('forgot_credentials.html', 
+                                recovery_type=recovery_type, 
+                                account_type=account_type)
+        
+        # Find user or store based on account_type
+        if account_type == 'store':
+            account = Store.query.filter_by(username=username).first()
+        else:  # 'user' or 'superadmin'
+            if account_type == 'superadmin':
+                account = User.query.filter_by(username=username, role='superadmin').first()
+            else:
+                account = User.query.filter_by(username=username).filter(User.role != 'superadmin').first()
+        
+        if account:
+            # Check if security question is set
+            if not account.security_question:
+                flash('Security question not set for this account. Please contact an administrator.', 'danger')
+                if account_type == 'store':
+                    return redirect(url_for('store_login'))
+                elif account_type == 'superadmin':
+                    return redirect(url_for('superadmin_login'))
+                else:
+                    return redirect(url_for('auth.login'))
+            
+            # Proceed to security question verification
+            return render_template('forgot_credentials.html', 
+                                recovery_type='security_question',
+                                account_type=account_type,
+                                username=username,
+                                security_question=account.security_question)
+        else:
+            flash('Username not found.', 'danger')
+            return render_template('forgot_credentials.html', 
+                                recovery_type=recovery_type, 
+                                account_type=account_type)
+    
+    # Default redirect if something unexpected happens
+    return redirect(url_for('home'))
+
+@auth_bp.route('/verify-security-answer/<string:account_type>', methods=['POST'])
+def verify_security_answer(account_type):
+    """
+    Verifies the security answer provided by the user.
+    """
+    username = request.form.get('username', '')
+    security_answer = request.form.get('security_answer', '')
+    
+    if not username or not security_answer:
+        flash('Username and security answer are required.', 'danger')
+        return redirect(url_for('auth.forgot_credentials', recovery_type='password', account_type=account_type))
+    
+    # Find user or store based on account_type
+    if account_type == 'store':
+        account = Store.query.filter_by(username=username).first()
+    else:  # 'user' or 'superadmin'
+        if account_type == 'superadmin':
+            account = User.query.filter_by(username=username, role='superadmin').first()
+        else:
+            account = User.query.filter_by(username=username).filter(User.role != 'superadmin').first()
+    
+    if not account:
+        flash('Account not found.', 'danger')
+        return redirect(url_for('auth.forgot_credentials', recovery_type='password', account_type=account_type))
+    
+    # Check security answer
+    if account.check_security_answer(security_answer):
+        # Generate a token for password reset
+        token = secrets.token_urlsafe(32)
+        reset_tokens[token] = {
+            'username': username,
+            'timestamp': time.time(),
+            'account_type': account_type
+        }
+        
+        # Redirect to password reset form
+        return render_template('forgot_credentials.html', 
+                            recovery_type='reset_password',
+                            account_type=account_type,
+                            username=username,
+                            token=token)
+    else:
+        flash('Incorrect security answer. Please try again.', 'danger')
+        return render_template('forgot_credentials.html',
+                            recovery_type='security_question',
+                            account_type=account_type,
+                            username=username,
+                            security_question=account.security_question)
+
+@auth_bp.route('/reset-password/<string:account_type>', methods=['POST'])
+def reset_password(account_type):
+    """
+    Resets the user's password after validating the token.
+    """
+    username = request.form.get('username', '')
+    token = request.form.get('token', '')
+    new_password = request.form.get('new_password', '')
+    confirm_password = request.form.get('confirm_password', '')
+    
+    # Validate input
+    if not all([username, token, new_password, confirm_password]):
+        flash('All fields are required.', 'danger')
+        return redirect(url_for('auth.forgot_credentials', recovery_type='password', account_type=account_type))
+    
+    # Check if passwords match
+    if new_password != confirm_password:
+        flash('Passwords do not match.', 'danger')
+        return render_template('forgot_credentials.html', 
+                            recovery_type='reset_password',
+                            account_type=account_type,
+                            username=username,
+                            token=token)
+    
+    # Validate token
+    if token not in reset_tokens:
+        flash('Invalid or expired token. Please try again.', 'danger')
+        return redirect(url_for('auth.forgot_credentials', recovery_type='password', account_type=account_type))
+    
+    # Check token expiry (30 minutes)
+    token_data = reset_tokens[token]
+    if time.time() - token_data['timestamp'] > 1800:  # 30 minutes in seconds
+        del reset_tokens[token]
+        flash('Token has expired. Please try again.', 'danger')
+        return redirect(url_for('auth.forgot_credentials', recovery_type='password', account_type=account_type))
+    
+    # Verify username and account type match
+    if token_data['username'] != username or token_data['account_type'] != account_type:
+        flash('Invalid token. Please try again.', 'danger')
+        return redirect(url_for('auth.forgot_credentials', recovery_type='password', account_type=account_type))
+    
+    # Find the account and reset password
+    if account_type == 'store':
+        account = Store.query.filter_by(username=username).first()
+    else:  # 'user' or 'superadmin'
+        if account_type == 'superadmin':
+            account = User.query.filter_by(username=username, role='superadmin').first()
+        else:
+            account = User.query.filter_by(username=username).filter(User.role != 'superadmin').first()
+    
+    if not account:
+        flash('Account not found.', 'danger')
+        return redirect(url_for('auth.forgot_credentials', recovery_type='password', account_type=account_type))
+    
+    # Update password
+    account.set_password(new_password)
+    db.session.commit()
+    
+    # Log the activity
+    if account_type == 'user' or account_type == 'superadmin':
+        log_activity("Password reset via security question", 
+                   details=f"Username: {username}", 
+                   user_id=account.id, 
+                   store_id=account.store_id)
+    
+    # Delete the used token
+    del reset_tokens[token]
+    
+    flash('Password reset successful. Please log in with your new password.', 'success')
+    
+    # Redirect to appropriate login page
+    if account_type == 'store':
+        return redirect(url_for('store_login'))
+    elif account_type == 'superadmin':
+        return redirect(url_for('superadmin_login'))
+    else:
+        return redirect(url_for('auth.login'))
+
+@auth_bp.route('/set-security-question', methods=['GET', 'POST'])
+@login_required
+def set_security_question():
+    """Allows a logged-in user to set their security question and answer."""
+    if request.method == 'GET':
+        return render_template('set_security_question.html')
+    
+    security_question = request.form.get('security_question', '').strip()
+    security_answer = request.form.get('security_answer', '').strip()
+    
+    if not security_question or not security_answer:
+        flash('Both security question and answer are required.', 'danger')
+        return render_template('set_security_question.html')
+    
+    # Update user's security question and answer
+    user = g.user
+    user.security_question = security_question
+    user.set_security_answer(security_answer)
+    
+    db.session.commit()
+    log_activity("Security question updated")
+    
+    flash('Security question and answer updated successfully.', 'success')
+    return redirect(url_for('dashboard'))
 
 def admin_required_for_store(f):
     @wraps(f)

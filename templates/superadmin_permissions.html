@@ -1,0 +1,586 @@
+{% extends 'base.html' %}
+
+{% block title %}User Permissions - Superadmin Tools{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+    .permissions-section {
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .section-title {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid #dee2e6;
+        padding-bottom: 0.75rem;
+    }
+    .section-title h2 {
+        margin: 0;
+        font-size: 1.5rem;
+    }
+    .section-icon {
+        background-color: #f0f4ff;
+        color: #4c6ef5;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.75rem;
+    }
+    .tab-container {
+        margin-top: 1.5rem;
+    }
+    .tab-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        border-bottom: 1px solid #dee2e6;
+        margin-bottom: 1.5rem;
+    }
+    .tab-button {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 500;
+        color: #495057;
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    .tab-button.active {
+        color: #4c6ef5;
+        border-bottom-color: #4c6ef5;
+    }
+    .tab-content {
+        display: none;
+    }
+    .tab-content.active {
+        display: block;
+    }
+    .permissions-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 2rem;
+    }
+    .permissions-table th, .permissions-table td {
+        padding: 0.75rem;
+        text-align: left;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .permissions-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    .permissions-table tr:hover {
+        background-color: #f8f9fa;
+    }
+    .permissions-table th:first-child,
+    .permissions-table td:first-child {
+        font-weight: 600;
+        background-color: #f8f9fa;
+        position: sticky;
+        left: 0;
+        z-index: 5;
+    }
+    .permissions-table tr:hover td:first-child {
+        background-color: #f1f3f5;
+    }
+    .permissions-controls {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+    }
+    .permission-toggle {
+        cursor: pointer;
+    }
+    .permission-toggle.granted {
+        color: #28a745;
+    }
+    .permission-toggle.denied {
+        color: #dc3545;
+    }
+    .permission-toggle.own {
+        color: #17a2b8;
+    }
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+    .form-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    .form-column {
+        flex: 1;
+        min-width: 200px;
+    }
+    .input-field {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 1rem;
+    }
+    .input-field:focus {
+        border-color: #4c6ef5;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(76, 110, 245, 0.25);
+    }
+    .textarea-field {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 1rem;
+        min-height: 100px;
+        resize: vertical;
+    }
+    .role-card {
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .role-info {
+        flex: 1;
+    }
+    .role-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0 0 0.25rem;
+    }
+    .role-description {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin: 0;
+    }
+    .legend {
+        display: flex;
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+    }
+    .legend-icon {
+        width: 20px;
+        text-align: center;
+    }
+    .legend-label {
+        color: #495057;
+    }
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.4);
+    }
+    .modal-content {
+        background-color: #fefefe;
+        margin: 5% auto;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        width: 80%;
+        max-width: 600px;
+    }
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .modal-title {
+        margin: 0;
+        font-size: 1.5rem;
+    }
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #6c757d;
+    }
+    .modal-close:hover {
+        color: #343a40;
+    }
+    .modal-footer {
+        margin-top: 2rem;
+        padding-top: 1rem;
+        border-top: 1px solid #dee2e6;
+        text-align: right;
+    }
+    .scrollable-container {
+        overflow-x: auto;
+        max-width: 100%;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: #6c757d;
+    }
+    .confirm-delete {
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="logo-image-login">
+    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pawfection Grooming Solutions Logo" style="max-width: 350px; margin-bottom: 1rem; align-items:center;">
+</div>
+<div class="form-wrapper" style="max-width: 1200px;">
+    <div class="form-container" style="padding: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h1 class="form-title">User Permissions</h1>
+            <div>
+                <a href="/superadmin/tools" class="button button-secondary">Back to Tools</a>
+            </div>
+        </div>
+        
+        <div class="permissions-section">
+            <div class="section-title">
+                <div class="section-icon"><i class="fas fa-user-shield"></i></div>
+                <h2>Role Management</h2>
+            </div>
+            
+            <p>Define user roles and their associated permissions across different resources in the system.</p>
+            
+            <div class="role-list">
+                <h3>Available Roles</h3>
+                {% for role in permissions.roles %}
+                <div class="role-card">
+                    <div class="role-info">
+                        <h4 class="role-name">{{ role.display_name }}</h4>
+                        <p class="role-description">{{ role.description }}</p>
+                    </div>
+                    <div>
+                        <button class="button button-primary button-sm" onclick="showPermissions('{{ role.name }}')">
+                            <i class="fas fa-key"></i> Manage Permissions
+                        </button>
+                        {% if role.name != 'superadmin' and role.name != 'admin' %}
+                        <button class="button button-danger button-sm" onclick="confirmDeleteRole('{{ role.name }}', '{{ role.display_name }}')">
+                            <i class="fas fa-trash-alt"></i> Delete
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <div style="text-align: right; margin-top: 1.5rem;">
+                    <button class="button button-primary" onclick="showAddRoleModal()">
+                        <i class="fas fa-plus-circle"></i> Add New Role
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="permissions-section">
+            <div class="section-title">
+                <div class="section-icon"><i class="fas fa-key"></i></div>
+                <h2>Role Permissions</h2>
+            </div>
+            
+            <div class="tab-container">
+                <div class="tab-buttons">
+                    {% for role in permissions.roles %}
+                    <button class="tab-button" data-tab="role-{{ role.name }}-tab">{{ role.display_name }}</button>
+                    {% endfor %}
+                </div>
+                
+                {% for role in permissions.roles %}
+                <div id="role-{{ role.name }}-tab" class="tab-content">
+                    <h3>{{ role.display_name }} Permissions</h3>
+                    <p>{{ role.description }}</p>
+                    
+                    <div class="legend">
+                        <div class="legend-item">
+                            <div class="legend-icon permission-toggle granted"><i class="fas fa-check-circle"></i></div>
+                            <div class="legend-label">Granted</div>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-icon permission-toggle denied"><i class="fas fa-times-circle"></i></div>
+                            <div class="legend-label">Denied</div>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-icon permission-toggle own"><i class="fas fa-user-circle"></i></div>
+                            <div class="legend-label">Own Resources Only</div>
+                        </div>
+                    </div>
+                    
+                    <div class="scrollable-container">
+                        <table class="permissions-table">
+                            <thead>
+                                <tr>
+                                    <th>Resource</th>
+                                    {% for operation in ['view', 'create', 'edit', 'delete', 'export'] %}
+                                        <th>{{ operation|title }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for resource in permissions.resource_types %}
+                                <tr>
+                                    <td>{{ resource.display_name }}</td>
+                                    {% for operation in ['view', 'create', 'edit', 'delete', 'export'] %}
+                                        {% if operation in resource.operations %}
+                                        <td>
+                                            <div class="permissions-controls">
+                                                {% set permission_value = role.permissions[resource.name][operation] %}
+                                                {% if permission_value == true %}
+                                                    <span class="permission-toggle granted" 
+                                                          onclick="togglePermission('{{ role.name }}', '{{ resource.name }}', '{{ operation }}', this)"
+                                                          data-value="true">
+                                                        <i class="fas fa-check-circle"></i>
+                                                    </span>
+                                                {% elif permission_value == "own" %}
+                                                    <span class="permission-toggle own"
+                                                          onclick="togglePermission('{{ role.name }}', '{{ resource.name }}', '{{ operation }}', this)"
+                                                          data-value="own">
+                                                        <i class="fas fa-user-circle"></i>
+                                                    </span>
+                                                {% else %}
+                                                    <span class="permission-toggle denied"
+                                                          onclick="togglePermission('{{ role.name }}', '{{ resource.name }}', '{{ operation }}', this)"
+                                                          data-value="false">
+                                                        <i class="fas fa-times-circle"></i>
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        {% else %}
+                                        <td class="permissions-controls">-</td>
+                                        {% endif %}
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div style="margin-top: 1rem; color: #6c757d; font-size: 0.9rem;">
+                        <p><i class="fas fa-info-circle"></i> Click on icons to toggle permission settings. Changes are saved automatically.</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Role Modal -->
+<div id="addRoleModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Add New Role</h2>
+            <button class="modal-close" onclick="closeAddRoleModal()">&times;</button>
+        </div>
+        
+        <form action="/superadmin/permissions" method="POST">
+            <div class="form-group">
+                <label for="role_name" class="form-label">Role Name (system identifier)</label>
+                <input type="text" id="role_name" name="role_name" class="input-field" required pattern="[a-z0-9_]+" title="Lowercase letters, numbers, and underscores only">
+                <div class="form-text">Lowercase letters, numbers, and underscores only.</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="display_name" class="form-label">Display Name</label>
+                <input type="text" id="display_name" name="display_name" class="input-field" required>
+                <div class="form-text">User-friendly name that will be displayed in the interface.</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="description" class="form-label">Description</label>
+                <textarea id="description" name="description" class="textarea-field"></textarea>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="button button-secondary" onclick="closeAddRoleModal()">Cancel</button>
+                <button type="submit" class="button button-primary">Create Role</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Role Modal -->
+<div id="deleteRoleModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Delete Role</h2>
+            <button class="modal-close" onclick="closeDeleteRoleModal()">&times;</button>
+        </div>
+        
+        <p>Are you sure you want to delete the role <strong id="deleteRoleName"></strong>?</p>
+        <p>This action cannot be undone. Any users assigned to this role will need to be reassigned.</p>
+        
+        <div class="modal-footer">
+            <button type="button" class="button button-secondary" onclick="closeDeleteRoleModal()">Cancel</button>
+            <form action="/superadmin/delete-role" method="POST" style="display: inline;">
+                <input type="hidden" id="delete_role_id" name="role_name">
+                <button type="submit" class="button button-danger confirm-delete">Delete Role</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set first tab as active
+        const firstTabButton = document.querySelector('.tab-button');
+        if (firstTabButton) {
+            firstTabButton.classList.add('active');
+            const tabId = firstTabButton.getAttribute('data-tab');
+            document.getElementById(tabId).classList.add('active');
+        }
+        
+        // Tab switching functionality
+        const tabButtons = document.querySelectorAll('.tab-button');
+        tabButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Remove active class from all buttons and contents
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                
+                // Add active class to clicked button and corresponding content
+                this.classList.add('active');
+                const tabId = this.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+    });
+    
+    // Toggle permission state
+    function togglePermission(roleName, resourceName, operationName, element) {
+        let currentValue = element.getAttribute('data-value');
+        let newValue;
+        
+        // Cycle through values: false -> true -> own -> false
+        if (currentValue === 'false') {
+            newValue = true;
+            element.className = 'permission-toggle granted';
+            element.innerHTML = '<i class="fas fa-check-circle"></i>';
+            element.setAttribute('data-value', 'true');
+        } else if (currentValue === 'true') {
+            newValue = 'own';
+            element.className = 'permission-toggle own';
+            element.innerHTML = '<i class="fas fa-user-circle"></i>';
+            element.setAttribute('data-value', 'own');
+        } else {
+            newValue = false;
+            element.className = 'permission-toggle denied';
+            element.innerHTML = '<i class="fas fa-times-circle"></i>';
+            element.setAttribute('data-value', 'false');
+        }
+        
+        // Send AJAX request to update permission
+        fetch('/superadmin/permissions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                role_name: roleName,
+                resource_name: resourceName,
+                operation_name: operationName,
+                value: newValue
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                alert('Error updating permission: ' + data.error);
+                // Revert the UI change if there was an error
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error updating permission:', error);
+            alert('Error updating permission. Please try again.');
+            // Revert the UI change if there was an error
+            location.reload();
+        });
+    }
+    
+    // Show permissions for a specific role
+    function showPermissions(roleName) {
+        // Find and click the tab button for this role
+        const tabButton = document.querySelector(`.tab-button[data-tab="role-${roleName}-tab"]`);
+        if (tabButton) {
+            tabButton.click();
+            
+            // Scroll to the permissions section
+            document.querySelector('.permissions-section:nth-child(2)').scrollIntoView({
+                behavior: 'smooth'
+            });
+        }
+    }
+    
+    // Add Role Modal functions
+    function showAddRoleModal() {
+        document.getElementById('addRoleModal').style.display = 'block';
+    }
+    
+    function closeAddRoleModal() {
+        document.getElementById('addRoleModal').style.display = 'none';
+    }
+    
+    // Delete Role Modal functions
+    function confirmDeleteRole(roleName, displayName) {
+        document.getElementById('deleteRoleName').textContent = displayName;
+        document.getElementById('delete_role_id').value = roleName;
+        document.getElementById('deleteRoleModal').style.display = 'block';
+    }
+    
+    function closeDeleteRoleModal() {
+        document.getElementById('deleteRoleModal').style.display = 'none';
+    }
+    
+    // Close modals when clicking outside
+    window.onclick = function(event) {
+        const addRoleModal = document.getElementById('addRoleModal');
+        const deleteRoleModal = document.getElementById('deleteRoleModal');
+        
+        if (event.target === addRoleModal) {
+            closeAddRoleModal();
+        }
+        
+        if (event.target === deleteRoleModal) {
+            closeDeleteRoleModal();
+        }
+    }
+</script>
+{% endblock %}

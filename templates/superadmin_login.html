@@ -48,6 +48,9 @@
                         Superadmin Login
                     </button>
                 </div>
+                <div class="form-link" style="text-align: center; margin-top: 1rem;">
+                    <a href="{{ url_for('auth.forgot_credentials', recovery_type='select', account_type='superadmin') }}" class="link-text">Forgot Username/Password?</a>
+                </div>
             </form>
             <div class="form-button-wrapper" style="margin-top: 1.5rem; text-align: center;">
                 <a href="{{ url_for('auth.login') }}" class="button button-secondary" style="width: 100%; margin-bottom: 1rem;">Back to Login</a>

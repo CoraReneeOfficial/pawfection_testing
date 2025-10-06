@@ -1,0 +1,358 @@
+{% extends 'base.html' %}
+
+{% block title %}System Alerts - Pawfection Grooming Solutions{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+    .alerts-container {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    .alert-card {
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 1rem;
+        padding: 1.25rem;
+        position: relative;
+        border-left: 4px solid #4c6ef5;
+    }
+    .alert-critical {
+        border-left-color: #dc3545;
+    }
+    .alert-warning {
+        border-left-color: #ffc107;
+    }
+    .alert-info {
+        border-left-color: #17a2b8;
+    }
+    .alert-success {
+        border-left-color: #28a745;
+    }
+    .alert-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+    .alert-title {
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin: 0;
+        display: flex;
+        align-items: center;
+    }
+    .alert-icon {
+        margin-right: 0.5rem;
+    }
+    .alert-timestamp {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    .alert-message {
+        margin-bottom: 0.75rem;
+        color: #343a40;
+    }
+    .alert-details {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-bottom: 0.75rem;
+    }
+    .alert-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .alert-source {
+        font-size: 0.85rem;
+        color: #6c757d;
+        background-color: #f8f9fa;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+    }
+    .alert-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .alert-actions button {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.85rem;
+    }
+    .filters {
+        display: flex;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+    .filter-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .filter-label {
+        font-weight: 500;
+        margin: 0;
+    }
+    .stats-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .stat-card {
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 1rem;
+        text-align: center;
+    }
+    .stat-value {
+        font-size: 1.75rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    .stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin: 0;
+    }
+    .custom-alert-form {
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .form-title {
+        font-size: 1.25rem;
+        margin-top: 0;
+        margin-bottom: 1.25rem;
+    }
+    .form-row {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    .form-group {
+        flex: 1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="alerts-container">
+    <div class="page-header">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h1>System Alerts</h1>
+            <a href="/superadmin/tools" class="button button-secondary">Back to Tools</a>
+        </div>
+        
+        <!-- Stats Overview -->
+        <div class="stats-container">
+            <div class="stat-card">
+                <p class="stat-value">{{ stats.critical }}</p>
+                <p class="stat-label">Critical Alerts</p>
+            </div>
+            <div class="stat-card">
+                <p class="stat-value">{{ stats.warning }}</p>
+                <p class="stat-label">Warnings</p>
+            </div>
+            <div class="stat-card">
+                <p class="stat-value">{{ stats.info }}</p>
+                <p class="stat-label">Info Alerts</p>
+            </div>
+            <div class="stat-card">
+                <p class="stat-value">{{ stats.resolved }}</p>
+                <p class="stat-label">Resolved</p>
+            </div>
+            <div class="stat-card">
+                <p class="stat-value">{{ stats.total }}</p>
+                <p class="stat-label">Total Alerts</p>
+            </div>
+        </div>
+        
+        <!-- Create Custom Alert Form -->
+        <div class="custom-alert-form">
+            <h2 class="form-title">Create Custom Alert</h2>
+            <form action="/superadmin/create-alert" method="post">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="alertTitle">Alert Title</label>
+                        <input type="text" id="alertTitle" name="title" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="alertType">Alert Type</label>
+                        <select id="alertType" name="type" class="form-control" required>
+                            <option value="critical">Critical</option>
+                            <option value="warning">Warning</option>
+                            <option value="info">Information</option>
+                            <option value="success">Success</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="alertMessage">Message</label>
+                    <textarea id="alertMessage" name="message" class="form-control" rows="3" required></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="alertSource">Source</label>
+                        <input type="text" id="alertSource" name="source" class="form-control" value="Manual Entry">
+                    </div>
+                    <div class="form-group">
+                        <label for="alertTarget">Target Stores/Users (optional)</label>
+                        <input type="text" id="alertTarget" name="target" class="form-control" placeholder="Leave blank for system-wide">
+                    </div>
+                </div>
+                <button type="submit" class="button button-primary">Create Alert</button>
+            </form>
+        </div>
+        
+        <!-- Filters -->
+        <div class="filters">
+            <div class="filter-group">
+                <p class="filter-label">Type:</p>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" checked> Critical</label>
+                    <label><input type="checkbox" checked> Warning</label>
+                    <label><input type="checkbox" checked> Info</label>
+                    <label><input type="checkbox" checked> Success</label>
+                </div>
+            </div>
+            <div class="filter-group">
+                <p class="filter-label">Status:</p>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" checked> Active</label>
+                    <label><input type="checkbox"> Resolved</label>
+                </div>
+            </div>
+            <div class="filter-group">
+                <p class="filter-label">Time:</p>
+                <select class="form-control form-control-sm">
+                    <option>Today</option>
+                    <option>Last 7 days</option>
+                    <option>Last 30 days</option>
+                    <option>All time</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Alerts List -->
+    <div class="alerts-list">
+        {% if alerts %}
+            {% for alert in alerts %}
+                <div class="alert-card alert-{{ alert.type }}">
+                    <div class="alert-header">
+                        <h3 class="alert-title">
+                            {% if alert.type == 'critical' %}
+                                <span class="alert-icon"><i class="fas fa-exclamation-circle" style="color: #dc3545;"></i></span>
+                            {% elif alert.type == 'warning' %}
+                                <span class="alert-icon"><i class="fas fa-exclamation-triangle" style="color: #ffc107;"></i></span>
+                            {% elif alert.type == 'info' %}
+                                <span class="alert-icon"><i class="fas fa-info-circle" style="color: #17a2b8;"></i></span>
+                            {% elif alert.type == 'success' %}
+                                <span class="alert-icon"><i class="fas fa-check-circle" style="color: #28a745;"></i></span>
+                            {% endif %}
+                            {{ alert.title }}
+                        </h3>
+                        <span class="alert-timestamp">{{ alert.timestamp }}</span>
+                    </div>
+                    <div class="alert-message">{{ alert.message }}</div>
+                    {% if alert.details %}
+                        <div class="alert-details">{{ alert.details }}</div>
+                    {% endif %}
+                    <div class="alert-footer">
+                        <span class="alert-source">{{ alert.source }}</span>
+                        <div class="alert-actions">
+                            <button class="button button-small button-outline" onclick="viewAlertDetails('{{ alert.id }}')">Details</button>
+                            {% if not alert.resolved %}
+                                <form action="/superadmin/resolve-alert" method="post" style="display: inline;">
+                                    <input type="hidden" name="alert_id" value="{{ alert.id }}">
+                                    <button type="submit" class="button button-small button-success">Mark Resolved</button>
+                                </form>
+                            {% endif %}
+                            <form action="/superadmin/delete-alert" method="post" style="display: inline;">
+                                <input type="hidden" name="alert_id" value="{{ alert.id }}">
+                                <button type="submit" class="button button-small button-danger">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <p>No alerts found. The system is running smoothly.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Alert Details Modal -->
+<div id="alertDetailsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle"></h2>
+            <span class="close">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div id="modalContent"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function viewAlertDetails(alertId) {
+        // In a real implementation, this would fetch alert details via AJAX
+        // For now, we'll just show a modal with placeholder content
+        const modal = document.getElementById('alertDetailsModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalContent = document.getElementById('modalContent');
+        
+        // Set modal content based on alert ID
+        modalTitle.innerText = 'Alert Details';
+        modalContent.innerHTML = `
+            <p><strong>Alert ID:</strong> ${alertId}</p>
+            <p><strong>First Detected:</strong> [Timestamp]</p>
+            <p><strong>Status History:</strong></p>
+            <ul>
+                <li>[Timestamp] - Alert created</li>
+                <li>[Timestamp] - Alert updated</li>
+            </ul>
+            <p><strong>Related Events:</strong></p>
+            <ul>
+                <li>Event 1</li>
+                <li>Event 2</li>
+            </ul>
+            <p><strong>Recommended Action:</strong> [Action details]</p>
+        `;
+        
+        // Display modal
+        modal.style.display = 'block';
+        
+        // Close modal when X is clicked
+        document.querySelector('.close').onclick = function() {
+            modal.style.display = 'none';
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+    }
+    
+    // Initialize filter functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkboxes = document.querySelectorAll('.filters input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                // In a real implementation, this would filter the alerts
+                console.log('Filter changed');
+            });
+        });
+    });
+</script>
+{% endblock %}

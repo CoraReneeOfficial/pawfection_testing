@@ -488,6 +488,9 @@ def add_user():
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
+        email = request.form.get('email', '').strip()
+        security_question = request.form.get('security_question', '')
+        security_answer = request.form.get('security_answer', '')
         is_admin = 'is_admin' in request.form
         is_groomer = 'is_groomer' in request.form 
         
@@ -496,6 +499,8 @@ def add_user():
         if not password: errors['password'] = "Password required."
         if password != confirm_password: errors['password_confirm'] = "Passwords do not match."
         if len(password) < 8 and password: errors['password_length'] = "Password too short."
+        if not security_question: errors['security_question'] = "Security question required."
+        if not security_answer: errors['security_answer'] = "Security answer required."
         
         # Check for username conflict only within the current store
         if User.query.filter_by(username=username, store_id=store_id).first():
@@ -508,8 +513,9 @@ def add_user():
             form_data['is_groomer'] = is_groomer
             return render_template('user_form.html', mode='add', user_data=form_data), 400
         
-        new_user = User(username=username, is_admin=is_admin, is_groomer=is_groomer, store_id=store_id)  # Assign store_id
+        new_user = User(username=username, is_admin=is_admin, is_groomer=is_groomer, store_id=store_id, security_question=security_question, email=email)  # Assign store_id and email
         new_user.set_password(password)
+        new_user.set_security_answer(security_answer)
         
         try:
             db.session.add(new_user)
@@ -553,6 +559,9 @@ def edit_user(user_id):
         new_username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
+        email = request.form.get('email', '').strip()
+        security_question = request.form.get('security_question', '')
+        security_answer = request.form.get('security_answer', '')
         is_admin = 'is_admin' in request.form
         is_groomer = 'is_groomer' in request.form
         
@@ -586,9 +595,18 @@ def edit_user(user_id):
             return render_template('user_form.html', mode='edit', user_data=form_data), 400
         
         user_to_edit.username = new_username
+        user_to_edit.email = email
         if password_changed: user_to_edit.set_password(password)
         user_to_edit.is_admin = is_admin
         user_to_edit.is_groomer = is_groomer
+        
+        # Update security question if provided
+        if security_question:
+            user_to_edit.security_question = security_question
+            
+        # Update security answer if provided
+        if security_answer:
+            user_to_edit.set_security_answer(security_answer)
         
         try:
             uploaded_filename = _handle_user_picture_upload(user_to_edit, request.files)
@@ -1234,6 +1252,18 @@ def edit_store():
                 errors.append('Password must be at least 8 characters.')
             else:
                 store.set_password(password)
+        
+        # Security question and answer logic
+        security_question = request.form.get('security_question', '')
+        security_answer = request.form.get('security_answer', '')
+        
+        # Update security question if provided
+        if security_question:
+            store.security_question = security_question
+            
+        # Update security answer if provided
+        if security_answer:
+            store.set_security_answer(security_answer)
         # Set all other fields
         store.name = request.form.get('name', store.name)
         store.username = new_username

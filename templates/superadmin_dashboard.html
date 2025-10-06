@@ -160,7 +160,7 @@
                 </button>
             </div>
             <div class="modal-body">
-                <form id="editStoreForm" action="/superadmin/edit_store" method="POST">
+                                <form id="editStoreForm" action="{{ url_for('management.superadmin_edit_store') }}" method="POST" enctype="multipart/form-data">
                     <input type="hidden" id="editStoreId" name="store_id" value="">
                     
                     <div class="form-group">

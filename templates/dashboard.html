@@ -360,7 +360,7 @@
                     </div>
                     <span class="status-badge status-{{ appt.status }}">{{ appt.status }}</span>
                     {% if appt.status == 'Scheduled' %}
-                    <a href="{{ url_for('appointments.invoice_checkout', appointment_id=appt.id) }}" class="button button-primary" style="margin-left:1em;">Checkout</a>
+                                        <a href="{{ url_for('appointments.checkout_start', appointment_id=appt.id) }}" class="button button-primary" style="margin-left:1em;">Checkout</a>
                     {% endif %}
                 </li>
                 {% endfor %}

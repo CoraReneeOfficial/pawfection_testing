@@ -43,8 +43,33 @@
                     <input type="text" id="store_username" name="store_username" required class="form-input" value="{{ request.form.store_username or '' }}">
                 </div>
                 <div class="form-group">
+                    <label for="store_email">Store Email</label>
+                    <input type="email" id="store_email" name="store_email" required class="form-input" value="{{ request.form.store_email or '' }}">
+                    <small class="form-help">Used for account recovery if you forget your username or password.</small>
+                </div>
+                <div class="form-group">
                     <label for="store_password">Store Password</label>
                     <input type="password" id="store_password" name="store_password" required class="form-input">
+                </div>
+                <div class="form-group">
+                    <label for="security_question">Security Question</label>
+                    <select id="security_question" name="security_question" required class="form-input">
+                        <option value="">-- Select a Question --</option>
+                        <option value="What was your first pet's name?">What was your first pet's name?</option>
+                        <option value="What was the name of your elementary school?">What was the name of your elementary school?</option>
+                        <option value="In what city were you born?">In what city were you born?</option>
+                        <option value="What is your mother's maiden name?">What is your mother's maiden name?</option>
+                        <option value="What was the make of your first car?">What was the make of your first car?</option>
+                        <option value="What is the name of your favorite childhood friend?">What is the name of your favorite childhood friend?</option>
+                        <option value="What is your favorite movie?">What is your favorite movie?</option>
+                        <option value="What street did you grow up on?">What street did you grow up on?</option>
+                        <option value="What is your favorite book?">What is your favorite book?</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="security_answer">Answer to Security Question</label>
+                    <input type="text" id="security_answer" name="security_answer" required class="form-input">
+                    <small class="form-help">This will be used to recover your account if you forget your password.</small>
                 </div>
                 <hr style="margin: 2rem 0;">
                 <div class="form-group">

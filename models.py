@@ -42,6 +42,10 @@ class Store(db.Model):
     # --- Stripe integration fields ---
     stripe_customer_id = db.Column(db.String(255), nullable=True)
     stripe_subscription_id = db.Column(db.String(255), nullable=True)
+    
+    # --- Security fields for password recovery ---
+    security_question = db.Column(db.String(255), nullable=True)
+    security_answer_hash = db.Column(db.String(128), nullable=True)
 
     # Relationships to other models, ensuring data is linked to the store
     users = db.relationship('User', backref='store', lazy=True)
@@ -61,6 +65,19 @@ class Store(db.Model):
         import bcrypt
         return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
 
+    def set_security_answer(self, answer):
+        """Hashes the security answer and stores it."""
+        import bcrypt
+        if answer:
+            self.security_answer_hash = bcrypt.hashpw(answer.lower().encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
+    def check_security_answer(self, answer):
+        """Checks if the given security answer matches the stored hash."""
+        import bcrypt
+        if not self.security_answer_hash or not answer:
+            return False
+        return bcrypt.checkpw(answer.lower().encode('utf-8'), self.security_answer_hash.encode('utf-8'))
+    
     def __repr__(self):
         return f"<Store {self.name} (ID: {self.id})>"
 
@@ -85,6 +102,10 @@ class User(db.Model):
     stripe_customer_id = db.Column(db.String(255), nullable=True)
     stripe_subscription_id = db.Column(db.String(255), nullable=True)
     is_subscribed = db.Column(db.Boolean, default=False, nullable=False)
+    
+    # Security fields for password recovery
+    security_question = db.Column(db.String(255), nullable=True)
+    security_answer_hash = db.Column(db.String(128), nullable=True)
 
     # Relationships to data created or assigned by this user
     activity_logs = db.relationship('ActivityLog', backref='user', lazy=True)
@@ -103,6 +124,19 @@ class User(db.Model):
         """Checks if the given password matches the stored hash."""
         import bcrypt
         return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
+        
+    def set_security_answer(self, answer):
+        """Hashes the security answer and stores it."""
+        import bcrypt
+        if answer:
+            self.security_answer_hash = bcrypt.hashpw(answer.lower().encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
+    def check_security_answer(self, answer):
+        """Checks if the given security answer matches the stored hash."""
+        import bcrypt
+        if not self.security_answer_hash or not answer:
+            return False
+        return bcrypt.checkpw(answer.lower().encode('utf-8'), self.security_answer_hash.encode('utf-8'))
 
     def __repr__(self):
         return f"<User {self.username} (ID: {self.id}, Role: {self.role}, Store: {self.store_id})>"

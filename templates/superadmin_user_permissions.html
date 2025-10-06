@@ -1,0 +1,730 @@
+{% extends 'base.html' %}
+
+{% block title %}User Permissions - Superadmin Tools{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+    .permission-wrapper {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .permission-container {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+        padding: 2rem;
+    }
+    
+    .header-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .user-card {
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        position: relative;
+    }
+    
+    .user-card:hover {
+        background-color: #f9f9f9;
+    }
+    
+    .user-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .user-details {
+        font-size: 0.9rem;
+        color: #666;
+        margin-bottom: 1rem;
+    }
+    
+    .permissions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 0.5rem;
+    }
+    
+    .permission-item {
+        display: flex;
+        align-items: center;
+    }
+    
+    .permission-item label {
+        margin-left: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .actions-dropdown {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+    }
+    
+    .role-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        margin-left: 0.5rem;
+    }
+    
+    .role-superadmin {
+        background-color: #ffcccb;
+        color: #d32f2f;
+    }
+    
+    .role-admin {
+        background-color: #c8e6c9;
+        color: #2e7d32;
+    }
+    
+    .role-staff {
+        background-color: #bbdefb;
+        color: #1976d2;
+    }
+    
+    .tab-container {
+        margin-bottom: 1.5rem;
+    }
+    
+    .tab-buttons {
+        display: flex;
+        border-bottom: 1px solid #ddd;
+        margin-bottom: 1rem;
+    }
+    
+    .tab-button {
+        padding: 0.75rem 1.5rem;
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        cursor: pointer;
+        font-weight: 500;
+    }
+    
+    .tab-button.active {
+        border-bottom: 3px solid #4caf50;
+        color: #4caf50;
+    }
+    
+    .tab-content {
+        display: none;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-row {
+        display: flex;
+        margin: 0 -0.5rem;
+    }
+    
+    .form-column {
+        flex: 1;
+        padding: 0 0.5rem;
+    }
+    
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+    
+    .input-field {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    
+    .search-container {
+        margin-bottom: 1.5rem;
+    }
+    
+    .search-input {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    
+    .alert {
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 4px;
+    }
+    
+    .alert-success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .alert-warning {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeeba;
+    }
+    
+    .modal-backdrop {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+    }
+    
+    .modal {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: white;
+        border-radius: 8px;
+        z-index: 1001;
+        max-width: 500px;
+        width: 100%;
+    }
+    
+    .modal-header {
+        padding: 1rem;
+        border-bottom: 1px solid #ddd;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .modal-body {
+        padding: 1rem;
+    }
+    
+    .modal-footer {
+        padding: 1rem;
+        border-top: 1px solid #ddd;
+        text-align: right;
+    }
+    
+    .close-modal {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="permission-wrapper">
+    <div class="permission-container">
+        <div class="header-actions">
+            <h1>User Permissions Management</h1>
+            <div>
+                <a href="/superadmin/tools" class="button button-secondary">Back to Tools</a>
+                <button class="button button-primary" id="add-user-btn">Add New User</button>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <div class="tab-container">
+            <div class="tab-buttons">
+                <button type="button" class="tab-button active" data-tab="users-tab">Users</button>
+                <button type="button" class="tab-button" data-tab="roles-tab">Roles</button>
+                <button type="button" class="tab-button" data-tab="permissions-tab">Permissions</button>
+            </div>
+            
+            <div id="users-tab" class="tab-content active">
+                <div class="search-container">
+                    <input type="text" class="search-input" placeholder="Search users by name or email..." id="user-search">
+                </div>
+                
+                <div id="user-list">
+                    {% for user in users %}
+                    <div class="user-card">
+                        <div class="user-header">
+                            <h3>{{ user.name }} 
+                                {% if user.role == 'superadmin' %}
+                                <span class="role-badge role-superadmin">Superadmin</span>
+                                {% elif user.role == 'admin' %}
+                                <span class="role-badge role-admin">Admin</span>
+                                {% else %}
+                                <span class="role-badge role-staff">Staff</span>
+                                {% endif %}
+                            </h3>
+                            <div class="actions-dropdown">
+                                <button class="button button-small button-secondary dropdown-toggle">Actions</button>
+                                <div class="dropdown-menu">
+                                    <a href="#" class="edit-user" data-user-id="{{ user.id }}">Edit User</a>
+                                    <a href="#" class="reset-password" data-user-id="{{ user.id }}">Reset Password</a>
+                                    {% if user.role != 'superadmin' %}
+                                    <a href="#" class="delete-user" data-user-id="{{ user.id }}">Delete User</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="user-details">
+                            <p><strong>Email:</strong> {{ user.email }}</p>
+                            <p><strong>Store:</strong> {{ user.store_name }}</p>
+                            <p><strong>Last Login:</strong> {{ user.last_login if user.last_login else 'Never' }}</p>
+                        </div>
+                        <div class="permissions-grid">
+                            {% for permission in user.permissions %}
+                            <div class="permission-item">
+                                <input type="checkbox" id="perm-{{ user.id }}-{{ permission.id }}" 
+                                       {% if permission.granted %}checked{% endif %} 
+                                       class="permission-checkbox" 
+                                       data-user-id="{{ user.id }}" 
+                                       data-permission-id="{{ permission.id }}">
+                                <label for="perm-{{ user.id }}-{{ permission.id }}">{{ permission.name }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <p>No users found. Click "Add New User" to create the first user.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div id="roles-tab" class="tab-content">
+                <p>Define roles and their default permissions</p>
+                
+                <div class="role-list">
+                    <div class="form-group">
+                        <label class="form-label">Superadmin Role</label>
+                        <p>Superadmins have access to all features and cannot have permissions revoked.</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Admin Role</label>
+                        <p>Store administrators have access to most store-specific features.</p>
+                        <div class="permissions-grid">
+                            {% for permission in admin_permissions %}
+                            <div class="permission-item">
+                                <input type="checkbox" id="admin-perm-{{ permission.id }}" 
+                                       {% if permission.default_for_admin %}checked{% endif %} 
+                                       class="role-permission-checkbox" 
+                                       data-role="admin" 
+                                       data-permission-id="{{ permission.id }}">
+                                <label for="admin-perm-{{ permission.id }}">{{ permission.name }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Staff Role</label>
+                        <p>Staff members have limited access appropriate for day-to-day operations.</p>
+                        <div class="permissions-grid">
+                            {% for permission in staff_permissions %}
+                            <div class="permission-item">
+                                <input type="checkbox" id="staff-perm-{{ permission.id }}" 
+                                       {% if permission.default_for_staff %}checked{% endif %} 
+                                       class="role-permission-checkbox" 
+                                       data-role="staff" 
+                                       data-permission-id="{{ permission.id }}">
+                                <label for="staff-perm-{{ permission.id }}">{{ permission.name }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="permissions-tab" class="tab-content">
+                <p>Define system permissions</p>
+                
+                <button id="add-permission-btn" class="button button-primary">Add New Permission</button>
+                
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Permission Name</th>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for permission in permissions %}
+                        <tr>
+                            <td>{{ permission.name }}</td>
+                            <td>{{ permission.description }}</td>
+                            <td>{{ permission.category }}</td>
+                            <td>
+                                <button class="button button-small button-secondary edit-permission" data-permission-id="{{ permission.id }}">Edit</button>
+                                <button class="button button-small button-danger delete-permission" data-permission-id="{{ permission.id }}">Delete</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add User Modal -->
+<div id="add-user-modal" class="modal">
+    <div class="modal-header">
+        <h2>Add New User</h2>
+        <button class="close-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+        <form id="add-user-form" action="/superadmin/users/add" method="POST">
+            <div class="form-group">
+                <label for="name" class="form-label">Full Name</label>
+                <input type="text" id="name" name="name" class="input-field" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="email" class="form-label">Email Address</label>
+                <input type="email" id="email" name="email" class="input-field" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="store_id" class="form-label">Store</label>
+                <select id="store_id" name="store_id" class="input-field" required>
+                    <option value="">Select a store</option>
+                    {% for store in stores %}
+                    <option value="{{ store.id }}">{{ store.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="role" class="form-label">Role</label>
+                <select id="role" name="role" class="input-field" required>
+                    <option value="staff">Staff</option>
+                    <option value="admin">Admin</option>
+                    <option value="superadmin">Superadmin</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="password" class="form-label">Initial Password</label>
+                <input type="password" id="password" name="password" class="input-field" required>
+                <small>User will be prompted to change on first login</small>
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button class="button button-secondary close-modal-btn">Cancel</button>
+        <button form="add-user-form" type="submit" class="button button-primary">Add User</button>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div id="edit-user-modal" class="modal">
+    <div class="modal-header">
+        <h2>Edit User</h2>
+        <button class="close-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+        <form id="edit-user-form" action="/superadmin/users/edit" method="POST">
+            <input type="hidden" id="edit_user_id" name="user_id">
+            
+            <div class="form-group">
+                <label for="edit_name" class="form-label">Full Name</label>
+                <input type="text" id="edit_name" name="name" class="input-field" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="edit_email" class="form-label">Email Address</label>
+                <input type="email" id="edit_email" name="email" class="input-field" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="edit_store_id" class="form-label">Store</label>
+                <select id="edit_store_id" name="store_id" class="input-field" required>
+                    <option value="">Select a store</option>
+                    {% for store in stores %}
+                    <option value="{{ store.id }}">{{ store.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="edit_role" class="form-label">Role</label>
+                <select id="edit_role" name="role" class="input-field" required>
+                    <option value="staff">Staff</option>
+                    <option value="admin">Admin</option>
+                    <option value="superadmin">Superadmin</option>
+                </select>
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button class="button button-secondary close-modal-btn">Cancel</button>
+        <button form="edit-user-form" type="submit" class="button button-primary">Update User</button>
+    </div>
+</div>
+
+<!-- Add Permission Modal -->
+<div id="add-permission-modal" class="modal">
+    <div class="modal-header">
+        <h2>Add New Permission</h2>
+        <button class="close-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+        <form id="add-permission-form" action="/superadmin/permissions/add" method="POST">
+            <div class="form-group">
+                <label for="permission_name" class="form-label">Permission Name</label>
+                <input type="text" id="permission_name" name="name" class="input-field" required>
+                <small>Use a clear, concise name (e.g., "manage_inventory")</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="permission_description" class="form-label">Description</label>
+                <textarea id="permission_description" name="description" class="input-field" rows="3" required></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="permission_category" class="form-label">Category</label>
+                <select id="permission_category" name="category" class="input-field" required>
+                    <option value="customers">Customers</option>
+                    <option value="appointments">Appointments</option>
+                    <option value="inventory">Inventory</option>
+                    <option value="reports">Reports</option>
+                    <option value="settings">Settings</option>
+                    <option value="billing">Billing</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Default For:</label>
+                <div>
+                    <input type="checkbox" id="default_admin" name="default_admin" value="1">
+                    <label for="default_admin">Admin Users</label>
+                </div>
+                <div>
+                    <input type="checkbox" id="default_staff" name="default_staff" value="1">
+                    <label for="default_staff">Staff Users</label>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button class="button button-secondary close-modal-btn">Cancel</button>
+        <button form="add-permission-form" type="submit" class="button button-primary">Add Permission</button>
+    </div>
+</div>
+
+<div class="modal-backdrop"></div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Tab switching functionality
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Remove active class from all buttons and contents
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+                
+                // Add active class to clicked button and corresponding content
+                this.classList.add('active');
+                const tabId = this.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+        
+        // Modal functionality
+        const modalBackdrop = document.querySelector('.modal-backdrop');
+        const modals = document.querySelectorAll('.modal');
+        const closeModalButtons = document.querySelectorAll('.close-modal, .close-modal-btn');
+        
+        function openModal(modalId) {
+            modalBackdrop.style.display = 'block';
+            document.getElementById(modalId).style.display = 'block';
+            document.body.style.overflow = 'hidden'; // Prevent scrolling
+        }
+        
+        function closeAllModals() {
+            modalBackdrop.style.display = 'none';
+            modals.forEach(modal => {
+                modal.style.display = 'none';
+            });
+            document.body.style.overflow = '';
+        }
+        
+        // Add User button
+        document.getElementById('add-user-btn').addEventListener('click', function() {
+            openModal('add-user-modal');
+        });
+        
+        // Add Permission button
+        document.getElementById('add-permission-btn').addEventListener('click', function() {
+            openModal('add-permission-modal');
+        });
+        
+        // Close modal buttons
+        closeModalButtons.forEach(button => {
+            button.addEventListener('click', closeAllModals);
+        });
+        
+        // Close modal when clicking outside
+        modalBackdrop.addEventListener('click', closeAllModals);
+        
+        // Prevent modal close when clicking inside modal
+        modals.forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+        });
+        
+        // Edit user buttons
+        const editUserButtons = document.querySelectorAll('.edit-user');
+        editUserButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const userId = this.getAttribute('data-user-id');
+                
+                // Fetch user data and populate form
+                fetch(`/superadmin/users/${userId}`)
+                    .then(response => response.json())
+                    .then(user => {
+                        document.getElementById('edit_user_id').value = user.id;
+                        document.getElementById('edit_name').value = user.name;
+                        document.getElementById('edit_email').value = user.email;
+                        document.getElementById('edit_store_id').value = user.store_id;
+                        document.getElementById('edit_role').value = user.role;
+                        
+                        openModal('edit-user-modal');
+                    })
+                    .catch(error => console.error('Error fetching user data:', error));
+            });
+        });
+        
+        // Permission checkbox change events
+        const permissionCheckboxes = document.querySelectorAll('.permission-checkbox');
+        permissionCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const userId = this.getAttribute('data-user-id');
+                const permissionId = this.getAttribute('data-permission-id');
+                const granted = this.checked;
+                
+                fetch('/superadmin/users/permissions/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        permission_id: permissionId,
+                        granted: granted
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to update permission');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Permission updated:', data);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    // Revert checkbox if there was an error
+                    this.checked = !granted;
+                    alert('Failed to update permission. Please try again.');
+                });
+            });
+        });
+        
+        // Role permission checkbox change events
+        const rolePermissionCheckboxes = document.querySelectorAll('.role-permission-checkbox');
+        rolePermissionCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const role = this.getAttribute('data-role');
+                const permissionId = this.getAttribute('data-permission-id');
+                const defaultEnabled = this.checked;
+                
+                fetch('/superadmin/roles/permissions/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        role: role,
+                        permission_id: permissionId,
+                        default_enabled: defaultEnabled
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to update role permission');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Role permission updated:', data);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    // Revert checkbox if there was an error
+                    this.checked = !defaultEnabled;
+                    alert('Failed to update role permission. Please try again.');
+                });
+            });
+        });
+        
+        // Search functionality
+        const userSearch = document.getElementById('user-search');
+        const userCards = document.querySelectorAll('.user-card');
+        
+        userSearch.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            
+            userCards.forEach(card => {
+                const name = card.querySelector('h3').textContent.toLowerCase();
+                const email = card.querySelector('.user-details').textContent.toLowerCase();
+                
+                if (name.includes(searchTerm) || email.includes(searchTerm)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

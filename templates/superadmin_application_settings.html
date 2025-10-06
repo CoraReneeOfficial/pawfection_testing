@@ -1,0 +1,585 @@
+{% extends 'base.html' %}
+
+{% block title %}Application Settings - Superadmin Tools{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+    .settings-section {
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .section-title {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid #dee2e6;
+        padding-bottom: 0.75rem;
+    }
+    .section-title h2 {
+        margin: 0;
+        font-size: 1.5rem;
+    }
+    .section-icon {
+        background-color: #f0f4ff;
+        color: #4c6ef5;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.75rem;
+    }
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+    .form-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+    }
+    .form-column {
+        flex: 1;
+        min-width: 200px;
+    }
+    .form-text {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-top: 0.25rem;
+    }
+    .form-switch {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 24px;
+    }
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 24px;
+    }
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+    input:checked + .slider {
+        background-color: #4c6ef5;
+    }
+    input:focus + .slider {
+        box-shadow: 0 0 1px #4c6ef5;
+    }
+    input:checked + .slider:before {
+        transform: translateX(26px);
+    }
+    .tab-container {
+        margin-top: 1.5rem;
+    }
+    .tab-buttons {
+        display: flex;
+        border-bottom: 1px solid #dee2e6;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+    .tab-button {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 500;
+        color: #495057;
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        cursor: pointer;
+    }
+    .tab-button.active {
+        color: #4c6ef5;
+        border-bottom-color: #4c6ef5;
+    }
+    .tab-content {
+        display: none;
+    }
+    .tab-content.active {
+        display: block;
+    }
+    .input-field {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 1rem;
+    }
+    .input-field:focus {
+        border-color: #4c6ef5;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(76, 110, 245, 0.25);
+    }
+    .textarea-field {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 1rem;
+        min-height: 100px;
+        resize: vertical;
+    }
+    .preview-box {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 1rem;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+    .preview-box img {
+        max-width: 100%;
+        max-height: 100px;
+        display: block;
+        margin: 0 auto;
+    }
+    .color-sample {
+        width: 25px;
+        height: 25px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 10px;
+        vertical-align: middle;
+        border: 1px solid #dee2e6;
+    }
+    .blue-color { background-color: #4c6ef5; }
+    .green-color { background-color: #40c057; }
+    .purple-color { background-color: #7950f2; }
+    .red-color { background-color: #fa5252; }
+    .orange-color { background-color: #fd7e14; }
+    .teal-color { background-color: #20c997; }
+    .settings-alert {
+        background-color: #fff3cd;
+        color: #856404;
+        border-radius: 4px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid #ffc107;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="logo-image-login">
+    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pawfection Grooming Solutions Logo" style="max-width: 350px; margin-bottom: 1rem; align-items:center;">
+</div>
+<div class="form-wrapper" style="max-width: 1200px;">
+    <div class="form-container" style="padding: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h1 class="form-title">Application Settings</h1>
+            <div>
+                <a href="/superadmin/tools" class="button button-secondary">Back to Tools</a>
+            </div>
+        </div>
+        
+        <div class="settings-alert">
+            <strong><i class="fas fa-exclamation-triangle"></i> Important:</strong> Changes to application settings may affect how the application appears and operates for all users.
+        </div>
+        
+        <form action="/superadmin/application-settings" method="POST">
+            <div class="tab-container">
+                <div class="tab-buttons">
+                    <button type="button" class="tab-button active" data-tab="appearance-tab">Appearance</button>
+                    <button type="button" class="tab-button" data-tab="business-tab">Business Info</button>
+                    <button type="button" class="tab-button" data-tab="notifications-tab">Notifications</button>
+                    <button type="button" class="tab-button" data-tab="integrations-tab">Integrations</button>
+                    <button type="button" class="tab-button" data-tab="features-tab">Features</button>
+                </div>
+                
+                <!-- Appearance Settings Tab -->
+                <div id="appearance-tab" class="tab-content active">
+                    <div class="settings-section">
+                        <div class="section-title">
+                            <div class="section-icon"><i class="fas fa-paint-brush"></i></div>
+                            <h2>Appearance Settings</h2>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-column">
+                                <label for="theme" class="form-label">Theme</label>
+                                <select id="theme" name="theme" class="input-field">
+                                    {% for theme in themes %}
+                                    <option value="{{ theme }}" {% if settings.appearance.theme == theme %}selected{% endif %}>
+                                        {{ theme|title }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">Select the overall theme for the application.</div>
+                            </div>
+                            
+                            <div class="form-column">
+                                <label for="color_scheme" class="form-label">Color Scheme</label>
+                                <select id="color_scheme" name="color_scheme" class="input-field">
+                                    {% for color in color_schemes %}
+                                    <option value="{{ color }}" {% if settings.appearance.color_scheme == color %}selected{% endif %}>
+                                        <span class="color-sample {{ color }}-color"></span> {{ color|title }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">Choose the primary color scheme for buttons and highlights.</div>
+                                
+                                <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                                    {% for color in color_schemes %}
+                                    <div class="color-sample {{ color }}-color" title="{{ color|title }}"></div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="logo_url" class="form-label">Logo URL</label>
+                            <input type="text" id="logo_url" name="logo_url" class="input-field" value="{{ settings.appearance.logo_url }}">
+                            <div class="form-text">URL to your company logo (recommended size: 350x100px).</div>
+                            
+                            <div class="preview-box">
+                                <img src="{{ settings.appearance.logo_url }}" alt="Logo Preview" id="logo_preview">
+                                <div class="form-text">Logo Preview</div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="favicon_url" class="form-label">Favicon URL</label>
+                            <input type="text" id="favicon_url" name="favicon_url" class="input-field" value="{{ settings.appearance.favicon_url }}">
+                            <div class="form-text">URL to your website favicon (must be .ico format, 16x16px or 32x32px).</div>
+                            
+                            <div class="preview-box">
+                                <img src="{{ settings.appearance.favicon_url }}" alt="Favicon Preview" id="favicon_preview" style="max-width: 32px;">
+                                <div class="form-text">Favicon Preview</div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="custom_css" class="form-label">Custom CSS</label>
+                            <textarea id="custom_css" name="custom_css" class="textarea-field">{{ settings.appearance.custom_css }}</textarea>
+                            <div class="form-text">Add custom CSS to override default styles. Changes will apply to all pages.</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Business Info Tab -->
+                <div id="business-tab" class="tab-content">
+                    <div class="settings-section">
+                        <div class="section-title">
+                            <div class="section-icon"><i class="fas fa-building"></i></div>
+                            <h2>Business Information</h2>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="business_name" class="form-label">Business Name</label>
+                            <input type="text" id="business_name" name="business_name" class="input-field" value="{{ settings.business.business_name }}">
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-column">
+                                <label for="contact_email" class="form-label">Contact Email</label>
+                                <input type="email" id="contact_email" name="contact_email" class="input-field" value="{{ settings.business.contact_email }}">
+                            </div>
+                            
+                            <div class="form-column">
+                                <label for="contact_phone" class="form-label">Contact Phone</label>
+                                <input type="text" id="contact_phone" name="contact_phone" class="input-field" value="{{ settings.business.contact_phone }}">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="address" class="form-label">Business Address</label>
+                            <textarea id="address" name="address" class="textarea-field" rows="3">{{ settings.business.address }}</textarea>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-column">
+                                <label for="website" class="form-label">Website URL</label>
+                                <input type="url" id="website" name="website" class="input-field" value="{{ settings.business.website }}">
+                            </div>
+                            
+                            <div class="form-column">
+                                <label for="hours_of_operation" class="form-label">Hours of Operation</label>
+                                <input type="text" id="hours_of_operation" name="hours_of_operation" class="input-field" value="{{ settings.business.hours_of_operation }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Notifications Tab -->
+                <div id="notifications-tab" class="tab-content">
+                    <div class="settings-section">
+                        <div class="section-title">
+                            <div class="section-icon"><i class="fas fa-bell"></i></div>
+                            <h2>Notification Settings</h2>
+                        </div>
+                        
+                        <p>Configure which automated notifications are sent to customers and staff.</p>
+                        
+                        <div class="form-group">
+                            <div class="form-switch">
+                                <label class="switch">
+                                    <input type="checkbox" name="appointment_confirmation" {% if settings.notifications.appointment_confirmation %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                                <span>Appointment Confirmation</span>
+                            </div>
+                            <div class="form-text">Send confirmation emails when appointments are booked.</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="form-switch">
+                                <label class="switch">
+                                    <input type="checkbox" name="appointment_reminder" {% if settings.notifications.appointment_reminder %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                                <span>Appointment Reminder</span>
+                            </div>
+                            <div class="form-text">Send reminder emails 24 hours before scheduled appointments.</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="form-switch">
+                                <label class="switch">
+                                    <input type="checkbox" name="appointment_cancellation" {% if settings.notifications.appointment_cancellation %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                                <span>Appointment Cancellation</span>
+                            </div>
+                            <div class="form-text">Send notifications when appointments are cancelled.</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="form-switch">
+                                <label class="switch">
+                                    <input type="checkbox" name="appointment_rescheduling" {% if settings.notifications.appointment_rescheduling %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                                <span>Appointment Rescheduling</span>
+                            </div>
+                            <div class="form-text">Send notifications when appointments are rescheduled.</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="form-switch">
+                                <label class="switch">
+                                    <input type="checkbox" name="invoice_notification" {% if settings.notifications.invoice_notification %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                                <span>Invoice Notification</span>
+                            </div>
+                            <div class="form-text">Send email with invoice details after service completion.</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="form-switch">
+                                <label class="switch">
+                                    <input type="checkbox" name="marketing_emails" {% if settings.notifications.marketing_emails %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                                <span>Marketing Emails</span>
+                            </div>
+                            <div class="form-text">Send promotional emails and newsletters to customers who opt-in.</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Integrations Tab -->
+                <div id="integrations-tab" class="tab-content">
+                    <div class="settings-section">
+                        <div class="section-title">
+                            <div class="section-icon"><i class="fas fa-plug"></i></div>
+                            <h2>Integrations</h2>
+                        </div>
+                        
+                        <p>Configure third-party service integrations and API keys.</p>
+                        
+                        <div class="form-group">
+                            <label for="stripe_public_key" class="form-label">Stripe Public Key</label>
+                            <input type="text" id="stripe_public_key" name="stripe_public_key" class="input-field" value="{{ settings.integrations.stripe_public_key }}">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="stripe_private_key" class="form-label">Stripe Private Key</label>
+                            <input type="password" id="stripe_private_key" name="stripe_private_key" class="input-field" value="{{ settings.integrations.stripe_private_key }}">
+                            <div class="form-text">Keep this key confidential and never share it publicly.</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="google_analytics_id" class="form-label">Google Analytics ID</label>
+                            <input type="text" id="google_analytics_id" name="google_analytics_id" class="input-field" value="{{ settings.integrations.google_analytics_id }}" placeholder="UA-XXXXXXXXX-X or G-XXXXXXXXXX">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="facebook_pixel_id" class="form-label">Facebook Pixel ID</label>
+                            <input type="text" id="facebook_pixel_id" name="facebook_pixel_id" class="input-field" value="{{ settings.integrations.facebook_pixel_id }}">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="mailchimp_api_key" class="form-label">Mailchimp API Key</label>
+                            <input type="password" id="mailchimp_api_key" name="mailchimp_api_key" class="input-field" value="{{ settings.integrations.mailchimp_api_key }}">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="google_maps_api_key" class="form-label">Google Maps API Key</label>
+                            <input type="text" id="google_maps_api_key" name="google_maps_api_key" class="input-field" value="{{ settings.integrations.google_maps_api_key }}">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Features Tab -->
+                <div id="features-tab" class="tab-content">
+                    <div class="settings-section">
+                        <div class="section-title">
+                            <div class="section-icon"><i class="fas fa-star"></i></div>
+                            <h2>Feature Settings</h2>
+                        </div>
+                        
+                        <p>Enable or disable various features of the application.</p>
+                        
+                        <div class="form-group">
+                            <div class="form-switch">
+                                <label class="switch">
+                                    <input type="checkbox" name="online_booking" {% if settings.features.online_booking %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                                <span>Online Booking</span>
+                            </div>
+                            <div class="form-text">Allow customers to book appointments online.</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="form-switch">
+                                <label class="switch">
+                                    <input type="checkbox" name="customer_accounts" {% if settings.features.customer_accounts %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                                <span>Customer Accounts</span>
+                            </div>
+                            <div class="form-text">Allow customers to create and manage their own accounts.</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="form-switch">
+                                <label class="switch">
+                                    <input type="checkbox" name="customer_reviews" {% if settings.features.customer_reviews %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                                <span>Customer Reviews</span>
+                            </div>
+                            <div class="form-text">Allow customers to leave reviews after service completion.</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="form-switch">
+                                <label class="switch">
+                                    <input type="checkbox" name="gift_cards" {% if settings.features.gift_cards %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                                <span>Gift Cards</span>
+                            </div>
+                            <div class="form-text">Enable purchasing and redeeming gift cards.</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="form-switch">
+                                <label class="switch">
+                                    <input type="checkbox" name="loyalty_program" {% if settings.features.loyalty_program %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                                <span>Loyalty Program</span>
+                            </div>
+                            <div class="form-text">Enable customer loyalty points and rewards program.</div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="form-switch">
+                                <label class="switch">
+                                    <input type="checkbox" name="referral_program" {% if settings.features.referral_program %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                                <span>Referral Program</span>
+                            </div>
+                            <div class="form-text">Enable customer referral incentives and tracking.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
+                <button type="reset" class="button button-secondary">Reset Changes</button>
+                <button type="submit" class="button button-primary">Save Settings</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Tab switching functionality
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Remove active class from all buttons and contents
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+                
+                // Add active class to clicked button and corresponding content
+                this.classList.add('active');
+                const tabId = this.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+        
+        // Preview logo and favicon when URL changes
+        document.getElementById('logo_url').addEventListener('change', function() {
+            document.getElementById('logo_preview').src = this.value;
+        });
+        
+        document.getElementById('favicon_url').addEventListener('change', function() {
+            document.getElementById('favicon_preview').src = this.value;
+        });
+        
+        // Confirmation before form submission
+        document.querySelector('form').addEventListener('submit', function(e) {
+            if (!confirm('Are you sure you want to save these application settings? Changes may affect all users.')) {
+                e.preventDefault();
+            }
+        });
+    });
+</script>
+{% endblock %}
