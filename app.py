@@ -92,7 +92,8 @@ def create_app():
 
     # Define base directories for persistent data and uploads.
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-    PERSISTENT_DATA_ROOT = os.environ.get('PERSISTENT_DATA_DIR', BASE_DIR)
+    # Use /persistent_storage for Railway deployment, fallback to BASE_DIR for local dev
+    PERSISTENT_DATA_ROOT = os.environ.get('PERSISTENT_DATA_DIR', '/persistent_storage' if os.path.exists('/persistent_storage') else BASE_DIR)
     DATABASE_PATH = os.path.join(PERSISTENT_DATA_ROOT, 'grooming_business_v2.db')
     UPLOAD_FOLDER = os.path.join(PERSISTENT_DATA_ROOT, 'uploads')
     SHARED_TOKEN_FILE = os.path.join(PERSISTENT_DATA_ROOT, 'shared_google_token.json')
@@ -100,12 +101,15 @@ def create_app():
 
     # Configure Flask application settings.
     app.config['SECRET_KEY'] = os.environ.get("FLASK_SECRET_KEY", os.urandom(32))
+    
     # Security: Set secure cookie flags
-    app.config['SESSION_COOKIE_SECURE'] = True  # Only send cookies over HTTPS
+    # Only set SECURE cookies in production (HTTPS), not in local development
+    is_production = os.environ.get('FLASK_ENV', 'production').lower() != 'development'
+    app.config['SESSION_COOKIE_SECURE'] = is_production  # Only send cookies over HTTPS in production
     app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevent JavaScript access to cookies
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Or 'Strict' if you want to be more restrictive
     # Optionally, set REMEMBER_COOKIE_SECURE/HTTPONLY/SAMESITE if using Flask-Login remember me
-    app.config['REMEMBER_COOKIE_SECURE'] = True
+    app.config['REMEMBER_COOKIE_SECURE'] = is_production
     app.config['REMEMBER_COOKIE_HTTPONLY'] = True
     app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
     # Set session timeout to 30 minutes for permanent sessions
@@ -115,6 +119,9 @@ def create_app():
     # Configure SQLAlchemy to use PostgreSQL if DATABASE_URL is set, otherwise use SQLite.
     database_url = os.environ.get('DATABASE_URL')
     if database_url:
+        # Fix for Railway/Heroku: Replace postgres:// with postgresql://
+        if database_url.startswith('postgres://'):
+            database_url = database_url.replace('postgres://', 'postgresql://', 1)
         app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     else:
         app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DATABASE_PATH}'
@@ -4679,12 +4686,12 @@ def create_app():
 
     return app
 
+# Create app instance for production (gunicorn, Railway, etc.)
+app = create_app()
+
 if __name__ == '__main__':
-    app = create_app()
-    # SECURITY WARNING: Never run with debug=True in production!
-    # Forcing debug mode ON for troubleshooting purposes.
-    # The original logic is preserved below but commented out.
-    # debug_mode = os.environ.get('FLASK_ENV', '').lower() == 'development' or os.environ.get('FLASK_DEBUG', '') == '1'
-    # if debug_mode:
-    #     print("[SECURITY WARNING] Debug mode is enabled. DO NOT use debug=True in production!")
-    app.run(debug=True)
+    # Only for local development
+    debug_mode = os.environ.get('FLASK_ENV', '').lower() == 'development' or os.environ.get('FLASK_DEBUG', '') == '1'
+    if debug_mode:
+        print("[SECURITY WARNING] Debug mode is enabled. DO NOT use debug=True in production!")
+    app.run(debug=debug_mode, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))

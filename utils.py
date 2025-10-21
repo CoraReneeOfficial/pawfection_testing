@@ -51,8 +51,6 @@ def subscription_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         user = getattr(g, 'user', None)
-        from app import is_user_subscribed  # Import here to avoid circular import
-        from flask import current_app
         current_app.logger.info(f"[SUBSCRIPTION] subscription_required: Checking access for user: {getattr(user, 'id', None)}, username={getattr(user, 'username', None)}, is_subscribed={getattr(user, 'is_subscribed', None)}")
         print(f"[SUBSCRIPTION] subscription_required: Checking access for user: {getattr(user, 'id', None)}, username={getattr(user, 'username', None)}, is_subscribed={getattr(user, 'is_subscribed', None)}")
         if not user or not is_user_subscribed(user):
