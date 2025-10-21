@@ -2,6 +2,7 @@ Flask
 Flask-Login
 Flask-Migrate
 Flask-SQLAlchemy
+Flask-WTF
 bcrypt
 Flask-Mail
 google-api-python-client
@@ -15,6 +16,7 @@ Authlib>=1.2.1
 APScheduler
 stripe
 psutil
+WTForms
 
 # Optional, but often good to specify if you rely on specific versions:
 # Werkzeug
