@@ -1,8 +1,48 @@
 from extensions import db
 import datetime
 from datetime import timezone
+from sqlalchemy.orm import declared_attr
 
-class Store(db.Model):
+class SecurityMixin:
+    """
+    Mixin for models that require password and security question/answer functionality.
+    """
+    @declared_attr
+    def password_hash(cls):
+        return db.Column(db.String(128), nullable=False)
+
+    @declared_attr
+    def security_question(cls):
+        return db.Column(db.String(255), nullable=True)
+
+    @declared_attr
+    def security_answer_hash(cls):
+        return db.Column(db.String(128), nullable=True)
+
+    def set_password(self, password):
+        """Hashes the given password and stores it."""
+        import bcrypt
+        self.password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+    def check_password(self, password):
+        """Checks if the given password matches the stored hash."""
+        import bcrypt
+        return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
+
+    def set_security_answer(self, answer):
+        """Hashes the security answer and stores it."""
+        import bcrypt
+        if answer:
+            self.security_answer_hash = bcrypt.hashpw(answer.lower().encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+    def check_security_answer(self, answer):
+        """Checks if the given security answer matches the stored hash."""
+        import bcrypt
+        if not self.security_answer_hash or not answer:
+            return False
+        return bcrypt.checkpw(answer.lower().encode('utf-8'), self.security_answer_hash.encode('utf-8'))
+
+class Store(SecurityMixin, db.Model):
     """
     Represents a single grooming business store.
     Each store has its own set of users, owners, dogs, services, and appointments.
@@ -12,7 +52,6 @@ class Store(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
     username = db.Column(db.String(80), unique=True, nullable=False) # Username for store login
-    password_hash = db.Column(db.String(128), nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.datetime.now(timezone.utc))
     subscription_status = db.Column(db.String(20), default='inactive', nullable=False)  # e.g., active, trial, unpaid, cancelled; default is 'inactive' so new stores must subscribe
     subscription_ends_at = db.Column(db.DateTime, nullable=True)
@@ -43,10 +82,6 @@ class Store(db.Model):
     stripe_customer_id = db.Column(db.String(255), nullable=True)
     stripe_subscription_id = db.Column(db.String(255), nullable=True)
     
-    # --- Security fields for password recovery ---
-    security_question = db.Column(db.String(255), nullable=True)
-    security_answer_hash = db.Column(db.String(128), nullable=True)
-
     # Relationships to other models, ensuring data is linked to the store
     users = db.relationship('User', backref='store', lazy=True)
     owners = db.relationship('Owner', backref='store', lazy=True)
@@ -54,41 +89,17 @@ class Store(db.Model):
     services = db.relationship('Service', backref='store', lazy=True)
     appointments = db.relationship('Appointment', backref='store', lazy=True)
     activity_logs = db.relationship('ActivityLog', backref='store', lazy=True) # Added relationship for ActivityLog
-
-    def set_password(self, password):
-        """Hashes the given password and stores it."""
-        import bcrypt
-        self.password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-
-    def check_password(self, password):
-        """Checks if the given password matches the stored hash."""
-        import bcrypt
-        return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
-
-    def set_security_answer(self, answer):
-        """Hashes the security answer and stores it."""
-        import bcrypt
-        if answer:
-            self.security_answer_hash = bcrypt.hashpw(answer.lower().encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        
-    def check_security_answer(self, answer):
-        """Checks if the given security answer matches the stored hash."""
-        import bcrypt
-        if not self.security_answer_hash or not answer:
-            return False
-        return bcrypt.checkpw(answer.lower().encode('utf-8'), self.security_answer_hash.encode('utf-8'))
     
     def __repr__(self):
         return f"<Store {self.name} (ID: {self.id})>"
 
-class User(db.Model):
+class User(SecurityMixin, db.Model):
     """
     Represents a user (admin, groomer, or superadmin) within a specific store.
     Superadmins are not tied to a store (store_id=None).
     """
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False) # Username must be unique across all users
-    password_hash = db.Column(db.String(128), nullable=False)
     role = db.Column(db.String(20), default='groomer', nullable=False)  # 'admin', 'groomer', 'superadmin'
     store_id = db.Column(db.Integer, db.ForeignKey('store.id'), nullable=True)  # nullable for superadmin
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
@@ -103,10 +114,6 @@ class User(db.Model):
     stripe_subscription_id = db.Column(db.String(255), nullable=True)
     is_subscribed = db.Column(db.Boolean, default=False, nullable=False)
     
-    # Security fields for password recovery
-    security_question = db.Column(db.String(255), nullable=True)
-    security_answer_hash = db.Column(db.String(128), nullable=True)
-
     # Relationships to data created or assigned by this user
     activity_logs = db.relationship('ActivityLog', backref='user', lazy=True)
     created_owners = db.relationship('Owner', backref='creator', lazy='dynamic', foreign_keys='Owner.created_by_user_id')
@@ -114,29 +121,6 @@ class User(db.Model):
     created_services = db.relationship('Service', backref='creator', lazy='dynamic', foreign_keys='Service.created_by_user_id')
     created_appointments = db.relationship('Appointment', backref='creator', lazy='dynamic', foreign_keys='Appointment.created_by_user_id')
     assigned_appointments = db.relationship('Appointment', backref='groomer', lazy='dynamic', foreign_keys='Appointment.groomer_id')
-
-    def set_password(self, password):
-        """Hashes the given password and stores it."""
-        import bcrypt
-        self.password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-
-    def check_password(self, password):
-        """Checks if the given password matches the stored hash."""
-        import bcrypt
-        return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
-        
-    def set_security_answer(self, answer):
-        """Hashes the security answer and stores it."""
-        import bcrypt
-        if answer:
-            self.security_answer_hash = bcrypt.hashpw(answer.lower().encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        
-    def check_security_answer(self, answer):
-        """Checks if the given security answer matches the stored hash."""
-        import bcrypt
-        if not self.security_answer_hash or not answer:
-            return False
-        return bcrypt.checkpw(answer.lower().encode('utf-8'), self.security_answer_hash.encode('utf-8'))
 
     def __repr__(self):
         return f"<User {self.username} (ID: {self.id}, Role: {self.role}, Store: {self.store_id})>"
