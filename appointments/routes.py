@@ -1689,9 +1689,27 @@ def email_receipt(appointment_id):
 @subscription_required
 def debug_list_appointments():
     """
-    Debug endpoint: Returns a plain text list of all appointments in the database.
+    Debug endpoint: Returns a plain text list of appointments.
+    Restricted to admins (own store) and superadmins (all or impersonated store).
     """
-    appts = Appointment.query.order_by(Appointment.appointment_datetime.asc()).all()
+    # Security fix: Restrict access to admins and superadmins only
+    if not g.user or (g.user.role != 'superadmin' and not g.user.is_admin):
+        abort(403)
+
+    # Security fix: Filter by store_id to maintain multi-tenant isolation
+    store_id = session.get('store_id')
+
+    query = Appointment.query
+    if g.user.role == 'superadmin':
+        if store_id:
+            query = query.filter_by(store_id=store_id)
+        # else: superadmin not impersonating can see all
+    else:
+        if not store_id:
+            abort(403)
+        query = query.filter_by(store_id=store_id)
+
+    appts = query.order_by(Appointment.appointment_datetime.asc()).all()
     lines = []
     for appt in appts:
         dog_name = appt.dog.name if appt.dog else 'None'
