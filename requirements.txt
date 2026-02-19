@@ -41,3 +41,5 @@ WTForms
 # urllib3 (requests dependency)
 # greenlet (SQLAlchemy dependency)
 # typing-extensions (often a dependency for type hinting)
+pandas
+xlsxwriter
