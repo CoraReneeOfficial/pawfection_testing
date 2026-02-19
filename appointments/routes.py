@@ -1340,7 +1340,7 @@ def payment_selection(appointment_id):
 @appointments_bp.route('/preview_receipt/<int:appointment_id>', methods=['GET'])
 @subscription_required
 def preview_receipt(appointment_id):
-    """Step 4: Show preview receipt with print/email/finalize options."""
+    """Step 4: Show preview receipt with finalize options."""
     if 'store_id' not in session or 'checkout_data' not in session:
         return redirect(url_for('appointments.checkout_start'))
         
@@ -1375,7 +1375,7 @@ def preview_receipt(appointment_id):
     
     session['checkout_data'] = checkout_data
     
-    return render_template('receipt_screen.html', 
+    return render_template('checkout_preview.html',
                           checkout_data=checkout_data,
                           appointment_id=appointment_id,
                           is_deposit=is_deposit)
@@ -1390,22 +1390,71 @@ def finalize_checkout(appointment_id):
     store_id = session['store_id']
     checkout_data = session['checkout_data']
     
-    # Get the appointment and mark it as completed
+    # Get the appointment
     appointment = Appointment.query.filter_by(id=appointment_id, store_id=store_id).first()
-    if appointment:
+    if not appointment:
+        flash('Appointment not found or access denied.', 'error')
+        return redirect(url_for('dashboard'))
+
+    try:
+        # Create Receipt object
+        new_receipt = Receipt(
+            appointment_id=appointment.id,
+            store_id=store_id,
+            owner_id=appointment.dog.owner.id if appointment.dog and appointment.dog.owner else None,
+            receipt_json=json.dumps(checkout_data),
+            created_at=datetime.datetime.now(timezone.utc)
+        )
+        db.session.add(new_receipt)
+
+        # Mark appointment as completed and update total
         appointment.status = 'Completed'
+        appointment.checkout_total_amount = checkout_data.get('total', 0)
+
         db.session.commit()
-        print(f"DEBUG: Appointment {appointment_id} marked as completed")
-    else:
-        print(f"ERROR: Appointment {appointment_id} not found for store {store_id}")
+
+        # Clear session data
+        flask_session.pop('checkout_data', None)
+        flask_session.pop('checkout_tip', None)
+        flask_session.pop('checkout_payment', None)
+
+        # Redirect to success page
+        return redirect(url_for('appointments.checkout_success', receipt_id=new_receipt.id))
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error finalizing checkout: {e}", exc_info=True)
+        flash('An error occurred while finalizing the checkout.', 'error')
+        return redirect(url_for('appointments.preview_receipt', appointment_id=appointment_id))
+
+@appointments_bp.route('/checkout/success/<int:receipt_id>', methods=['GET'])
+@subscription_required
+def checkout_success(receipt_id):
+    """Displays the checkout success page with receipt options."""
+    if 'store_id' not in session:
+        return redirect(url_for('auth.login'))
+
+    receipt = Receipt.query.filter_by(id=receipt_id, store_id=session['store_id']).first_or_404()
+    receipt_data = json.loads(receipt.receipt_json)
     
-    # Clear session data
-    flask_session.pop('checkout_data', None)
-    flask_session.pop('checkout_tip', None)
-    flask_session.pop('checkout_payment', None)
+    # Map keys for the email template
+    receipt_data['date'] = receipt_data.get('receipt_date')
+    receipt_data['tip'] = receipt_data.get('tip_amount', 0)
+
+    # Ensure 'total' is available in the template context
+    if 'total' not in receipt_data and 'final_total' in receipt_data:
+        receipt_data['total'] = receipt_data['final_total']
+
+    # Add store info if missing
+    if 'store_email' not in receipt_data:
+        store = Store.query.get(session['store_id'])
+        receipt_data['store_email'] = store.email
+        receipt_data['store_phone'] = store.phone
     
-    flash('Checkout completed and receipt saved!', 'success')
-    return redirect(url_for('dashboard'))
+    return render_template('checkout_success.html',
+                          receipt_id=receipt.id,
+                          customer_email=receipt.owner.email if receipt.owner else '',
+                          **receipt_data)
 
 # --- END NEW CHECKOUT FLOW ---
 

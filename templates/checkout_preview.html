@@ -1,36 +1,23 @@
 {% extends 'base.html' %}
 
-{% block title %}{% if is_deposit %}Deposit Payment Receipt{% else %}Receipt - Checkout Complete{% endif %}{% endblock %}
+{% block title %}Preview Receipt - Checkout{% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <style>
-  .receipt-success { text-align: center; margin: 2.5rem 0 2rem 0; }
-  .receipt-success .fa-check-circle { color: var(--success-color); font-size: 3.5em; margin-bottom: 0.5rem; }
-  .receipt-options { display: flex; gap: 1.2rem; justify-content: center; margin: 2rem 0 1.5rem 0; }
-  .receipt-btn { min-width: 140px; font-size: 1.05em; }
-  @media print {
-    body * { visibility: hidden !important; }
-    #printable-receipt, #printable-receipt * { visibility: visible !important; }
-    #printable-receipt { position: absolute; left: 0; top: 0; width: 100vw; background: white; box-shadow: none; }
-    .receipt-options, .button, form[action*="dashboard"] { display: none !important; }
-  }
+  .receipt-header-icon { text-align: center; margin: 2.5rem 0 2rem 0; }
+  .receipt-header-icon .fa-file-invoice-dollar { color: var(--primary-color); font-size: 3.5em; margin-bottom: 0.5rem; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container checkout-container">
-  <div class="receipt-success">
-    <i class="fas fa-check-circle"></i>
-    {% if is_deposit %}
-    <h1>Deposit Payment Complete!</h1>
-    <p>The deposit has been successfully processed.</p>
-    {% else %}
-    <h1>Checkout Complete!</h1>
-    <p>Thank you for your business.</p>
-    {% endif %}
+  <div class="receipt-header-icon">
+    <i class="fas fa-file-invoice-dollar"></i>
+    <h1>Preview Receipt</h1>
+    <p>Please review the details below before finalizing the checkout.</p>
   </div>
-  <div class="receipt-content" id="printable-receipt">
+  <div class="receipt-content">
     <div class="receipt-container" style="max-width:480px;margin:auto;">
       <div class="header" style="text-align:center;margin-bottom:1.5rem;">
         <h1>{{ checkout_data.store_name }}</h1>
@@ -80,25 +67,14 @@
         {% endif %}
         <p><strong>Payment Method:</strong> {{ checkout_data.payment_method|capitalize }}</p>
       </div>
-      <div class="receipt-options" style="display:flex;gap:1.2rem;justify-content:center;margin:2rem 0 1.5rem 0;">
-        <form method="POST" action="{{ url_for('appointments.email_receipt', appointment_id=appointment_id) }}" style="display:inline;">
-          <button type="submit" class="button button-primary receipt-btn"><i class="fas fa-envelope"></i> Email Receipt</button>
-        </form>
-        <button type="button" class="button button-secondary receipt-btn" id="print-receipt-btn" onclick="openPrintableReceipt()"><i class="fas fa-print"></i> Print Receipt</button>
-      </div>
       <form method="POST" action="{{ url_for('appointments.finalize_checkout', appointment_id=appointment_id) }}">
         <button type="submit" class="button button-success" style="width:100%;margin:1.4rem 0 0.6rem 0;font-size:1.13em;background:#28a745;">{% if is_deposit %}Process Deposit{% else %}Complete Checkout{% endif %}</button>
       </form>
-      <form method="GET" action="{{ url_for('dashboard') }}">
-        <button type="submit" class="button button-primary" style="width:100%;margin-top:0.6rem;font-size:1.08em;">Finish / Back to Dashboard</button>
-      </form>
+
+      <div style="text-align:center; margin-top:1rem;">
+          <a href="{{ url_for('dashboard') }}" class="button button-secondary" style="width:100%; display:inline-block; box-sizing: border-box;" onclick="return confirm('Are you sure you want to cancel? Progress will be lost.')">Cancel Checkout</a>
+      </div>
     </div>
   </div>
 </div>
-
-<script>
-function openPrintableReceipt() {
-  window.print();
-}
-</script>
 {% endblock %}
