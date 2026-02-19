@@ -25,10 +25,17 @@
             </div>
 
             {# *** NEW: Dog Picture Upload *** #}
-            <div class="form-group">
+            <div class="form-group" x-data="{ preview: null }">
                 <label for="dog_picture">Dog Picture</label>
-                <input type="file" id="dog_picture" name="dog_picture" class="form-input" accept="image/png, image/jpeg, image/gif, image/webp">
+                <input type="file" id="dog_picture" name="dog_picture" class="form-input" accept="image/png, image/jpeg, image/gif, image/webp"
+                       @change="preview = $event.target.files[0] ? URL.createObjectURL($event.target.files[0]) : null">
                  <small class="text-muted">Optional. Allowed types: png, jpg, jpeg, gif, webp.</small>
+
+                 <template x-if="preview">
+                    <div style="margin-top: 10px;">
+                        <img :src="preview" alt="Image Preview" style="max-width: 150px; border-radius: 4px; border: 1px solid #ccc;">
+                    </div>
+                 </template>
             </div>
 
             <div class="form-group">
