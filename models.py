@@ -311,6 +311,8 @@ class Notification(db.Model):
     reference_type = db.Column(db.String(50), nullable=True)  # Type of related object ('appointment', etc.)
     is_read = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.datetime.now(timezone.utc), nullable=False)
+    remind_at = db.Column(db.DateTime, nullable=True)
+    shown_in_popup = db.Column(db.Boolean, default=False, nullable=False)
     
     # Relationships
     store = db.relationship('Store', backref='notifications')

@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='1.5') }}">
     {% block head %}{% endblock %}
 </head>
-<body x-data="{ navMenuOpen: false, notificationOpen: false }">
+<body x-data="notificationManager()">
     <div class="page-wrapper">
 
         {% if g.user %}
@@ -35,14 +35,11 @@
                     <!-- Notification Button -->
                     <div class="nav-notification">
                         <button type="button" @click.stop="notificationOpen = !notificationOpen; if(notificationOpen) navMenuOpen = false;" class="nav-notification-button" aria-label="Notifications">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="{% if unread_notifications_count > 0 %}#ff0000{% else %}currentColor{% endif %}" class="notification-icon">
-                                <path d="M5.85 3.5a.75.75 0 00-1.117-1 9.719 9.719 0 00-2.348 4.876.75.75 0 001.479.248A8.219 8.219 0 015.85 3.5zM19.267 2.5a.75.75 0 10-1.118 1 8.22 8.22 0 011.987 4.124.75.75 0 001.48-.248A9.72 9.72 0 0019.266 2.5z" />
-                                <path fill-rule="evenodd" d="M12 2.25A6.75 6.75 0 005.25 9v.75a8.217 8.217 0 01-2.119 5.52.75.75 0 00.298 1.206c1.544.57 3.16.99 4.831 1.243a3.75 3.75 0 107.48 0 24.583 24.583 0 004.83-1.244.75.75 0 00.298-1.205 8.217 8.217 0 01-2.118-5.52V9A6.75 6.75 0 0012 2.25zM9.75 18c0-.034 0-.067.002-.1a25.05 25.05 0 004.496 0l.002.1a2.25 2.25 0 11-4.5 0z" clip-rule="evenodd" />
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="notification-icon">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
                             </svg>
                             <!-- Notification Badge -->
-                            {% if unread_notifications_count > 0 %}
-                            <span class="notification-badge" style="color: black;">{{ unread_notifications_count }}</span>
-                            {% endif %}
+                            <span x-show="unreadCount > 0" x-text="unreadCount" class="notification-badge" style="color: black;" x-cloak></span>
                         </button>
                         <!-- Notification Dropdown -->
                         <div class="notification-dropdown" id="notification-dropdown" 
@@ -147,6 +144,157 @@
         </footer>
 
     </div>
+
+    <!-- Notification Popup -->
+    <div id="notification-popup"
+         class="notification-popup"
+         x-data="{ show: false }"
+         x-show="popupShow"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="translate-y-2 opacity-0"
+         x-transition:enter-end="translate-y-0 opacity-100"
+         x-transition:leave="transition ease-in duration-300"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         style="display: none;"
+         x-cloak>
+
+        <div class="notification-popup-content" @click="if($event.target.tagName !== 'BUTTON' && currentNotification) window.location.href = currentNotification.link">
+            <div class="notification-popup-header">
+                <strong x-text="currentNotification ? currentNotification.type.replace('_', ' ').toUpperCase() : 'Notification'"></strong>
+                <button @click.stop="popupShow = false; if(currentNotification) markPopupShown(currentNotification.id)" class="close-btn">&times;</button>
+            </div>
+            <div class="notification-popup-body" x-text="currentNotification ? currentNotification.content : ''"></div>
+            <div class="notification-popup-actions">
+                <button @click.stop="openReminderModal(currentNotification)" class="btn-small">Remind</button>
+                <button @click.stop="markRead(currentNotification.id)" class="btn-small">Mark Read</button>
+                <button @click.stop="popupShow = false; markPopupShown(currentNotification.id)" class="btn-small">Dismiss</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reminder Modal -->
+    <div id="reminder-modal"
+         class="reminder-modal-overlay"
+         x-show="reminderShow"
+         x-transition.opacity
+         style="display: none;"
+         x-cloak>
+
+        <div class="reminder-modal-content" @click.outside="reminderShow = false">
+            <h3>Set Reminder</h3>
+            <p x-text="'Remind me about: ' + (reminderNotification ? reminderNotification.content : '')"></p>
+
+            <div class="form-group">
+                <label>Remind me at:</label>
+                <input type="datetime-local" x-model="remindTime" class="form-input">
+            </div>
+
+            <div class="modal-actions">
+                <button @click="reminderShow = false" class="btn-secondary">Cancel</button>
+                <button @click="setReminder()" class="btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('notificationManager', () => ({
+                navMenuOpen: false,
+                notificationOpen: false,
+                unreadCount: {{ unread_notifications_count|default(0) }},
+
+                // Popup state
+                popupShow: false,
+                currentNotification: null,
+                popupTimeout: null,
+
+                // Reminder Modal state
+                reminderShow: false,
+                reminderNotification: null,
+                remindTime: '',
+
+                init() {
+                    // Start polling
+                    setInterval(() => this.pollNotifications(), 10000);
+                },
+
+                pollNotifications() {
+                    fetch('/notifications/check_new')
+                        .then(res => {
+                            if(res.ok) return res.json();
+                            return null;
+                        })
+                        .then(data => {
+                            if (data) {
+                                this.unreadCount = data.unread_count;
+                                if (data.notifications && data.notifications.length > 0) {
+                                    // Show the first one
+                                    this.showPopup(data.notifications[0]);
+                                }
+                            }
+                        })
+                        .catch(err => console.error('Notification poll error:', err));
+                },
+
+                showPopup(notification) {
+                    this.currentNotification = notification;
+                    this.popupShow = true;
+                    if (this.popupTimeout) clearTimeout(this.popupTimeout);
+                    this.popupTimeout = setTimeout(() => {
+                        this.popupShow = false;
+                        if (this.currentNotification && this.currentNotification.id === notification.id) {
+                            this.markPopupShown(notification.id);
+                        }
+                    }, 10000);
+                },
+
+                markPopupShown(id) {
+                    fetch(`/notifications/mark_popup_shown/${id}`, { method: 'POST' });
+                },
+
+                markRead(id) {
+                    fetch(`/notifications/mark_read/${id}`, { method: 'POST' })
+                        .then(() => {
+                            this.popupShow = false;
+                            this.unreadCount = Math.max(0, this.unreadCount - 1);
+                        });
+                },
+
+                openReminderModal(notification) {
+                    this.reminderNotification = notification;
+                    // Default time: 1 hour from now
+                    const now = new Date();
+                    now.setHours(now.getHours() + 1);
+                    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                    this.remindTime = now.toISOString().slice(0, 16);
+
+                    this.reminderShow = true;
+                    this.popupShow = false;
+                    if (this.popupTimeout) clearTimeout(this.popupTimeout);
+                    this.markPopupShown(notification.id);
+                },
+
+                setReminder() {
+                    if (!this.remindTime || !this.reminderNotification) return;
+
+                    // Convert local time string to UTC ISO string
+                    const localDate = new Date(this.remindTime);
+                    const utcDate = localDate.toISOString();
+
+                    fetch(`/notifications/set_reminder/${this.reminderNotification.id}`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ remind_at: utcDate })
+                    }).then(res => {
+                        if (res.ok) {
+                            this.reminderShow = false;
+                        }
+                    });
+                }
+            }));
+        });
+    </script>
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     {% block scripts %}{% endblock %}
 </body>
