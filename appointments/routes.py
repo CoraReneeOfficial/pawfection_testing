@@ -200,7 +200,8 @@ def api_appointments():
     events = []
     for appt in appointments_db:
         # Defensive: reload relationships in case of stale data
-        db.session.refresh(appt)
+        # BOLT OPTIMIZATION: Removed db.session.refresh(appt) to prevent N+1 queries.
+        # The initial query already eager loads relationships.
         dog_name = appt.dog.name if appt.dog else 'Unknown Dog'
         owner_name = appt.dog.owner.name if appt.dog and appt.dog.owner else 'Unknown Owner'
         groomer_name = appt.groomer.username if appt.groomer else "Unassigned"
