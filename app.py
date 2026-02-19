@@ -670,7 +670,14 @@ def create_app():
             return redirect(url_for('superadmin_login'))
         
         stores = Store.query.all()
-        store_admins = {store.id: User.query.filter_by(store_id=store.id, is_admin=True).all() for store in stores}
+        # Fetch all admin users in one query to avoid N+1 problem
+        all_admins = User.query.filter_by(is_admin=True).all()
+
+        # Group admins by store_id
+        store_admins = {store.id: [] for store in stores}
+        for admin in all_admins:
+            if admin.store_id in store_admins:
+                store_admins[admin.store_id].append(admin)
         
         # Count active and expired subscriptions
         active_subscriptions = Store.query.filter_by(subscription_status='active').count()
