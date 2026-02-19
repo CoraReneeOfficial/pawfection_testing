@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}Checkout Complete - Receipt{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<style>
+  .receipt-success { text-align: center; margin: 2.5rem 0 2rem 0; }
+  .receipt-success .fa-check-circle { color: var(--success-color); font-size: 3.5em; margin-bottom: 0.5rem; }
+  .receipt-options { display: flex; gap: 1.2rem; justify-content: center; margin: 2rem 0 1.5rem 0; }
+  .receipt-btn { min-width: 140px; font-size: 1.05em; }
+  @media print {
+    body * { visibility: hidden !important; }
+    #printable-receipt, #printable-receipt * { visibility: visible !important; }
+    #printable-receipt { position: absolute; left: 0; top: 0; width: 100vw; background: white; box-shadow: none; }
+    .receipt-options, .button, .navbar, .footer { display: none !important; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container checkout-container">
+  <div class="receipt-success">
+    <i class="fas fa-check-circle"></i>
+    <h1>Checkout Complete!</h1>
+    <p>The transaction has been successfully processed.</p>
+  </div>
+
+  <div class="receipt-content" id="printable-receipt">
+    {% include 'email/receipt_email.html' %}
+  </div>
+
+  <div class="receipt-options">
+    <form method="POST" action="{{ url_for('appointments.email_receipt_by_id', receipt_id=receipt_id) }}" style="display:inline;">
+      <input type="hidden" name="email" value="{{ customer_email }}">
+      <button type="submit" class="button button-primary receipt-btn"><i class="fas fa-envelope"></i> Email Receipt</button>
+    </form>
+
+    <button type="button" class="button button-secondary receipt-btn" id="print-receipt-btn" onclick="window.print()"><i class="fas fa-print"></i> Print Receipt</button>
+
+    <a href="{{ url_for('dashboard') }}" class="button button-primary receipt-btn"><i class="fas fa-home"></i> Dashboard</a>
+  </div>
+</div>
+{% endblock %}

@@ -157,12 +157,8 @@ function addServiceOrFee(btn) {
 }
 
 /* Initialize global variables with template data */
-// Wrap in a script tag with a specific type to avoid linting errors in the template variables
-</script>
-
-<!-- Data initialization script - separated to avoid linting errors with template variables -->
-<script type="text/template" id="template-data">
-{
+// Initialize global variables directly using Jinja2 tojson filter
+var templateData = {
   "lineItems": {{ line_items|tojson|safe if line_items else '[]' }},
   "subtotal": {{ subtotal|default(0)|float }},
   "taxes": {{ taxes|default(0)|float }},
@@ -172,40 +168,30 @@ function addServiceOrFee(btn) {
   "tax_enabled": {{ tax_enabled|default(true)|tojson|safe }},
   "base_url": {{ base_url|default('')|tojson }},
   "tax_rate": {{ tax_rate|default(0.07)|float }}
-}
-</script>
+};
 
-<!-- Main application script -->
-<script>
-// Initialize global variables from template data
-(function() {
-  // Parse the template data from the script tag
-  var templateDataElement = document.getElementById('template-data');
-  var templateData = JSON.parse(templateDataElement.textContent);
-  
-  // Set global variables from template data
-  window.lineItems = templateData.lineItems || [];
-  
-  // Process line items to ensure all have types
-  if (window.lineItems && window.lineItems.length) {
-    window.lineItems = window.lineItems.map(function(item) {
-      if (!item.type) {
-        item.type = 'custom'; // Default type for legacy items
-      }
-      return item;
-    });
-  }
-  
-  // Set other globals
-  window.subtotal = templateData.subtotal || 0;
-  window.taxes = templateData.taxes || 0;
-  window.total = templateData.total || 0;
-  window.appointment_id = templateData.appointment_id;
-  window.customer_name = templateData.customer_name || 'Customer';
-  window.tax_enabled = templateData.tax_enabled;
-  window.base_url = templateData.base_url;
-  window.taxRate = templateData.tax_rate || 0.07;
-})();
+// Set global variables from template data
+window.lineItems = templateData.lineItems || [];
+
+// Process line items to ensure all have types
+if (window.lineItems && window.lineItems.length) {
+  window.lineItems = window.lineItems.map(function(item) {
+    if (!item.type) {
+      item.type = 'custom'; // Default type for legacy items
+    }
+    return item;
+  });
+}
+
+// Set other globals
+window.subtotal = templateData.subtotal || 0;
+window.taxes = templateData.taxes || 0;
+window.total = templateData.total || 0;
+window.appointment_id = templateData.appointment_id;
+window.customer_name = templateData.customer_name || 'Customer';
+window.tax_enabled = templateData.tax_enabled;
+window.base_url = templateData.base_url;
+window.taxRate = templateData.tax_rate || 0.07;
 
 // Tax and discount configuration
 var discount = { name: '', type: 'amount', value: 0, amount: 0 }; // New discount object
@@ -292,7 +278,7 @@ function renderLineItems() {
     services.forEach(function(item) {
       var row = document.createElement('div');
       row.className = 'line-item-row';
-      row.innerHTML = '<span>' + item.name + '</span> <span>$' + parseFloat(item.price).toFixed(2) + '</span> <button type="button" class="remove-btn" title="Delete item" onclick="removeItem(' + item.originalIndex + ')" style="margin-left:8px;"><i class="fas fa-trash-alt"></i> Void</button>';
+      row.innerHTML = '<span>' + item.name + '</span> <span>$' + parseFloat(item.price).toFixed(2) + '</span> <button type="button" class="remove-btn" title="Remove item" onclick="removeItem(' + item.originalIndex + ')" style="margin-left:8px;"><i class="fas fa-trash-alt"></i></button>';
       document.getElementById('services-list').appendChild(row);
     });
   } else {
@@ -305,7 +291,7 @@ function renderLineItems() {
     fees.forEach(function(item) {
       var row = document.createElement('div');
       row.className = 'line-item-row';
-      row.innerHTML = '<span>' + item.name + '</span> <span>$' + parseFloat(item.price).toFixed(2) + '</span> <button type="button" class="remove-btn" title="Delete item" onclick="removeItem(' + item.originalIndex + ')" style="margin-left:8px;"><i class="fas fa-trash-alt"></i> Void</button>';
+      row.innerHTML = '<span>' + item.name + '</span> <span>$' + parseFloat(item.price).toFixed(2) + '</span> <button type="button" class="remove-btn" title="Remove item" onclick="removeItem(' + item.originalIndex + ')" style="margin-left:8px;"><i class="fas fa-trash-alt"></i></button>';
       document.getElementById('fees-list').appendChild(row);
     });
   } else {
@@ -318,7 +304,7 @@ function renderLineItems() {
     customItems.forEach(function(item) {
       var row = document.createElement('div');
       row.className = 'line-item-row';
-      row.innerHTML = '<span>' + item.name + '</span> <span>$' + parseFloat(item.price).toFixed(2) + '</span> <button type="button" class="remove-btn" title="Delete item" onclick="removeItem(' + item.originalIndex + ')" style="margin-left:8px;"><i class="fas fa-trash-alt"></i> Void</button>';
+      row.innerHTML = '<span>' + item.name + '</span> <span>$' + parseFloat(item.price).toFixed(2) + '</span> <button type="button" class="remove-btn" title="Remove item" onclick="removeItem(' + item.originalIndex + ')" style="margin-left:8px;"><i class="fas fa-trash-alt"></i></button>';
       document.getElementById('custom-list').appendChild(row);
     });
   } else {

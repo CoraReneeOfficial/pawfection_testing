@@ -89,7 +89,7 @@
     <input type="hidden" id="tip-amount-input" name="tip_amount" value="0">
     <input type="hidden" id="final-total-input" name="final_total" value="{{ initial_total }}">
     
-    <div class="tip-btn-grid">
+    <div class="tip-btn-grid" style="margin-bottom:0.5rem;">
       <button type="button" id="tip-15" class="button button-primary tip-btn">15%</button>
       <button type="button" id="tip-18" class="button button-primary tip-btn">18%</button>
       <button type="button" id="tip-20" class="button button-primary tip-btn">20%</button>
@@ -97,6 +97,7 @@
       <button type="button" id="tip-custom" class="button button-secondary tip-btn">Custom</button>
       <button type="button" id="no-tip" class="button button-secondary tip-btn">No Tip</button>
     </div>
+    <div style="text-align:center;color:#666;font-size:0.9em;margin-bottom:1.2rem;">(Tip calculated on subtotal)</div>
     
     <div class="custom-tip-row" id="custom-tip-row" style="display:none;">
       <input type="number" id="custom-tip-input" class="form-input" min="0" step="0.01" placeholder="Enter tip amount">
@@ -128,9 +129,9 @@
     var tipAmount = 0;
     var finalTotal = initialTotal;
 
-    // Function to set tip as a percentage of the total
+    // Function to set tip as a percentage of the subtotal
     function setTipPercent(percent) {
-      tipAmount = Math.round(initialTotal * percent * 100) / 100;
+      tipAmount = Math.round(subtotal * percent * 100) / 100;
       updateFinalTotal();
       hideCustomInput();
     }
