@@ -72,10 +72,18 @@
                 </select>
             </div>
 
-            <div class="form-group">
-                <label for="appointment_date">Date *</label>
+            <div class="form-group" x-data="{ apptDate: '{{ appointment_data.get('appointment_date', today_date_iso) }}' }">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                    <label for="appointment_date" style="margin-bottom: 0;">Date *</label>
+                    <button type="button"
+                            @click="apptDate = new Date().toLocaleDateString('en-CA')"
+                            class="button button-small"
+                            style="padding: 2px 8px; font-size: 0.75rem; background-color: var(--secondary-light); border: 1px solid var(--border-color); color: var(--text-dark); cursor: pointer; border-radius: 4px;">
+                        Today
+                    </button>
+                </div>
                 {# Pre-fill if value exists from previous submission, otherwise default to today #}
-                <input type="date" id="appointment_date" name="appointment_date" required class="form-input" value="{{ appointment_data.get('appointment_date', today_date_iso) }}">
+                <input type="date" id="appointment_date" name="appointment_date" required class="form-input" x-model="apptDate">
             </div>
 
             <div class="form-group">
@@ -101,7 +109,15 @@
             </div>
 
             <div class="form-group">
-                <label for="services">Requested Services</label>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                    <label for="services" style="margin-bottom: 0;">Requested Services</label>
+                    <button type="button"
+                            onclick="document.getElementById('services').selectedIndex = -1;"
+                            class="button button-small"
+                            style="padding: 2px 8px; font-size: 0.75rem; background-color: var(--secondary-light); border: 1px solid var(--border-color); color: var(--text-dark); cursor: pointer; border-radius: 4px;">
+                        Clear Selection
+                    </button>
+                </div>
                 <select name="services" id="services" multiple class="form-input" style="height: auto; min-height: 100px;">
                     {% for service in services %}
                     <option value="{{ service.id }}" 

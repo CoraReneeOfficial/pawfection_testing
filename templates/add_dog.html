@@ -54,9 +54,12 @@
                 <label for="anxiety_issues">Anxiety Issues</label>
                 <textarea id="anxiety_issues" name="anxiety_issues" rows="2" class="form-input" placeholder="Optional: Note any triggers or specific issues">{{ dog.get('anxiety_issues', '') }}</textarea>
             </div>
-            <div class="form-group">
-                <label for="other_notes">Other Notes</label>
-                <textarea id="other_notes" name="other_notes" rows="3" class="form-input" placeholder="Optional: Any other relevant information">{{ dog.get('other_notes', '') }}</textarea>
+            <div class="form-group" x-data="{ count: 0 }">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                    <label for="other_notes" style="margin-bottom: 0;">Other Notes</label>
+                    <span class="text-muted" style="font-size: 0.75rem;" x-text="count + ' characters'"></span>
+                </div>
+                <textarea id="other_notes" name="other_notes" rows="3" class="form-input" placeholder="Optional: Any other relevant information" x-ref="noteInput" @input="count = $refs.noteInput.value.length" x-init="count = $refs.noteInput.value.length">{{ dog.get('other_notes', '') }}</textarea>
             </div>
 
             <p style="font-size: 0.8rem; color: var(--text-muted);">* Required fields</p>

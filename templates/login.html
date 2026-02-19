@@ -46,7 +46,7 @@
                 Store: {{ store_name }}
             </div>
             {% endif %}
-            <form method="POST" action="{{ url_for('auth.login') }}" novalidate>
+            <form method="POST" action="{{ url_for('auth.login') }}" novalidate x-data="{ submitting: false }" @submit="submitting = true">
                 <div class="form-group">
                     <label for="username">Username</label>
                     <input type="text" id="username" name="username" required class="form-input" autofocus value="{{ request.form.username or '' }}">
@@ -70,8 +70,9 @@
                     </div>
                 </div>
                 <div class="form-button-wrapper">
-                    <button type="submit" class="button button-primary" style="width: 100%;">
-                        Sign In
+                    <button type="submit" class="button button-primary" style="width: 100%;" :disabled="submitting" :class="{ 'opacity-50 cursor-not-allowed': submitting }">
+                        <span x-show="!submitting">Sign In</span>
+                        <span x-show="submitting" style="display: none;">Signing In...</span>
                     </button>
                 </div>
                 <div class="form-link" style="text-align: center; margin-top: 1rem;">
