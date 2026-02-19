@@ -432,7 +432,7 @@ def create_app():
         from sqlalchemy.orm import joinedload
         from dateutil import tz
         import datetime
-        from sqlalchemy import func, and_, or_
+        from sqlalchemy import func, and_, or_, case
         store_id = session.get('store_id')
         store = None
         STORE_TIMEZONE = pytz.UTC
@@ -463,20 +463,39 @@ def create_app():
         upcoming_appointments = []
 
         if store_id:
-            # Appointments Today
-            appointments_today = Appointment.query.filter(
-                Appointment.status == 'Scheduled',
-                Appointment.store_id == store_id,
-                Appointment.appointment_datetime >= today_start,
-                Appointment.appointment_datetime < today_end
-            ).count()
+            # Combined query for Appointments Today, Revenue Today, and Pending Checkouts
+            stats = db.session.query(
+                # Appointments Today: Scheduled and within today
+                func.count(case(
+                    (and_(
+                        Appointment.status == 'Scheduled',
+                        Appointment.appointment_datetime >= today_start,
+                        Appointment.appointment_datetime < today_end
+                    ), 1),
+                    else_=None
+                )),
+                # Revenue Today: Completed and within today
+                func.sum(case(
+                    (and_(
+                        Appointment.status == 'Completed',
+                        Appointment.appointment_datetime >= today_start,
+                        Appointment.appointment_datetime < today_end
+                    ), Appointment.checkout_total_amount),
+                    else_=0
+                )),
+                # Pending Checkouts: Scheduled and before now
+                func.count(case(
+                    (and_(
+                        Appointment.status == 'Scheduled',
+                        Appointment.appointment_datetime < now_utc
+                    ), 1),
+                    else_=None
+                ))
+            ).filter(Appointment.store_id == store_id).one()
 
-            # Pending Checkouts (appointments scheduled for today or earlier, not completed/cancelled)
-            pending_checkouts = Appointment.query.filter(
-                Appointment.status == 'Scheduled',
-                Appointment.store_id == store_id,
-                Appointment.appointment_datetime < now_utc
-            ).count()
+            appointments_today = stats[0]
+            revenue_today = stats[1] or 0.0
+            pending_checkouts = stats[2]
 
             # New Clients This Week
             new_clients_week = Owner.query.filter(
@@ -484,14 +503,6 @@ def create_app():
                 Owner.created_at >= week_start,
                 Owner.created_at < week_end
             ).count()
-
-            # Revenue Today (sum of completed appointments today)
-            revenue_today = db.session.query(func.coalesce(func.sum(Appointment.checkout_total_amount), 0)).filter(
-                Appointment.status == 'Completed',
-                Appointment.store_id == store_id,
-                Appointment.appointment_datetime >= today_start,
-                Appointment.appointment_datetime < today_end
-            ).scalar() or 0.0
 
             # Appointments needing details
             appointments_details_needed = (
