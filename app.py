@@ -234,6 +234,12 @@ def create_app():
     # Ensure all database tables are created on application startup.
     with app.app_context():
         db.create_all()
+        # Run manual fix for notification schema if needed
+        try:
+            from fix_notifications_schema import check_and_fix
+            check_and_fix(app)
+        except Exception as e:
+            app.logger.error(f"Failed to run notification schema fix: {e}")
 
     # Register blueprints for modular routes
     app.register_blueprint(auth_bp)
