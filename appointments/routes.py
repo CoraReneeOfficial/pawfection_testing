@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g, jsonify, current_app, session, abort
-from models import Appointment, Dog, Owner, User, ActivityLog, Store, Service
+from models import Appointment, Dog, Owner, User, ActivityLog, Store, Service, Receipt
 from appointments.details_needed_utils import appointment_needs_details
 from extensions import db
 from sqlalchemy import or_
@@ -905,7 +905,6 @@ from appointments.google_calendar_webhook import webhook_bp as google_calendar_w
 
 # --- NEW CHECKOUT FLOW ---
 
-from flask import session as flask_session
 import json
 
 @appointments_bp.route('/select_checkout')
@@ -1414,9 +1413,9 @@ def finalize_checkout(appointment_id):
         db.session.commit()
 
         # Clear session data
-        flask_session.pop('checkout_data', None)
-        flask_session.pop('checkout_tip', None)
-        flask_session.pop('checkout_payment', None)
+        session.pop('checkout_data', None)
+        session.pop('checkout_tip', None)
+        session.pop('checkout_payment', None)
 
         # Redirect to success page
         return redirect(url_for('appointments.checkout_success', receipt_id=new_receipt.id))
@@ -1436,7 +1435,7 @@ def checkout_success(receipt_id):
 
     receipt = Receipt.query.filter_by(id=receipt_id, store_id=session['store_id']).first_or_404()
     receipt_data = json.loads(receipt.receipt_json)
-    
+
     # Map keys for the email template
     receipt_data['date'] = receipt_data.get('receipt_date')
     receipt_data['tip'] = receipt_data.get('tip_amount', 0)
@@ -1451,14 +1450,18 @@ def checkout_success(receipt_id):
         receipt_data['store_email'] = store.email
         receipt_data['store_phone'] = store.phone
     
+    # Handle potentially missing owner email
+    customer_email = ''
+    if receipt.owner and receipt.owner.email:
+        customer_email = receipt.owner.email
+
     return render_template('checkout_success.html',
                           receipt_id=receipt.id,
-                          customer_email=receipt.owner.email if receipt.owner else '',
+                          customer_email=customer_email,
                           **receipt_data)
 
 # --- END NEW CHECKOUT FLOW ---
 
-from models import Receipt
 import json
 import uuid  # For generating unique IDs
 from flask import send_file, make_response
