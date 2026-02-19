@@ -233,7 +233,8 @@ def google_callback():
 @auth_bp.route('/google/debug-redirect-uri')
 def google_debug_redirect_uri():
     return jsonify({
-        'google_callback_url': url_for('auth.google_callback', _external=True)
+        'google_callback_url': url_for('auth.google_callback', _external=True),
+        'google_store_callback_url': url_for('auth.google_store_callback', _external=True)
     })
 
 # Dictionary to store password reset tokens with their creation time and associated username
