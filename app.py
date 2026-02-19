@@ -786,9 +786,7 @@ def create_app():
             query = query.filter(
                 or_(
                     User.username.ilike(f'%{search_query}%'),
-                    User.email.ilike(f'%{search_query}%'),
-                    User.first_name.ilike(f'%{search_query}%'),
-                    User.last_name.ilike(f'%{search_query}%')
+                    User.email.ilike(f'%{search_query}%')
                 )
             )
         
@@ -802,8 +800,6 @@ def create_app():
             query = query.order_by(User.email.asc() if sort_order == 'asc' else User.email.desc())
         elif sort_by == 'created_at':
             query = query.order_by(User.created_at.asc() if sort_order == 'asc' else User.created_at.desc())
-        elif sort_by == 'last_login':
-            query = query.order_by(User.last_login.asc() if sort_order == 'asc' else User.last_login.desc())
         
         # Paginate results
         users_pagination = query.paginate(page=page, per_page=per_page, error_out=False)
@@ -813,9 +809,13 @@ def create_app():
         roles = db.session.query(User.role).distinct().all()
         unique_roles = [role[0] for role in roles if role[0]]
         
+        # Get all stores for dropdown
+        stores = Store.query.all()
+
         app.logger.info("Superadmin viewed user management page.")
         return render_template('superadmin_user_management.html',
                               users=users,
+                              stores=stores,
                               pagination=users_pagination,
                               search_query=search_query,
                               role_filter=role_filter,
@@ -824,176 +824,8 @@ def create_app():
                               roles=unique_roles)
     
     # Superadmin Data Export route
-    @app.route('/superadmin/data-export')
-    def superadmin_data_export():
-        """
-        Displays data export interface for superadmins.
-        """
-        from flask import render_template
-        import datetime
-        
-        if not session.get('is_superadmin'):
-            flash('Access denied.', 'danger')
-            return redirect(url_for('superadmin_login'))
-        
-        # Get export options (tables available for export)
-        export_tables = [
-            {'name': 'stores', 'label': 'Stores', 'description': 'All store details including subscription status'},
-            {'name': 'users', 'label': 'Users', 'description': 'All user accounts and their roles'},
-            {'name': 'appointments', 'label': 'Appointments', 'description': 'All appointment data including status'},
-            {'name': 'dogs', 'label': 'Dogs', 'description': 'All registered dogs and their details'},
-            {'name': 'activity_logs', 'label': 'Activity Logs', 'description': 'System activity logs'},
-            {'name': 'services', 'label': 'Services', 'description': 'Available services across all stores'}
-        ]
-        
-        # Get recent exports if we had a table to track them
-        recent_exports = [
-            {
-                'id': 1,
-                'table': 'stores',
-                'format': 'csv',
-                'timestamp': datetime.datetime.now() - datetime.timedelta(days=1),
-                'status': 'completed',
-                'file_size': '45 KB',
-                'exported_by': 'admin'
-            },
-            {
-                'id': 2,
-                'table': 'appointments',
-                'format': 'json',
-                'timestamp': datetime.datetime.now() - datetime.timedelta(days=3),
-                'status': 'completed',
-                'file_size': '128 KB',
-                'exported_by': 'admin'
-            }
-        ]
-        
-        # List of available export formats
-        export_formats = ['csv', 'json', 'excel']
-        
-        app.logger.info("Superadmin viewed data export page.")
-        return render_template('superadmin_data_export.html',
-                              export_tables=export_tables,
-                              recent_exports=recent_exports,
-                              export_formats=export_formats)
                               
     # Superadmin Global Configuration Settings route
-    @app.route('/superadmin/global-configuration', methods=['GET', 'POST'])
-    def superadmin_global_config():
-        """
-        Displays and processes configuration settings for superadmins.
-        """
-        from flask import render_template, request, flash, redirect, url_for
-        import json
-        import os
-        
-        if not session.get('is_superadmin'):
-            flash('Access denied.', 'danger')
-            return redirect(url_for('superadmin_login'))
-        
-        # Path to configuration file
-        config_file_path = os.path.join(os.path.dirname(__file__), 'config', 'app_settings.json')
-        
-        # Create config directory if it doesn't exist
-        os.makedirs(os.path.dirname(config_file_path), exist_ok=True)
-        
-        # Default configuration settings
-        default_config = {
-            'system': {
-                'maintenance_mode': False,
-                'debug_mode': False,
-                'log_level': 'INFO',
-                'session_timeout': 30
-            },
-            'email': {
-                'smtp_server': 'smtp.example.com',
-                'smtp_port': 587,
-                'smtp_use_tls': True,
-                'sender_email': 'noreply@pawfection.com',
-                'sender_name': 'Pawfection Grooming'
-            },
-            'appointments': {
-                'allow_online_booking': True,
-                'max_appointments_per_day': 15,
-                'buffer_minutes': 15,
-                'notification_enabled': True
-            },
-            'payments': {
-                'stripe_enabled': True,
-                'cash_enabled': True,
-                'check_enabled': True,
-                'default_tax_rate': 8.5,
-                'allow_tips': True
-            },
-            'security': {
-                'failed_login_limit': 5,
-                'password_expiry_days': 90,
-                'require_2fa': False,
-                'lockout_duration_minutes': 30
-            }
-        }
-        
-        # Load current configuration or create default if not exists
-        current_config = default_config
-        try:
-            if os.path.exists(config_file_path):
-                with open(config_file_path, 'r') as file:
-                    current_config = json.load(file)
-        except Exception as e:
-            app.logger.error(f"Error loading configuration: {str(e)}")
-            flash('Error loading configuration settings.', 'danger')
-        
-        # Process form submission
-        if request.method == 'POST':
-            try:
-                updated_config = current_config.copy()
-                
-                # Process system settings
-                updated_config['system']['maintenance_mode'] = 'maintenance_mode' in request.form
-                updated_config['system']['debug_mode'] = 'debug_mode' in request.form
-                updated_config['system']['log_level'] = request.form.get('log_level')
-                updated_config['system']['session_timeout'] = int(request.form.get('session_timeout', 30))
-                
-                # Process email settings
-                updated_config['email']['smtp_server'] = request.form.get('smtp_server')
-                updated_config['email']['smtp_port'] = int(request.form.get('smtp_port', 587))
-                updated_config['email']['smtp_use_tls'] = 'smtp_use_tls' in request.form
-                updated_config['email']['sender_email'] = request.form.get('sender_email')
-                updated_config['email']['sender_name'] = request.form.get('sender_name')
-                
-                # Process appointment settings
-                updated_config['appointments']['allow_online_booking'] = 'allow_online_booking' in request.form
-                updated_config['appointments']['max_appointments_per_day'] = int(request.form.get('max_appointments_per_day', 15))
-                updated_config['appointments']['buffer_minutes'] = int(request.form.get('buffer_minutes', 15))
-                updated_config['appointments']['notification_enabled'] = 'notification_enabled' in request.form
-                
-                # Process payment settings
-                updated_config['payments']['stripe_enabled'] = 'stripe_enabled' in request.form
-                updated_config['payments']['cash_enabled'] = 'cash_enabled' in request.form
-                updated_config['payments']['check_enabled'] = 'check_enabled' in request.form
-                updated_config['payments']['default_tax_rate'] = float(request.form.get('default_tax_rate', 8.5))
-                updated_config['payments']['allow_tips'] = 'allow_tips' in request.form
-                
-                # Process security settings
-                updated_config['security']['failed_login_limit'] = int(request.form.get('failed_login_limit', 5))
-                updated_config['security']['password_expiry_days'] = int(request.form.get('password_expiry_days', 90))
-                updated_config['security']['require_2fa'] = 'require_2fa' in request.form
-                updated_config['security']['lockout_duration_minutes'] = int(request.form.get('lockout_duration_minutes', 30))
-                
-                # Save updated configuration
-                with open(config_file_path, 'w') as file:
-                    json.dump(updated_config, file, indent=2)
-                
-                current_config = updated_config
-                flash('Configuration settings saved successfully.', 'success')
-                
-            except Exception as e:
-                app.logger.error(f"Error saving configuration: {str(e)}")
-                flash(f'Error saving configuration: {str(e)}', 'danger')
-        
-        # Render the configuration page
-        app.logger.info("Superadmin viewed configuration settings page.")
-        return render_template('superadmin_configuration.html', config=current_config)
         
     # Superadmin User Permissions route
     @app.route('/superadmin/permissions', methods=['GET', 'POST'])
@@ -2209,8 +2041,8 @@ def create_app():
                               us_states=us_states)
                               
     # Superadmin Global Configuration Settings route
-    @app.route('/superadmin/global-configuration-alt', methods=['GET', 'POST'])
-    def superadmin_global_config_alt():
+    @app.route('/superadmin/global-configuration', methods=['GET', 'POST'])
+    def superadmin_global_config():
         """
         Allows superadmins to manage global configuration settings.
         """
@@ -2853,297 +2685,10 @@ def create_app():
                               stats=stats)
     
     # Superadmin User Management route
-    @app.route('/superadmin/manage-users', methods=['GET', 'POST'])
-    def superadmin_user_management_alt():
-        """
-        User management interface for superadmins to manage all system users.
-        """
-        from flask import render_template, request, flash, redirect, url_for, jsonify
-        import datetime
-        import math
-        
-        if not session.get('is_superadmin'):
-            flash('Access denied.', 'danger')
-            return redirect(url_for('superadmin_login'))
-        
-        # Get query parameters for search, filtering and sorting
-        search_query = request.args.get('search', '')
-        role_filter = request.args.get('role', 'all')
-        sort_by = request.args.get('sort_by', 'username')
-        sort_order = request.args.get('sort_order', 'asc')
-        page = request.args.get('page', 1, type=int)
-        per_page = 10  # Number of users per page
-        
-        # Query users based on filters
-        query = User.query
-        
-        # Apply search filter if provided
-        if search_query:
-            query = query.filter(
-                (User.username.ilike(f'%{search_query}%')) |
-                (User.email.ilike(f'%{search_query}%'))
-            )
-        
-        # Apply role filter if not 'all'
-        if role_filter != 'all':
-            query = query.filter(User.role == role_filter)
-        
-        # Apply sorting
-        if sort_by == 'username':
-            query = query.order_by(User.username.asc() if sort_order == 'asc' else User.username.desc())
-        elif sort_by == 'email':
-            query = query.order_by(User.email.asc() if sort_order == 'asc' else User.email.desc())
-        elif sort_by == 'role':
-            query = query.order_by(User.role.asc() if sort_order == 'asc' else User.role.desc())
-        elif sort_by == 'created_at':
-            query = query.order_by(User.created_at.asc() if sort_order == 'asc' else User.created_at.desc())
-        
-        # Get total users count for pagination
-        total_users = query.count()
-        total_pages = math.ceil(total_users / per_page)
-        
-        # Apply pagination
-        users = query.paginate(page=page, per_page=per_page)
-        
-        # Get all stores for dropdown in forms
-        stores = Store.query.all()
-        
-        # Handle API requests (AJAX)
-        if request.method == 'POST' and request.headers.get('Content-Type') == 'application/json':
-            data = request.get_json()
-            action = data.get('action')
-            
-            try:
-                if action == 'add_user':
-                    # Validate required fields
-                    username = data.get('username')
-                    email = data.get('email')
-                    password = data.get('password')
-                    role = data.get('role')
-                    store_id = data.get('store_id')
-                    
-                    if not username or not email or not password or not role:
-                        return jsonify({
-                            'success': False,
-                            'message': 'All fields are required'
-                        }), 400
-                    
-                    # Check if username or email already exists
-                    if User.query.filter_by(username=username).first():
-                        return jsonify({
-                            'success': False,
-                            'message': 'Username already exists'
-                        }), 400
-                    
-                    if User.query.filter_by(email=email).first():
-                        return jsonify({
-                            'success': False,
-                            'message': 'Email already exists'
-                        }), 400
-                    
-                    # Create new user
-                    new_user = User(
-                        username=username,
-                        email=email,
-                        role=role,
-                        store_id=store_id if store_id else None,
-                        is_admin=(role == 'admin'),
-                        is_groomer=(role == 'groomer'),
-                        created_at=datetime.datetime.now()
-                    )
-                    
-                    new_user.set_password(password)
-                    
-                    db.session.add(new_user)
-                    db.session.commit()
-                    
-                    # Log the action
-                    app.logger.info(f"Superadmin created new user: {username}")
-                    
-                    return jsonify({
-                        'success': True,
-                        'message': 'User created successfully',
-                        'user': {
-                            'id': new_user.id,
-                            'username': new_user.username,
-                            'email': new_user.email,
-                            'role': new_user.role
-                        }
-                    })
-                
-                elif action == 'edit_user':
-                    user_id = data.get('id')
-                    username = data.get('username')
-                    email = data.get('email')
-                    role = data.get('role')
-                    store_id = data.get('store_id')
-                    active = data.get('active', True)
-                    
-                    if not user_id or not username or not email or not role:
-                        return jsonify({
-                            'success': False,
-                            'message': 'Required fields missing'
-                        }), 400
-                    
-                    # Find the user
-                    user = User.query.get(user_id)
-                    if not user:
-                        return jsonify({
-                            'success': False,
-                            'message': 'User not found'
-                        }), 404
-                    
-                    # Check for username/email conflicts with other users
-                    username_exists = User.query.filter(User.username == username, User.id != user_id).first()
-                    if username_exists:
-                        return jsonify({
-                            'success': False,
-                            'message': 'Username already in use by another user'
-                        }), 400
-                    
-                    email_exists = User.query.filter(User.email == email, User.id != user_id).first()
-                    if email_exists:
-                        return jsonify({
-                            'success': False,
-                            'message': 'Email already in use by another user'
-                        }), 400
-                    
-                    # Update user
-                    user.username = username
-                    user.email = email
-                    user.role = role
-                    user.store_id = store_id if store_id else None
-                    user.is_admin = (role == 'admin')
-                    user.is_groomer = (role == 'groomer')
-                    user.active = active
-                    
-                    db.session.commit()
-                    
-                    # Log the action
-                    app.logger.info(f"Superadmin updated user ID {user_id}: {username}")
-                    
-                    return jsonify({
-                        'success': True,
-                        'message': 'User updated successfully',
-                        'user': {
-                            'id': user.id,
-                            'username': user.username,
-                            'email': user.email,
-                            'role': user.role,
-                            'active': user.active
-                        }
-                    })
-                
-                elif action == 'delete_user':
-                    user_id = data.get('id')
-                    
-                    if not user_id:
-                        return jsonify({
-                            'success': False,
-                            'message': 'User ID required'
-                        }), 400
-                    
-                    # Find the user
-                    user = User.query.get(user_id)
-                    if not user:
-                        return jsonify({
-                            'success': False,
-                            'message': 'User not found'
-                        }), 404
-                    
-                    # Don't allow deleting yourself
-                    if user.id == session.get('user_id'):
-                        return jsonify({
-                            'success': False,
-                            'message': 'Cannot delete your own account'
-                        }), 400
-                    
-                    # Log before deletion for audit trail
-                    username = user.username
-                    
-                    # Delete the user
-                    db.session.delete(user)
-                    db.session.commit()
-                    
-                    # Log the action
-                    app.logger.info(f"Superadmin deleted user ID {user_id}: {username}")
-                    
-                    return jsonify({
-                        'success': True,
-                        'message': f'User {username} deleted successfully'
-                    })
-                
-                elif action == 'reset_password':
-                    user_id = data.get('id')
-                    new_password = data.get('password')
-                    
-                    if not user_id or not new_password:
-                        return jsonify({
-                            'success': False,
-                            'message': 'User ID and new password required'
-                        }), 400
-                    
-                    # Find the user
-                    user = User.query.get(user_id)
-                    if not user:
-                        return jsonify({
-                            'success': False,
-                            'message': 'User not found'
-                        }), 404
-                    
-                    # Update password
-                    user.set_password(new_password)
-                    db.session.commit()
-                    
-                    # Log the action
-                    app.logger.info(f"Superadmin reset password for user ID {user_id}: {user.username}")
-                    
-                    return jsonify({
-                        'success': True,
-                        'message': 'Password reset successfully'
-                    })
-                
-                else:
-                    return jsonify({
-                        'success': False,
-                        'message': 'Invalid action'
-                    }), 400
-            
-            except Exception as e:
-                db.session.rollback()
-                app.logger.error(f"Error in user management API: {str(e)}")
-                return jsonify({
-                    'success': False,
-                    'message': f'An error occurred: {str(e)}'
-                }), 500
-        
-        # For GET requests, render the template
-        app.logger.info("Superadmin viewed user management page")
-        
-        # Define role options for filter dropdown
-        role_options = [
-            {'value': 'all', 'label': 'All Roles'},
-            {'value': 'superadmin', 'label': 'Superadmin'},
-            {'value': 'admin', 'label': 'Admin'},
-            {'value': 'groomer', 'label': 'Groomer'},
-            {'value': 'customer', 'label': 'Customer'}
-        ]
-        
-        return render_template('superadmin_user_management.html',
-                              users=users.items,
-                              stores=stores,
-                              search_query=search_query,
-                              role_filter=role_filter,
-                              role_options=role_options,
-                              sort_by=sort_by,
-                              sort_order=sort_order,
-                              current_page=page,
-                              total_pages=total_pages,
-                              total_users=total_users)
     
     # Superadmin Data Export route
     @app.route('/superadmin/data-export', methods=['GET', 'POST'])
-    def superadmin_data_export_alt():
+    def superadmin_data_export():
         """
         Data export interface for superadmins to export system data in various formats.
         """
@@ -3365,893 +2910,14 @@ def create_app():
                               export_history=export_history)
     
     # Superadmin System Health route
-    @app.route('/superadmin/system-health-alt')
-    def superadmin_system_health_alt():
-        """
-        System health monitoring interface for superadmins.
-        """
-        from flask import render_template, flash, redirect, url_for
-        import datetime
-        import platform
-        import sys
-        import psutil
-        import os
-        import socket
-        
-        if not session.get('is_superadmin'):
-            flash('Access denied.', 'danger')
-            return redirect(url_for('superadmin_login'))
-        
-        try:
-            # Get system resources usage
-            cpu_usage = psutil.cpu_percent(interval=1)
-            memory = psutil.virtual_memory()
-            memory_usage = memory.percent
-            disk = psutil.disk_usage('/')
-            disk_usage = disk.percent
-            
-            # Get system information
-            system_info = {
-                'cpu_usage': f"{cpu_usage:.1f}%",
-                'memory_usage': f"{memory_usage:.1f}%",
-                'disk_usage': f"{disk_usage:.1f}%",
-                'platform': platform.platform(),
-                'python_version': sys.version.split()[0],
-                'uptime': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            }
-            
-            # Get database statistics
-            total_stores = Store.query.count()
-            active_stores = Store.query.filter(Store.active == True).count()
-            total_users = User.query.count()
-            
-            # Recent activity in last 24 hours (mock data)
-            recent_activity = 156  # This would normally be a count from logs or activity table
-            
-            # Get recent login activity (last 24 hours)
-            # In a real implementation, this would come from a proper login audit table
-            # For now, we'll create mock data
-            recent_logins = []
-            now = datetime.datetime.now()
-            
-            # Sample usernames for mock data
-            usernames = ['admin1', 'groomer_john', 'superadmin', 'store_manager', 'tech_support']
-            
-            # Generate mock login events
-            for i in range(10):
-                # Random time in the last 24 hours
-                hours_ago = (i * 2) + (i % 3)  # Distribute over 24 hours
-                timestamp = now - datetime.timedelta(hours=hours_ago)
-                
-                # Select a random user
-                user_idx = i % len(usernames)
-                username = usernames[user_idx]
-                
-                # Create a mock user object
-                mock_user = type('', (), {})()  # Create an anonymous object
-                mock_user.username = username
-                mock_user.id = i + 1
-                
-                # Create a mock login entry
-                login_entry = type('', (), {})()  # Create an anonymous object
-                login_entry.user = mock_user
-                login_entry.timestamp = timestamp
-                login_entry.action = "logged in successfully" if i % 5 != 0 else "failed login attempt"
-                
-                recent_logins.append(login_entry)
-            
-            # Sort by timestamp, most recent first
-            recent_logins.sort(key=lambda x: x.timestamp, reverse=True)
-            
-            # Log the view
-            app.logger.info("Superadmin viewed system health dashboard")
-            
-            return render_template('superadmin_system_health.html',
-                                  system_info=system_info,
-                                  total_stores=total_stores,
-                                  active_stores=active_stores,
-                                  total_users=total_users,
-                                  recent_activity=recent_activity,
-                                  recent_logins=recent_logins)
-            
-        except Exception as e:
-            app.logger.error(f"Error in system health dashboard: {str(e)}")
-            flash(f"Error loading system health data: {str(e)}", 'danger')
-            return redirect(url_for('superadmin_tools'))
     
     # Superadmin Application Settings route
-    @app.route('/superadmin/application-settings-alt', methods=['GET', 'POST'])
-    def superadmin_application_settings_alt():
-        """
-        Application settings interface for superadmins to configure system-wide settings.
-        """
-        from flask import render_template, request, flash, redirect, url_for
-        import json
-        import os
-        
-        if not session.get('is_superadmin'):
-            flash('Access denied.', 'danger')
-            return redirect(url_for('superadmin_login'))
-        
-        # Path to settings JSON file (would be stored in a database in production)
-        settings_file = os.path.join(app.root_path, 'static', 'settings.json')
-        
-        # Default settings if file doesn't exist
-        default_settings = {
-            'appearance': {
-                'theme': 'light',
-                'primary_color': '#4c6ef5',
-                'logo_path': '/static/images/logo.png',
-                'favicon_path': '/static/images/favicon.ico',
-                'custom_css': '',
-                'show_footer': True,
-                'show_help_menu': True
-            },
-            'business': {
-                'company_name': 'Pawfection Grooming Solutions',
-                'address': '123 Main Street, Anytown, CA 12345',
-                'phone': '(555) 123-4567',
-                'email': 'contact@pawfection.com',
-                'website': 'https://pawfection.com',
-                'support_email': 'support@pawfection.com',
-                'tax_rate': 8.25
-            },
-            'notifications': {
-                'email_notifications': True,
-                'sms_notifications': True,
-                'appointment_reminders': True,
-                'reminder_time': 24,  # hours before appointment
-                'send_receipts': True,
-                'notify_on_errors': True,
-                'notify_superadmin': True
-            },
-            'integrations': {
-                'payment_gateway': 'stripe',
-                'stripe_key': 'pk_test_example',
-                'stripe_secret': 'sk_test_example',
-                'google_analytics': '',
-                'mailchimp_api': '',
-                'twilio_sid': '',
-                'twilio_token': ''
-            },
-            'features': {
-                'enable_online_booking': True,
-                'enable_customer_accounts': True,
-                'enable_reviews': True,
-                'enable_invoicing': True,
-                'enable_customer_portal': True,
-                'enable_multistore': True,
-                'maintenance_mode': False
-            }
-        }
-        
-        # Load current settings or create default
-        try:
-            if os.path.exists(settings_file):
-                with open(settings_file, 'r') as f:
-                    settings = json.load(f)
-            else:
-                settings = default_settings
-                # Create directory if it doesn't exist
-                os.makedirs(os.path.dirname(settings_file), exist_ok=True)
-                with open(settings_file, 'w') as f:
-                    json.dump(settings, f, indent=4)
-        except Exception as e:
-            app.logger.error(f"Error loading settings file: {str(e)}")
-            settings = default_settings
-        
-        # Handle form submission
-        if request.method == 'POST':
-            try:
-                # Update appearance settings
-                settings['appearance']['theme'] = request.form.get('theme', 'light')
-                settings['appearance']['primary_color'] = request.form.get('primary_color', '#4c6ef5')
-                settings['appearance']['custom_css'] = request.form.get('custom_css', '')
-                settings['appearance']['show_footer'] = 'show_footer' in request.form
-                settings['appearance']['show_help_menu'] = 'show_help_menu' in request.form
-                
-                # Update business settings
-                settings['business']['company_name'] = request.form.get('company_name', '')
-                settings['business']['address'] = request.form.get('address', '')
-                settings['business']['phone'] = request.form.get('phone', '')
-                settings['business']['email'] = request.form.get('email', '')
-                settings['business']['website'] = request.form.get('website', '')
-                settings['business']['support_email'] = request.form.get('support_email', '')
-                try:
-                    settings['business']['tax_rate'] = float(request.form.get('tax_rate', 0))
-                except ValueError:
-                    settings['business']['tax_rate'] = 0
-                
-                # Update notification settings
-                settings['notifications']['email_notifications'] = 'email_notifications' in request.form
-                settings['notifications']['sms_notifications'] = 'sms_notifications' in request.form
-                settings['notifications']['appointment_reminders'] = 'appointment_reminders' in request.form
-                try:
-                    settings['notifications']['reminder_time'] = int(request.form.get('reminder_time', 24))
-                except ValueError:
-                    settings['notifications']['reminder_time'] = 24
-                settings['notifications']['send_receipts'] = 'send_receipts' in request.form
-                settings['notifications']['notify_on_errors'] = 'notify_on_errors' in request.form
-                settings['notifications']['notify_superadmin'] = 'notify_superadmin' in request.form
-                
-                # Update integration settings
-                settings['integrations']['payment_gateway'] = request.form.get('payment_gateway', 'stripe')
-                settings['integrations']['stripe_key'] = request.form.get('stripe_key', '')
-                settings['integrations']['stripe_secret'] = request.form.get('stripe_secret', '')
-                settings['integrations']['google_analytics'] = request.form.get('google_analytics', '')
-                settings['integrations']['mailchimp_api'] = request.form.get('mailchimp_api', '')
-                settings['integrations']['twilio_sid'] = request.form.get('twilio_sid', '')
-                settings['integrations']['twilio_token'] = request.form.get('twilio_token', '')
-                
-                # Update feature settings
-                settings['features']['enable_online_booking'] = 'enable_online_booking' in request.form
-                settings['features']['enable_customer_accounts'] = 'enable_customer_accounts' in request.form
-                settings['features']['enable_reviews'] = 'enable_reviews' in request.form
-                settings['features']['enable_invoicing'] = 'enable_invoicing' in request.form
-                settings['features']['enable_customer_portal'] = 'enable_customer_portal' in request.form
-                settings['features']['enable_multistore'] = 'enable_multistore' in request.form
-                settings['features']['maintenance_mode'] = 'maintenance_mode' in request.form
-                
-                # Save the updated settings
-                with open(settings_file, 'w') as f:
-                    json.dump(settings, f, indent=4)
-                
-                flash('Application settings updated successfully!', 'success')
-                app.logger.info("Superadmin updated application settings")
-                
-            except Exception as e:
-                app.logger.error(f"Error saving application settings: {str(e)}")
-                flash(f"Error saving settings: {str(e)}", 'danger')
-        
-        # Log the view
-        app.logger.info("Superadmin viewed application settings page")
-        
-        return render_template('superadmin_application_settings.html', settings=settings)
     
     # Superadmin System Logs route
-    @app.route('/superadmin/system-logs')
-    def superadmin_system_logs_alt():
-        """
-        System logs interface for superadmins to view and filter application logs.
-        """
-        from flask import render_template, request, flash, redirect, url_for
-        import datetime
-        import random
-        import os
-        
-        if not session.get('is_superadmin'):
-            flash('Access denied.', 'danger')
-            return redirect(url_for('superadmin_login'))
-        
-        # Get query parameters for filtering
-        log_level = request.args.get('level', 'all')
-        component = request.args.get('component', 'all')
-        date_from = request.args.get('date_from', '')
-        date_to = request.args.get('date_to', '')
-        search_term = request.args.get('search', '')
-        
-        # In a real application, logs would come from a log file or database
-        # For demonstration, we'll create mock log data
-        
-        # Generate random logs with different levels, components, and timestamps
-        log_levels = ['INFO', 'WARNING', 'ERROR', 'CRITICAL', 'DEBUG']
-        components = ['Authentication', 'Database', 'Payment', 'Scheduler', 'API', 'User Management', 'System']
-        
-        # Create date range (last 7 days)
-        end_date = datetime.datetime.now()
-        start_date = end_date - datetime.timedelta(days=7)
-        
-        # Generate 100 log entries
-        logs = []
-        log_counts = {'INFO': 0, 'WARNING': 0, 'ERROR': 0, 'CRITICAL': 0, 'DEBUG': 0}
-        
-        for i in range(100):
-            # Generate a random timestamp within the date range
-            random_seconds = random.randint(0, int((end_date - start_date).total_seconds()))
-            timestamp = start_date + datetime.timedelta(seconds=random_seconds)
-            
-            # Generate a random log level with weighted probabilities
-            level_weights = [60, 20, 10, 5, 5]  # INFO, WARNING, ERROR, CRITICAL, DEBUG weights
-            level = random.choices(log_levels, weights=level_weights, k=1)[0]
-            log_counts[level] += 1
-            
-            # Generate a random component
-            component_name = random.choice(components)
-            
-            # Generate a user (sometimes None for system logs)
-            user = None
-            if random.random() > 0.3:  # 70% of logs have a user
-                user_id = random.randint(1, 10)
-                user = f"user{user_id}"
-            
-            # Generate a message based on the log level and component
-            if level == 'INFO':
-                messages = [
-                    f"User logged in successfully",
-                    f"Appointment created for customer",
-                    f"Payment processed successfully",
-                    f"Data backup completed",
-                    f"Settings updated"
-                ]
-            elif level == 'WARNING':
-                messages = [
-                    f"Failed login attempt",
-                    f"Slow database query detected",
-                    f"API rate limit approaching",
-                    f"Low disk space warning",
-                    f"Session timeout for user"
-                ]
-            elif level == 'ERROR':
-                messages = [
-                    f"Database connection error",
-                    f"Payment processing failed",
-                    f"API request failed",
-                    f"Email sending failed",
-                    f"File upload error"
-                ]
-            elif level == 'CRITICAL':
-                messages = [
-                    f"Database server down",
-                    f"Security breach detected",
-                    f"Out of memory error",
-                    f"System crash detected",
-                    f"Data corruption detected"
-                ]
-            else:  # DEBUG
-                messages = [
-                    f"Query execution time: {random.randint(10, 500)}ms",
-                    f"Cache hit ratio: {random.randint(50, 99)}%",
-                    f"Memory usage: {random.randint(100, 800)}MB",
-                    f"Request processing time: {random.randint(5, 200)}ms",
-                    f"Thread pool size: {random.randint(5, 20)}"
-                ]
-            
-            message = random.choice(messages)
-            
-            # Create the log entry
-            log_entry = {
-                'id': i + 1,
-                'timestamp': timestamp,
-                'level': level,
-                'component': component_name,
-                'message': message,
-                'user': user,
-                'details': f"Request ID: {random.randint(10000, 99999)} | IP: 192.168.{random.randint(1, 255)}.{random.randint(1, 255)}"
-            }
-            
-            logs.append(log_entry)
-        
-        # Sort logs by timestamp (newest first)
-        logs.sort(key=lambda x: x['timestamp'], reverse=True)
-        
-        # Apply filters
-        filtered_logs = logs
-        
-        if log_level != 'all':
-            filtered_logs = [log for log in filtered_logs if log['level'] == log_level]
-        
-        if component != 'all':
-            filtered_logs = [log for log in filtered_logs if log['component'] == component]
-        
-        if date_from:
-            try:
-                date_from = datetime.datetime.strptime(date_from, '%Y-%m-%d')
-                filtered_logs = [log for log in filtered_logs if log['timestamp'].date() >= date_from.date()]
-            except ValueError:
-                pass
-        
-        if date_to:
-            try:
-                date_to = datetime.datetime.strptime(date_to, '%Y-%m-%d')
-                filtered_logs = [log for log in filtered_logs if log['timestamp'].date() <= date_to.date()]
-            except ValueError:
-                pass
-        
-        if search_term:
-            filtered_logs = [log for log in filtered_logs if search_term.lower() in log['message'].lower() or 
-                             search_term.lower() in (log['user'] or '').lower() or
-                             search_term.lower() in log['component'].lower() or
-                             search_term.lower() in log['details'].lower()]
-        
-        # Calculate stats
-        total_logs = len(logs)
-        error_count = log_counts['ERROR'] + log_counts['CRITICAL']
-        warning_count = log_counts['WARNING']
-        info_count = log_counts['INFO']
-        debug_count = log_counts['DEBUG']
-        
-        # Log the view
-        app.logger.info("Superadmin viewed system logs page")
-        
-        return render_template('superadmin_system_logs.html',
-                              logs=filtered_logs,
-                              log_level=log_level,
-                              component=component,
-                              date_from=date_from if isinstance(date_from, str) else date_from.strftime('%Y-%m-%d') if date_from else '',
-                              date_to=date_to if isinstance(date_to, str) else date_to.strftime('%Y-%m-%d') if date_to else '',
-                              search_term=search_term,
-                              log_levels=log_levels,
-                              components=components,
-                              total_logs=total_logs,
-                              error_count=error_count,
-                              warning_count=warning_count,
-                              info_count=info_count,
-                              debug_count=debug_count)
     
     # Superadmin Email Test route
-    @app.route('/superadmin/email-test-alt', methods=['GET', 'POST'])
-    def superadmin_email_test_alt():
-        """
-        Email testing interface for superadmins to test email functionality and configure email settings.
-        """
-        from flask import render_template, request, flash, redirect, url_for, jsonify
-        import json
-        import os
-        import smtplib
-        import datetime
-        from email.mime.multipart import MIMEMultipart
-        from email.mime.text import MIMEText
-        
-        if not session.get('is_superadmin'):
-            flash('Access denied.', 'danger')
-            return redirect(url_for('superadmin_login'))
-        
-        # Path to email config JSON file (would be stored in a database in production)
-        config_file = os.path.join(app.root_path, 'static', 'email_config.json')
-        
-        # Default email config
-        default_config = {
-            'smtp_server': 'smtp.example.com',
-            'smtp_port': 587,
-            'use_tls': True,
-            'username': 'noreply@pawfection.com',
-            'password': '',  # In production, this would be securely stored
-            'from_email': 'noreply@pawfection.com',
-            'from_name': 'Pawfection Grooming Solutions',
-            'reply_to': 'support@pawfection.com',
-            'test_recipient': '',
-            'last_test': None,
-            'test_results': []
-        }
-        
-        # Load current config or create default
-        try:
-            if os.path.exists(config_file):
-                with open(config_file, 'r') as f:
-                    config = json.load(f)
-            else:
-                config = default_config
-                os.makedirs(os.path.dirname(config_file), exist_ok=True)
-                with open(config_file, 'w') as f:
-                    json.dump(config, f, indent=4)
-        except Exception as e:
-            app.logger.error(f"Error loading email config file: {str(e)}")
-            config = default_config
-        
-        test_result = None
-        template_samples = [
-            {
-                'name': 'Welcome Email',
-                'subject': 'Welcome to Pawfection Grooming Solutions!',
-                'content': '''<h2>Welcome to Pawfection!</h2>
-                <p>Dear {name},</p>
-                <p>Thank you for choosing Pawfection Grooming Solutions for your pet's grooming needs.</p>
-                <p>We're excited to have you as part of our family and look forward to taking care of your furry friend.</p>
-                <p>If you have any questions, please don't hesitate to contact us.</p>
-                <p>Best regards,<br>The Pawfection Team</p>'''
-            },
-            {
-                'name': 'Appointment Confirmation',
-                'subject': 'Your Grooming Appointment Confirmation',
-                'content': '''<h2>Appointment Confirmed!</h2>
-                <p>Dear {name},</p>
-                <p>This is to confirm your grooming appointment for {pet_name} on {date} at {time}.</p>
-                <p>Please arrive 10 minutes early to ensure a smooth check-in process.</p>
-                <p>If you need to reschedule, please contact us at least 24 hours in advance.</p>
-                <p>We look forward to seeing you and {pet_name}!</p>
-                <p>Best regards,<br>The Pawfection Team</p>'''
-            },
-            {
-                'name': 'Receipt',
-                'subject': 'Your Pawfection Receipt',
-                'content': '''<h2>Thank You for Your Business!</h2>
-                <p>Dear {name},</p>
-                <p>Thank you for visiting Pawfection Grooming Solutions today.</p>
-                <p>Please find your receipt details below:</p>
-                <p><strong>Services:</strong> {services}</p>
-                <p><strong>Total Amount:</strong> ${amount}</p>
-                <p><strong>Date:</strong> {date}</p>
-                <p>We hope you and {pet_name} were happy with our services!</p>
-                <p>Best regards,<br>The Pawfection Team</p>'''
-            }
-        ]
-        
-        # Handle form submission for email test
-        if request.method == 'POST':
-            action = request.form.get('action')
-            
-            if action == 'test_email':
-                recipient = request.form.get('recipient')
-                subject = request.form.get('subject')
-                message = request.form.get('message')
-                template_id = request.form.get('template')
-                
-                if template_id and template_id != 'custom':
-                    try:
-                        template_index = int(template_id)
-                        if 0 <= template_index < len(template_samples):
-                            subject = template_samples[template_index]['subject']
-                            message = template_samples[template_index]['content']
-                            # Replace placeholders with sample data
-                            message = message.replace('{name}', 'John Doe')
-                            message = message.replace('{pet_name}', 'Buddy')
-                            message = message.replace('{date}', datetime.datetime.now().strftime('%Y-%m-%d'))
-                            message = message.replace('{time}', '10:00 AM')
-                            message = message.replace('{services}', 'Full Groom, Nail Trim')
-                            message = message.replace('{amount}', '85.00')
-                    except (ValueError, IndexError):
-                        pass
-                
-                # Store last test recipient for convenience
-                config['test_recipient'] = recipient
-                
-                # Try to send the test email
-                try:
-                    # In a real app, we'd use the configured SMTP server
-                    # For this demo, we'll simulate the email sending process
-                    
-                    # Create a timestamp for this test
-                    timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    
-                    # Simulate success (in a real app, this would be actual SMTP sending)
-                    success = True
-                    error_message = None
-                    
-                    # In reality, we would use something like this:
-                    """
-                    smtp_server = smtplib.SMTP(config['smtp_server'], config['smtp_port'])
-                    if config['use_tls']:
-                        smtp_server.starttls()
-                    if config['username'] and config['password']:
-                        smtp_server.login(config['username'], config['password'])
-                    
-                    msg = MIMEMultipart('alternative')
-                    msg['Subject'] = subject
-                    msg['From'] = f"{config['from_name']} <{config['from_email']}>"
-                    msg['To'] = recipient
-                    msg['Reply-To'] = config['reply_to']
-                    
-                    text_part = MIMEText("This is a test email from Pawfection Grooming Solutions.", 'plain')
-                    html_part = MIMEText(message, 'html')
-                    
-                    msg.attach(text_part)
-                    msg.attach(html_part)
-                    
-                    smtp_server.send_message(msg)
-                    smtp_server.quit()
-                    """
-                    
-                    # Record the test result
-                    test_result = {
-                        'success': success,
-                        'timestamp': timestamp,
-                        'recipient': recipient,
-                        'subject': subject,
-                        'error': error_message
-                    }
-                    
-                    # Add to test history (keep last 5)
-                    config['test_results'].insert(0, test_result)
-                    config['test_results'] = config['test_results'][:5]
-                    config['last_test'] = timestamp
-                    
-                    # Save the updated config
-                    with open(config_file, 'w') as f:
-                        json.dump(config, f, indent=4)
-                    
-                    if success:
-                        flash(f'Test email successfully sent to {recipient}!', 'success')
-                        app.logger.info(f"Superadmin sent test email to {recipient}")
-                    else:
-                        flash(f'Error sending test email: {error_message}', 'danger')
-                        app.logger.error(f"Error sending test email: {error_message}")
-                    
-                except Exception as e:
-                    error_message = str(e)
-                    test_result = {
-                        'success': False,
-                        'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                        'recipient': recipient,
-                        'subject': subject,
-                        'error': error_message
-                    }
-                    
-                    # Add to test history (keep last 5)
-                    config['test_results'].insert(0, test_result)
-                    config['test_results'] = config['test_results'][:5]
-                    
-                    flash(f'Error sending test email: {error_message}', 'danger')
-                    app.logger.error(f"Error sending test email: {error_message}")
-            
-            elif action == 'save_config':
-                try:
-                    # Update email configuration
-                    config['smtp_server'] = request.form.get('smtp_server', '')
-                    config['smtp_port'] = int(request.form.get('smtp_port', 587))
-                    config['use_tls'] = 'use_tls' in request.form
-                    config['username'] = request.form.get('username', '')
-                    
-                    # Only update password if a new one is provided
-                    new_password = request.form.get('password')
-                    if new_password:
-                        config['password'] = new_password  # In production, this would be encrypted
-                    
-                    config['from_email'] = request.form.get('from_email', '')
-                    config['from_name'] = request.form.get('from_name', '')
-                    config['reply_to'] = request.form.get('reply_to', '')
-                    
-                    # Save the updated config
-                    with open(config_file, 'w') as f:
-                        json.dump(config, f, indent=4)
-                    
-                    flash('Email configuration saved successfully!', 'success')
-                    app.logger.info("Superadmin updated email configuration")
-                    
-                except Exception as e:
-                    flash(f'Error saving email configuration: {str(e)}', 'danger')
-                    app.logger.error(f"Error saving email configuration: {str(e)}")
-        
-        # Log the view
-        app.logger.info("Superadmin viewed email test page")
-        
-        return render_template('superadmin_email_test.html', 
-                               config=config, 
-                               test_result=test_result,
-                               templates=template_samples)
     
     # Superadmin Database Management route
-    @app.route('/superadmin/database-alt', methods=['GET', 'POST'])
-    def superadmin_database_alt():
-        """
-        Database management interface for superadmins to run queries, backup, and restore.
-        """
-        from flask import render_template, request, flash, redirect, url_for, jsonify, Response
-        from sqlalchemy import text, inspect
-        import json
-        import os
-        import time
-        import datetime
-        import sqlite3
-        import csv
-        import io
-        
-        if not session.get('is_superadmin'):
-            flash('Access denied.', 'danger')
-            return redirect(url_for('superadmin_login'))
-        
-        # Get database info using SQLAlchemy
-        inspector = inspect(db.engine)
-        tables = inspector.get_table_names()
-        table_counts = {}
-        table_sizes = {}
-        
-        # For SQLite, we need to get sizes differently than for other databases
-        # This is a simplified approach for the demo
-        try:
-            for table in tables:
-                # Count rows
-                result = db.session.execute(text(f"SELECT COUNT(*) as count FROM {table}"))
-                count = result.scalar()
-                table_counts[table] = count
-                
-                # Estimate size (this is very approximate for SQLite)
-                # In a real app with a different database, you'd use a database-specific approach
-                table_sizes[table] = f"{count * 2} KB"  # Very rough estimate
-        except Exception as e:
-            app.logger.error(f"Error getting database stats: {str(e)}")
-        
-        # Get total database size
-        # For SQLite, we can get the file size
-        db_size = "Unknown"
-        try:
-            # This assumes SQLite database file is at instance/site.db
-            db_path = os.path.join(app.instance_path, 'site.db')
-            if os.path.exists(db_path):
-                size_bytes = os.path.getsize(db_path)
-                if size_bytes < 1024*1024:
-                    db_size = f"{size_bytes / 1024:.2f} KB"
-                else:
-                    db_size = f"{size_bytes / (1024*1024):.2f} MB"
-        except Exception as e:
-            app.logger.error(f"Error getting database file size: {str(e)}")
-        
-        # Last backup info - In a real app this would come from a real backup system
-        last_backup = {
-            'timestamp': datetime.datetime.now() - datetime.timedelta(days=2, hours=3),
-            'size': '15.7 MB',
-            'success': True
-        }
-        
-        # Sample queries for common operations
-        sample_queries = [
-            {
-                'name': 'List all stores',
-                'query': 'SELECT * FROM store LIMIT 10;'
-            },
-            {
-                'name': 'List all users',
-                'query': 'SELECT id, username, email, role FROM user LIMIT 10;'
-            },
-            {
-                'name': 'Recent appointments',
-                'query': 'SELECT * FROM appointment ORDER BY date DESC LIMIT 10;'
-            },
-            {
-                'name': 'Customers with pets',
-                'query': 'SELECT c.*, COUNT(p.id) as pet_count FROM customer c LEFT JOIN pet p ON c.id = p.customer_id GROUP BY c.id LIMIT 10;'
-            },
-            {
-                'name': 'Revenue by store',
-                'query': 'SELECT s.name, SUM(i.total_amount) as total_revenue FROM store s LEFT JOIN invoice i ON s.id = i.store_id GROUP BY s.id;'
-            }
-        ]
-        
-        # Handle form submissions
-        query_result = None
-        backup_result = None
-        restore_result = None
-        
-        if request.method == 'POST':
-            action = request.form.get('action')
-            
-            if action == 'run_query':
-                query = request.form.get('query')
-                if query:
-                    try:
-                        # For security in a real app, you'd want to restrict what queries can be run
-                        # and sanitize inputs properly
-                        start_time = time.time()
-                        result = db.session.execute(text(query))
-                        execution_time = time.time() - start_time
-                        
-                        # Check if it's a SELECT query (has results) or something else
-                        if result.keys():
-                            # Convert results to a list of dicts for display
-                            rows = [dict(row) for row in result]
-                            
-                            query_result = {
-                                'columns': result.keys(),
-                                'rows': rows,
-                                'row_count': len(rows),
-                                'execution_time': f"{execution_time:.4f}"
-                            }
-                            flash(f"Query executed successfully. {len(rows)} rows returned.", 'success')
-                        else:
-                            # For non-SELECT queries (INSERT, UPDATE, DELETE, etc.)
-                            db.session.commit()  # Commit the transaction
-                            flash(f"Query executed successfully. No result set returned.", 'success')
-                            query_result = {
-                                'rowcount': result.rowcount,
-                                'execution_time': f"{execution_time:.4f}"
-                            }
-                            
-                        app.logger.info(f"Superadmin executed SQL query: {query}")
-                        
-                    except Exception as e:
-                        db.session.rollback()  # Roll back any failed transaction
-                        error_message = str(e)
-                        flash(f"Error executing query: {error_message}", 'danger')
-                        app.logger.error(f"Error executing SQL query: {error_message}")
-                        query_result = {
-                            'error': error_message
-                        }
-                else:
-                    flash('Please enter a query to execute.', 'warning')
-                    
-            elif action == 'backup_database':
-                # In a real app, this would create an actual backup
-                # For this demo, we'll simulate a backup process
-                try:
-                    # Simulate backup process
-                    time.sleep(1)  # Simulating work
-                    
-                    # Record backup info
-                    backup_timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-                    backup_filename = f"pawfection_backup_{backup_timestamp}.sqlite"
-                    backup_path = os.path.join(app.root_path, 'static', 'backups', backup_filename)
-                    
-                    # Ensure backup directory exists
-                    os.makedirs(os.path.dirname(backup_path), exist_ok=True)
-                    
-                    # In a real app, you would copy the database file or use proper backup tools
-                    # For demo purposes, we'll just create an empty file
-                    with open(backup_path, 'w') as f:
-                        f.write('') 
-                    
-                    backup_result = {
-                        'success': True,
-                        'timestamp': backup_timestamp,
-                        'filename': backup_filename
-                    }
-                    
-                    flash(f"Database backup created successfully: {backup_filename}", 'success')
-                    app.logger.info(f"Superadmin created database backup: {backup_filename}")
-                    
-                except Exception as e:
-                    error_message = str(e)
-                    backup_result = {
-                        'success': False,
-                        'error': error_message
-                    }
-                    flash(f"Error creating backup: {error_message}", 'danger')
-                    app.logger.error(f"Error creating database backup: {error_message}")
-            
-            elif action == 'export_table':
-                table_name = request.form.get('table_name')
-                export_format = request.form.get('export_format', 'csv')
-                
-                if table_name and table_name in tables:
-                    try:
-                        # Get table data
-                        result = db.session.execute(text(f"SELECT * FROM {table_name} LIMIT 1000"))
-                        columns = result.keys()
-                        rows = [dict(row) for row in result]
-                        
-                        if export_format == 'csv':
-                            # Generate CSV
-                            output = io.StringIO()
-                            writer = csv.DictWriter(output, fieldnames=columns)
-                            writer.writeheader()
-                            writer.writerows(rows)
-                            
-                            # Prepare response
-                            response = Response(
-                                output.getvalue(),
-                                mimetype='text/csv',
-                                headers={
-                                    'Content-Disposition': f'attachment; filename={table_name}_export.csv'
-                                }
-                            )
-                            
-                            app.logger.info(f"Superadmin exported table {table_name} as CSV")
-                            return response
-                            
-                        elif export_format == 'json':
-                            # Generate JSON
-                            json_data = json.dumps({"data": rows}, indent=2)
-                            
-                            # Prepare response
-                            response = Response(
-                                json_data,
-                                mimetype='application/json',
-                                headers={
-                                    'Content-Disposition': f'attachment; filename={table_name}_export.json'
-                                }
-                            )
-                            
-                            app.logger.info(f"Superadmin exported table {table_name} as JSON")
-                            return response
-                            
-                    except Exception as e:
-                        error_message = str(e)
-                        flash(f"Error exporting table: {error_message}", 'danger')
-                        app.logger.error(f"Error exporting table {table_name}: {error_message}")
-                else:
-                    flash('Invalid table name selected.', 'danger')
-        
-        # Log the view
-        app.logger.info("Superadmin viewed database management page")
-        
-        return render_template('superadmin_database.html',
-                               tables=tables,
-                               table_counts=table_counts,
-                               table_sizes=table_sizes,
-                               db_size=db_size,
-                               last_backup=last_backup,
-                               sample_queries=sample_queries,
-                               query_result=query_result,
-                               backup_result=backup_result,
-                               restore_result=restore_result)
 
     # Superadmin stop impersonation
     @app.route('/superadmin/stop_impersonation')
@@ -4702,6 +3368,223 @@ def create_app():
 
 
 
+    # Superadmin Create User route
+    @app.route('/superadmin/create-user', methods=['POST'])
+    def superadmin_create_user():
+        from flask import request, flash, redirect, url_for
+        import datetime
+
+        if not session.get('is_superadmin'):
+            flash('Access denied.', 'danger')
+            return redirect(url_for('superadmin_login'))
+
+        username = request.form.get('username')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        role = request.form.get('role')
+        store_id = request.form.get('store_id')
+
+        if not username or not email or not password or not role:
+            flash('All required fields must be filled.', 'danger')
+            return redirect(url_for('superadmin_user_management'))
+
+        if User.query.filter_by(username=username).first():
+            flash('Username already exists.', 'danger')
+            return redirect(url_for('superadmin_user_management'))
+
+        if User.query.filter_by(email=email).first():
+            flash('Email already exists.', 'danger')
+            return redirect(url_for('superadmin_user_management'))
+
+        try:
+            # Handle store_id
+            if store_id and store_id.isdigit():
+                store_id = int(store_id)
+            else:
+                store_id = None
+
+            new_user = User(
+                username=username,
+                email=email,
+                role=role,
+                store_id=store_id,
+                created_at=datetime.datetime.now(),
+                is_admin=(role == 'admin' or role == 'superadmin'),
+                is_groomer=(role == 'groomer')
+            )
+            new_user.set_password(password)
+
+            db.session.add(new_user)
+            db.session.commit()
+
+            app.logger.info(f"Superadmin created user: {username}")
+            flash('User created successfully.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error creating user: {str(e)}")
+            flash(f'Error creating user: {str(e)}', 'danger')
+
+        return redirect(url_for('superadmin_user_management'))
+
+    # Superadmin Update User route
+    @app.route('/superadmin/update-user', methods=['POST'])
+    def superadmin_update_user():
+        from flask import request, flash, redirect, url_for
+
+        if not session.get('is_superadmin'):
+            flash('Access denied.', 'danger')
+            return redirect(url_for('superadmin_login'))
+
+        user_id = request.form.get('user_id')
+        username = request.form.get('username')
+        email = request.form.get('email')
+        role = request.form.get('role')
+        store_id = request.form.get('store_id')
+
+        if not user_id:
+            flash('User ID is missing.', 'danger')
+            return redirect(url_for('superadmin_user_management'))
+
+        user = User.query.get(user_id)
+        if not user:
+            flash('User not found.', 'danger')
+            return redirect(url_for('superadmin_user_management'))
+
+        # Check conflicts
+        existing_username = User.query.filter(User.username == username, User.id != user_id).first()
+        if existing_username:
+            flash('Username already taken by another user.', 'danger')
+            return redirect(url_for('superadmin_user_management'))
+
+        existing_email = User.query.filter(User.email == email, User.id != user_id).first()
+        if existing_email:
+            flash('Email already taken by another user.', 'danger')
+            return redirect(url_for('superadmin_user_management'))
+
+        try:
+            # Handle store_id
+            if store_id and store_id.isdigit():
+                store_id = int(store_id)
+            else:
+                store_id = None
+
+            user.username = username
+            user.email = email
+            user.role = role
+            user.store_id = store_id
+            user.is_admin = (role == 'admin' or role == 'superadmin')
+            user.is_groomer = (role == 'groomer')
+
+            db.session.commit()
+
+            app.logger.info(f"Superadmin updated user: {username}")
+            flash('User updated successfully.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error updating user: {str(e)}")
+            flash(f'Error updating user: {str(e)}', 'danger')
+
+        return redirect(url_for('superadmin_user_management'))
+
+    # Superadmin Reset User Password route
+    @app.route('/superadmin/reset-user-password', methods=['POST'])
+    def superadmin_reset_user_password():
+        from flask import request, flash, redirect, url_for
+
+        if not session.get('is_superadmin'):
+            flash('Access denied.', 'danger')
+            return redirect(url_for('superadmin_login'))
+
+        user_id = request.form.get('user_id')
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+
+        if not user_id or not new_password:
+            flash('Missing required fields.', 'danger')
+            return redirect(url_for('superadmin_user_management'))
+
+        if new_password != confirm_password:
+            flash('Passwords do not match.', 'danger')
+            return redirect(url_for('superadmin_user_management'))
+
+        user = User.query.get(user_id)
+        if not user:
+            flash('User not found.', 'danger')
+            return redirect(url_for('superadmin_user_management'))
+
+        try:
+            user.set_password(new_password)
+            db.session.commit()
+
+            app.logger.info(f"Superadmin reset password for user: {user.username}")
+            flash('Password reset successfully.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error resetting password: {str(e)}")
+            flash(f'Error resetting password: {str(e)}', 'danger')
+
+        return redirect(url_for('superadmin_user_management'))
+
+    # Superadmin Delete User route
+    @app.route('/superadmin/delete-user', methods=['POST'])
+    def superadmin_delete_user():
+        from flask import request, flash, redirect, url_for
+
+        if not session.get('is_superadmin'):
+            flash('Access denied.', 'danger')
+            return redirect(url_for('superadmin_login'))
+
+        user_id = request.form.get('user_id')
+
+        if not user_id:
+            flash('User ID is missing.', 'danger')
+            return redirect(url_for('superadmin_user_management'))
+
+        if int(user_id) == session.get('user_id'):
+            flash('You cannot delete your own account.', 'danger')
+            return redirect(url_for('superadmin_user_management'))
+
+        user = User.query.get(user_id)
+        if not user:
+            flash('User not found.', 'danger')
+            return redirect(url_for('superadmin_user_management'))
+
+        try:
+            username = user.username
+            db.session.delete(user)
+            db.session.commit()
+
+            app.logger.info(f"Superadmin deleted user: {username}")
+            flash(f'User {username} deleted successfully.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error deleting user: {str(e)}")
+            flash(f'Error deleting user: {str(e)}', 'danger')
+
+        return redirect(url_for('superadmin_user_management'))
+
+    # Superadmin Get User Details (AJAX)
+    @app.route('/superadmin/get-user/<int:user_id>')
+    def superadmin_get_user(user_id):
+        from flask import jsonify
+
+        if not session.get('is_superadmin'):
+            return jsonify({'success': False, 'message': 'Access denied'}), 403
+
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'}), 404
+
+        user_data = {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'role': user.role,
+            'store_id': user.store_id,
+            'active': user.is_active
+        }
+
+        return jsonify({'success': True, 'user': user_data})
     return app
 
 # Create app instance for production (gunicorn, Railway, etc.)
