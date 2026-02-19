@@ -124,8 +124,13 @@
                 {% if messages %}
                     {% for category, message in messages %}
                         {% set category_class = 'flash-' + category if category in ['danger', 'success', 'warning', 'info'] else 'flash-info' %}
-                        <div class="flash-message {{ category_class }}" role="alert">
-                            <p>{{ message }}</p>
+                        <div class="flash-message {{ category_class }}" role="alert" x-data="{ show: true }" x-show="show" x-transition.opacity.duration.300ms style="display: flex; justify-content: space-between; align-items: center;">
+                            <p style="margin-bottom: 0;">{{ message }}</p>
+                            <button type="button" @click="show = false" aria-label="Close" style="background: none; border: none; cursor: pointer; color: inherit; opacity: 0.7; padding: 0 0 0 1rem; display: flex; align-items: center;">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 1.1rem; height: 1.1rem;">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
                         </div>
                     {% endfor %}
                 {% endif %}
