@@ -71,79 +71,27 @@ def calendar_view():
     except Exception as e:
         current_app.logger.error(f"Error syncing Google Calendar: {str(e)}", exc_info=True)
     
-    # Get all appointments for the store with all statuses
-    current_app.logger.info("Querying local appointments...")
-    local_appointments = Appointment.query.options(
+    # Optimized: Only fetch the top 5 scheduled appointments needed for display
+    # This prevents loading all historical appointments which was causing performance issues
+    current_app.logger.info("Querying scheduled appointments for display...")
+    local_appointments_display = Appointment.query.options(
         db.joinedload(Appointment.dog).joinedload(Dog.owner),
         db.joinedload(Appointment.groomer)
     ).filter(
         Appointment.store_id == store_id,
-        Appointment.status.in_(['Scheduled', 'Completed', 'Cancelled', 'No Show'])
-    ).order_by(Appointment.appointment_datetime.asc()).all()
+        Appointment.status == 'Scheduled'
+    ).order_by(Appointment.appointment_datetime.asc()).limit(5).all()
+
+    current_app.logger.info(f"Retrieved {len(local_appointments_display)} scheduled appointments")
     
-    current_app.logger.info(f"Retrieved {len(local_appointments)} appointments")
-    for i, appt in enumerate(local_appointments, 1):
-        # Ensure details_needed is always up to date
+    for i, appt in enumerate(local_appointments_display, 1):
+        # Ensure details_needed is always up to date for displayed items
         appt.details_needed = appointment_needs_details(appt.dog, appt.groomer, appt.requested_services_text)
         # Convert appointment time to store timezone for display
         if appt.appointment_datetime.tzinfo is None:
             appt.local_time = appt.appointment_datetime.replace(tzinfo=timezone.utc).astimezone(store_timezone)
         else:
             appt.local_time = appt.appointment_datetime.astimezone(store_timezone)
-        current_app.logger.info(
-            f"Appt {i}: ID={appt.id}, Status={appt.status}, "
-            f"Dog={getattr(appt.dog, 'name', 'None')} (ID: {getattr(appt, 'dog_id', 'None')}), "
-            f"Groomer={getattr(appt.groomer, 'username', 'None')} (ID: {getattr(appt, 'groomer_id', 'None')}), "
-            f"Time={appt.local_time}, "
-            f"GoogleEventID={getattr(appt, 'google_event_id', 'None')}, "
-            f"DetailsNeeded={getattr(appt, 'details_needed', 'False')}"
-        )
-    
-    # Format appointments for FullCalendar
-    events = []
-    for appt in local_appointments:
-        if not appt.dog:
-            current_app.logger.warning(f"Skipping appointment {appt.id} - no dog associated")
-            continue
-            
-        try:
-            # Use local_time for event start (already in store timezone)
-            event = {
-                'id': appt.id,
-                'title': f"{appt.dog.name} - {appt.requested_services_text or 'Appointment'}",
-                'start': appt.local_time.isoformat(),
-                'status': appt.status,
-                'dog_name': appt.dog.name,
-                'dog_id': appt.dog.id,
-                'owner_name': appt.dog.owner.name if appt.dog.owner else 'Unknown Owner',
-                'owner_id': appt.dog.owner.id if appt.dog.owner else None,
-                'services': appt.requested_services_text or '',
-                'notes': appt.notes or '',
-                'groomer': appt.groomer.username if appt.groomer else 'Unassigned',
-                'groomer_id': appt.groomer.id if appt.groomer else None,
-                'details_needed': appt.details_needed,
-                'editable': True,
-                'google_event_id': appt.google_event_id or ''
-            }
-            
-            # Set event color based on status
-            if appt.status == 'Completed':
-                event['color'] = '#28a745'  # Green
-            elif appt.status == 'Cancelled':
-                event['color'] = '#dc3545'  # Red
-                event['editable'] = False
-            elif appt.status == 'No Show':
-                event['color'] = '#ffc107'  # Yellow
-            elif appt.details_needed:
-                event['color'] = '#fd7e14'  # Orange
-                
-            events.append(event)
-        except Exception as e:
-            current_app.logger.error(f"Error formatting appointment {getattr(appt, 'id', 'unknown')}: {str(e)}", exc_info=True)
-    
-    current_app.logger.info(f"Successfully formatted {len(events)} events for calendar")
-    # Limit to first 5 scheduled appointments for the calendar page preview
-    local_appointments_display = [a for a in local_appointments if a.status == 'Scheduled'][:5]
     # Determine Google Calendar embed URL and connection status
     pawfection_calendar_embed_url = None
     is_google_calendar_connected = False
@@ -159,7 +107,7 @@ def calendar_view():
         local_appointments=local_appointments_display,
         pawfection_calendar_embed_url=pawfection_calendar_embed_url,
         is_google_calendar_connected=is_google_calendar_connected,
-        events=json.dumps(events),
+        events="[]", # Events JSON is not used in the template, passing empty list to save processing
         STORE_TIMEZONE=store_timezone,
         tz=tz
     )
