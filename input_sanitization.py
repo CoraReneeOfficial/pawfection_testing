@@ -13,8 +13,6 @@ def sanitize_text_input(text):
     """
     if not text:
         return ''
-    # Escape HTML
-    text = escape(text)
     # Optionally strip dangerous tags (e.g. script/style)
     # Remove script/style blocks
     text = re.sub(r'<(script|style)[^>]*>.*?</\1>', '', text, flags=re.DOTALL | re.IGNORECASE)
@@ -22,4 +20,6 @@ def sanitize_text_input(text):
     text = re.sub(r'on\w+\s*=\s*"[^"]*"', '', text, flags=re.IGNORECASE)
     text = re.sub(r'on\w+\s*=\s*\'[^\']*\'', '', text, flags=re.IGNORECASE)
     text = re.sub(r'on\w+\s*=\s*[^\s>]+', '', text, flags=re.IGNORECASE)
+    # Escape HTML
+    text = escape(text)
     return text
