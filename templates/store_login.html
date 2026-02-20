@@ -35,6 +35,7 @@
                 <h2 class="form-title">Store Login</h2>
             </div>
             <form method="POST" action="{{ url_for('store_login') }}" novalidate>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group">
                     <label for="username">Store Username</label>
                     <input type="text" id="username" name="username" required class="form-input" autofocus value="{{ request.form.username or '' }}">
