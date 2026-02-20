@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g, current_app, session
-from models import Owner, Dog, Appointment, ActivityLog
+from models import Owner, Dog, Appointment, ActivityLog, AppointmentRequest, Receipt
 from extensions import db
 from sqlalchemy import or_
 from functools import wraps
@@ -172,6 +172,7 @@ def edit_owner(owner_id):
 def delete_owner(owner_id):
     """
     Securely deletes an owner and all their dogs and appointments, only if the owner belongs to the current store.
+    Handles cleanup of associated records that don't cascade automatically.
     """
     store_id = session.get('store_id')
     owner = Owner.query.filter_by(id=owner_id, store_id=store_id).first()
@@ -180,8 +181,30 @@ def delete_owner(owner_id):
         return redirect(url_for('owners.directory'))
     try:
         owner_name = owner.name
+
+        # 1. Unlink AppointmentRequests associated with this owner
+        requests = AppointmentRequest.query.filter_by(owner_id=owner.id).all()
+        for req in requests:
+            req.owner_id = None
+
+        # 2. Delete Receipts associated with appointments of this owner's dogs
+        # Since Receipt.appointment_id is nullable=False, we must delete them before deleting appointments
+        # Appointments will be deleted by cascade when Dog is deleted, which is deleted when Owner is deleted
+
+        # Get all dog IDs for this owner
+        dog_ids = [d.id for d in owner.dogs]
+
+        if dog_ids:
+            # Get all appointment IDs for these dogs
+            appointment_ids = [a.id for a in Appointment.query.filter(Appointment.dog_id.in_(dog_ids)).all()]
+
+            if appointment_ids:
+                # Delete receipts for these appointments
+                Receipt.query.filter(Receipt.appointment_id.in_(appointment_ids)).delete(synchronize_session=False)
+
         db.session.delete(owner)
         db.session.commit()
+        log_activity("Deleted Owner", details=f"Owner: {owner_name} (ID: {owner_id}), Store ID: {store_id}")
         flash(f'Owner "{owner_name}" and all their dogs/appointments have been deleted.', 'success')
     except Exception as e:
         db.session.rollback()

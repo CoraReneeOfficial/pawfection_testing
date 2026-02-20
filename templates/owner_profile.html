@@ -103,7 +103,9 @@
     <div class="profile-actions">
          <a href="{{ url_for('owners.directory') }}" class="button" style="background-color: var(--secondary-color); color: white;">Back to Directory</a>
          <a href="{{ url_for('owners.edit_owner', owner_id=owner.id) }}" class="button button-primary">Edit Owner Info</a>
-         {# TODO: Add Delete Owner button/link (needs confirmation and careful consideration of associated dogs) #}
+         <form action="{{ url_for('owners.delete_owner', owner_id=owner.id) }}" method="post" onsubmit="return confirm('Are you sure you want to delete this owner? This will permanently delete the owner, all their dogs, and all appointments. This action cannot be undone.');" style="display:inline;">
+             <button type="submit" class="button" style="background-color: #dc3545; color: white;">Delete Owner</button>
+         </form>
          </div>
 </div>
 {% endblock %}
