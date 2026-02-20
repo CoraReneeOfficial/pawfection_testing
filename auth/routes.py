@@ -79,7 +79,7 @@ def login():
             return render_template('login.html', show_initial_setup=check_initial_setup(), store_name=store_name), 400
         
         # --- DEBUG LOGGING ---
-        current_app.logger.info(f"[LOGIN DEBUG] Attempt login: username={username}, store_id={store_id}, password_entered={password}")
+        current_app.logger.info(f"[LOGIN DEBUG] Attempt login: username={username}, store_id={store_id}")
         # Authenticate user within the context of the current store
         user = User.query.filter_by(username=username, store_id=store_id).first()
         if user:
