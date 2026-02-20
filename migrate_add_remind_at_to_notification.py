@@ -51,13 +51,20 @@ def migrate_sqlite(db_path: str):
         conn.commit()
         print("[DONE] SQLite migration completed.")
 
-def migrate_postgres():
+def migrate_postgres(db_url=None):
     import psycopg2
     from psycopg2 import sql
 
+    if not db_url:
+        db_url = os.environ.get('DATABASE_URL')
+
+    if not db_url:
+        print("[SKIP] No DATABASE_URL provided for Postgres migration.")
+        return
+
     print("Migrating Postgres database...")
     try:
-        pg_conn = psycopg2.connect(os.environ['DATABASE_URL'])
+        pg_conn = psycopg2.connect(db_url)
         pg_conn.autocommit = True
         cur = pg_conn.cursor()
 

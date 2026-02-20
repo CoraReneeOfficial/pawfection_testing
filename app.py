@@ -22,6 +22,7 @@ from auth.routes import oauth
 import stripe
 from flask import request, jsonify, render_template
 from secure_headers import init_secure_headers  # Import secure headers
+import migrate_add_remind_at_to_notification
 # Removed import for datetime as it's not directly used at top level of app.py anymore
 # Removed log_activity definition as it's now in utils.py
 
@@ -209,6 +210,17 @@ def create_app():
     # Ensure all database tables are created on application startup.
     with app.app_context():
         db.create_all()
+
+        # Check for and apply missing notification columns (remind_at, shown_in_popup)
+        try:
+            if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
+                app.logger.info("Checking for notification schema updates (SQLite)...")
+                migrate_add_remind_at_to_notification.migrate_sqlite(DATABASE_PATH)
+            else:
+                app.logger.info("Checking for notification schema updates (Postgres)...")
+                migrate_add_remind_at_to_notification.migrate_postgres(app.config['SQLALCHEMY_DATABASE_URI'])
+        except Exception as e:
+            app.logger.error(f"Failed to run notification migration: {e}")
 
     # Register blueprints for modular routes
     app.register_blueprint(auth_bp)
