@@ -1,0 +1,4 @@
+## 2025-05-15 - [Stored XSS in System Logs]
+**Vulnerability:** A Stored XSS vulnerability in the System Logs page allowed execution of arbitrary JavaScript via malicious log messages when a search term was highlighted. The template used `{{ log.message|replace(...)|safe }}` which marked the entire message as safe HTML after highlighting, exposing any existing scripts in the log message.
+**Learning:** The `|safe` filter is powerful and dangerous. Using it on the result of a string replacement applied to potentially unsafe input (even if intended to add safe HTML tags) exposes the original unsafe content. Highlighting logic must operate on *already escaped* content.
+**Prevention:** Escape the base content first (`|e`). Then apply highlighting by replacing the *escaped* search term with a safe HTML string that wraps the *escaped* term. Use Jinja2's `format` or string concatenation with `|safe` for the replacement pattern only, not the whole string.
