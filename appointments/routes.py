@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from models import Appointment, Dog, Owner, User, ActivityLog, Store, Service, Receipt
 from appointments.details_needed_utils import appointment_needs_details
 from extensions import db
-from sqlalchemy import or_
+from sqlalchemy import or_, desc, cast, String
 from sqlalchemy.orm import joinedload
 from functools import wraps
 import datetime
@@ -1474,47 +1474,87 @@ from flask import send_file, make_response
 def receipts_management():
     """
     Receipts management page with search and advanced filters.
+    Uses database-side filtering and pagination for performance.
     """
-    q = request.args.get('q', '').strip().lower()
+    q = request.args.get('q', '').strip()
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
     min_total = request.args.get('min_total')
     max_total = request.args.get('max_total')
+    page = request.args.get('page', 1, type=int)
+
     store_id = session.get('store_id')
-    query = Receipt.query.filter_by(store_id=store_id)
+
+    # Base query joining Receipt -> Appointment -> Dog -> Owner
+    query = db.session.query(Receipt).join(Appointment).join(Dog).join(Owner).filter(Receipt.store_id == store_id)
+
+    # Apply search filter (q)
+    if q:
+        search_term = f"%{q}%"
+        query = query.filter(or_(
+            Owner.name.ilike(search_term),
+            Dog.name.ilike(search_term),
+            cast(Receipt.created_at, String).ilike(search_term),
+            cast(Appointment.checkout_total_amount, String).ilike(search_term)
+        ))
+
+    # Apply Date filters
+    if start_date:
+        # Assuming start_date is 'YYYY-MM-DD'
+        try:
+            start_dt = datetime.datetime.strptime(start_date, '%Y-%m-%d')
+            # Adjust timezone if necessary, but Receipt.created_at is UTC
+            # For simplicity, filter >= start of day
+            query = query.filter(Receipt.created_at >= start_dt)
+        except ValueError:
+            pass
+
+    if end_date:
+        try:
+            end_dt = datetime.datetime.strptime(end_date, '%Y-%m-%d')
+            # Make sure to include the whole end day (up to 23:59:59)
+            end_dt = end_dt + datetime.timedelta(days=1)
+            query = query.filter(Receipt.created_at < end_dt)
+        except ValueError:
+            pass
+
+    # Apply Amount filters
+    if min_total:
+        try:
+            query = query.filter(Appointment.checkout_total_amount >= float(min_total))
+        except ValueError:
+            pass
+
+    if max_total:
+        try:
+            query = query.filter(Appointment.checkout_total_amount <= float(max_total))
+        except ValueError:
+            pass
+
+    # Pagination
+    per_page = 20
+    pagination = query.order_by(Receipt.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+
     receipts = []
-    for r in query.order_by(Receipt.created_at.desc()).all():
-        data = json.loads(r.receipt_json)
-        # Advanced search
-        if q:
-            if not (q in data.get('customer_name', '').lower() or
-                    q in data.get('pet_name', '').lower() or
-                    q in data.get('date', '').lower() or
-                    q in str(data.get('final_total', '')).lower()):
-                continue
-        # Date filter
-        if start_date and data.get('date'):
-            if data['date'] < start_date:
-                continue
-        if end_date and data.get('date'):
-            if data['date'] > end_date:
-                continue
-        # Amount filter
-        if min_total:
-            try:
-                if float(data.get('final_total', 0)) < float(min_total):
-                    continue
-            except Exception:
-                pass
-        if max_total:
-            try:
-                if float(data.get('final_total', 0)) > float(max_total):
-                    continue
-            except Exception:
-                pass
+    for r in pagination.items:
+        try:
+            data = json.loads(r.receipt_json)
+        except Exception as e:
+            current_app.logger.error(f"Error parsing receipt JSON for ID {r.id}: {e}")
+            data = {}
+
         data['id'] = r.id
+
+        # Ensure 'total' is available (similar logic to view_receipt)
+        if 'total' not in data and 'final_total' in data:
+            data['total'] = data['final_total']
+        elif 'total' not in data:
+            # Fallback calculation or grab from DB if needed
+            data['total'] = r.appointment.checkout_total_amount if r.appointment else 0
+
         receipts.append(data)
-    return render_template('receipts_management.html', receipts=receipts)
+
+    return render_template('receipts_management.html', receipts=receipts, pagination=pagination)
 
 @appointments_bp.route('/receipts/email/<int:receipt_id>', methods=['POST'])
 @subscription_required
