@@ -299,6 +299,14 @@
             
             <div class="log-table-container">
                 {% if logs|length > 0 %}
+
+                {# START: Fix for XSS vulnerability - pre-calculate safe replacement for search term #}
+                {% if search_term %}
+                    {% set escaped_term = search_term|e %}
+                    {% set replacement = '<span class="highlight">{}</span>'.format(escaped_term)|safe %}
+                {% endif %}
+                {# END: Fix for XSS vulnerability #}
+
                 <table class="log-table">
                     <thead>
                         <tr>
@@ -317,7 +325,7 @@
                             </td>
                             <td class="message-cell">
                                 {% if search_term %}
-                                    {{ log.message|replace(search_term, '<span class="highlight">' + search_term + '</span>')|safe }}
+                                    {{ (log.message|e).replace(escaped_term, replacement) }}
                                 {% else %}
                                     {{ log.message }}
                                 {% endif %}
