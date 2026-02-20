@@ -1,10 +1,11 @@
+import os
 """
 Script to fix duplicate superadmin_global_config function definitions in app.py.
 """
 import re
 
 # Read the app.py file
-with open('app.py', 'r', encoding='utf-8') as f:
+with open(os.path.join(os.path.dirname(__file__), '../../app.py'), 'r', encoding='utf-8') as f:
     content = f.read()
 
 # Count occurrences of the function definition
@@ -23,7 +24,7 @@ if len(parts) >= 3:
     modified_content = parts[0] + pattern + parts[1] + replacement + ''.join(parts[2:])
     
     # Write the modified content back to app.py
-    with open('app.py', 'w', encoding='utf-8') as f:
+    with open(os.path.join(os.path.dirname(__file__), '../../app.py'), 'w', encoding='utf-8') as f:
         f.write(modified_content)
     
     print("Successfully renamed second function to superadmin_global_config_alt")

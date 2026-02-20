@@ -1,3 +1,4 @@
+import os
 """
 Fix duplicate superadmin_database function names in app.py by renaming the second occurrence.
 """
@@ -6,7 +7,7 @@ import re
 def fix_duplicate_function():
     try:
         # Read the file content
-        with open('app.py', 'r', encoding='utf-8') as file:
+        with open(os.path.join(os.path.dirname(__file__), '../../app.py'), 'r', encoding='utf-8') as file:
             content = file.read()
         
         # Find all occurrences of the function name
@@ -43,7 +44,7 @@ def fix_duplicate_function():
             )
         
         # Write the modified content back
-        with open('app.py', 'w', encoding='utf-8') as file:
+        with open(os.path.join(os.path.dirname(__file__), '../../app.py'), 'w', encoding='utf-8') as file:
             file.write(new_content)
         
         print("Successfully fixed duplicate function names")

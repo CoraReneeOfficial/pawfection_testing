@@ -1,16 +1,17 @@
+import os
 """
-Fix duplicate superadmin_application_settings function names in app.py by renaming the second occurrence.
+Fix duplicate superadmin_email_test function names in app.py by renaming the second occurrence.
 """
 import re
 
 def fix_duplicate_function():
     try:
         # Read the file content
-        with open('app.py', 'r', encoding='utf-8') as file:
+        with open(os.path.join(os.path.dirname(__file__), '../../app.py'), 'r', encoding='utf-8') as file:
             content = file.read()
         
         # Find all occurrences of the function name
-        matches = list(re.finditer(r'def superadmin_application_settings\(\):', content))
+        matches = list(re.finditer(r'def superadmin_email_test\(\):', content))
         
         if len(matches) < 2:
             print(f"Found only {len(matches)} occurrences, not enough to fix")
@@ -23,12 +24,12 @@ def fix_duplicate_function():
         # Replace only the second occurrence
         new_content = (
             content[:start_pos] + 
-            "def superadmin_application_settings_alt():" + 
-            content[start_pos + len("def superadmin_application_settings():"):]
+            "def superadmin_email_test_alt():" + 
+            content[start_pos + len("def superadmin_email_test():"):]
         )
         
         # Also change the route path for the second occurrence
-        route_pattern = r"@app\.route\('/superadmin/application-settings', methods=\['GET', 'POST'\]\)"
+        route_pattern = r"@app\.route\('/superadmin/email-test', methods=\['GET', 'POST'\]\)"
         route_matches = list(re.finditer(route_pattern, new_content))
         
         if len(route_matches) >= 2:
@@ -38,12 +39,12 @@ def fix_duplicate_function():
             
             new_content = (
                 new_content[:route_start] + 
-                "@app.route('/superadmin/application-settings-alt', methods=['GET', 'POST'])" + 
+                "@app.route('/superadmin/email-test-alt', methods=['GET', 'POST'])" + 
                 new_content[route_end:]
             )
         
         # Write the modified content back
-        with open('app.py', 'w', encoding='utf-8') as file:
+        with open(os.path.join(os.path.dirname(__file__), '../../app.py'), 'w', encoding='utf-8') as file:
             file.write(new_content)
         
         print("Successfully fixed duplicate function names")

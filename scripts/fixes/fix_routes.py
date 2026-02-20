@@ -1,10 +1,11 @@
+import os
 """
 Simple script to fix duplicate route definitions in app.py.
 """
 import re
 
 # Read the app.py file
-with open('app.py', 'r', encoding='utf-8') as f:
+with open(os.path.join(os.path.dirname(__file__), '../../app.py'), 'r', encoding='utf-8') as f:
     content = f.read()
 
 # Find the first occurrence and replace it
@@ -15,7 +16,7 @@ replacement = '# Superadmin Global Configuration Settings route\n    @app.route(
 modified_content = re.sub(pattern, replacement, content, count=1)
 
 # Write the modified content back to app.py
-with open('app.py', 'w', encoding='utf-8') as f:
+with open(os.path.join(os.path.dirname(__file__), '../../app.py'), 'w', encoding='utf-8') as f:
     f.write(modified_content)
 
 print("Route definitions updated successfully.")

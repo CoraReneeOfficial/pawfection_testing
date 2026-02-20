@@ -1,3 +1,4 @@
+import os
 """
 Comprehensive script to fix all duplicate route definitions in app.py.
 """
@@ -61,11 +62,11 @@ def fix_duplicate_routes(content):
 
 # Read the app.py file
 try:
-    with open('app.py', 'r', encoding='utf-8') as f:
+    with open(os.path.join(os.path.dirname(__file__), '../../app.py'), 'r', encoding='utf-8') as f:
         content = f.read()
 except UnicodeDecodeError:
     # Try with a different encoding if UTF-8 fails
-    with open('app.py', 'r', encoding='latin1') as f:
+    with open(os.path.join(os.path.dirname(__file__), '../../app.py'), 'r', encoding='latin1') as f:
         content = f.read()
 
 # Specifically fix the superadmin_configuration route first
@@ -79,7 +80,7 @@ modified_content = re.sub(config_pattern, config_replacement, content, count=1)
 #modified_content = fix_duplicate_routes(modified_content)
 
 # Write the modified content back to app.py
-with open('app.py', 'w', encoding='utf-8') as f:
+with open(os.path.join(os.path.dirname(__file__), '../../app.py'), 'w', encoding='utf-8') as f:
     f.write(modified_content)
 
 print("Route definitions updated successfully.")

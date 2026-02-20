@@ -1,7 +1,7 @@
 import os
 import subprocess
 
-MIGRATIONS_DIR = os.path.join(os.path.dirname(__file__), 'migrations')
+MIGRATIONS_DIR = os.path.join(os.path.dirname(__file__), '../../../migrations')
 
 # Check if migrations directory exists
 if not os.path.exists(MIGRATIONS_DIR):
