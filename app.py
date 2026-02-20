@@ -1,6 +1,8 @@
 # app.py
 import os
 import bcrypt
+import re
+from sqlalchemy import text, inspect
 from flask import Flask, g, session, redirect, url_for, flash, send_from_directory, current_app
 from flask.wrappers import Request
 from extensions import db
@@ -2699,7 +2701,6 @@ def create_app():
         import io
         import os
         import pandas as pd
-        from sqlalchemy import inspect
         
         if not session.get('is_superadmin'):
             flash('Access denied.', 'danger')
@@ -2819,21 +2820,66 @@ def create_app():
                     return redirect(url_for('superadmin_data_export'))
                 
                 try:
-                    # Build the SQL query
+                    # Validate table_name against actual database tables
+                    inspector = inspect(db.engine)
+                    all_tables = inspector.get_table_names()
+                    if table_name not in all_tables:
+                        flash(f'Invalid table: {table_name}', 'danger')
+                        return redirect(url_for('superadmin_data_export'))
+
+                    # Get valid columns for this table
+                    all_columns = [c['name'] for c in inspector.get_columns(table_name)]
+
+                    # Build and validate the columns list
                     if selected_columns and len(selected_columns) > 0:
-                        columns_str = ', '.join(selected_columns)
+                        validated_columns = []
+                        for col in selected_columns:
+                            if col in all_columns:
+                                validated_columns.append(col)
+                            else:
+                                flash(f'Invalid column {col} for table {table_name}', 'danger')
+                                return redirect(url_for('superadmin_data_export'))
+                        columns_str = ', '.join(validated_columns)
                     else:
                         columns_str = '*'
                     
-                    sql_query = f"SELECT {columns_str} FROM {table_name}"
+                    # Build the SQL query string safely
+                    # table_name and columns_str are now whitelisted
+                    sql_query_str = f"SELECT {columns_str} FROM {table_name}"
                     
-                    # Add filter condition if provided
+                    # Add filter condition if provided, with robust sanitization
                     if filter_condition:
-                        sql_query += f" WHERE {filter_condition}"
+                        # Allow only a safe subset of characters for the filter
+                        # This prevents semicolons, comments, and other dangerous constructs
+                        if not re.match(r'^[a-zA-Z0-9_ \.\(\)\',=><!%@\+\-]+$', filter_condition):
+                            flash('Invalid characters in filter condition.', 'danger')
+                            return redirect(url_for('superadmin_data_export'))
+
+                        # Further check to prevent UNION or other dangerous keywords
+                        # We use word boundaries to avoid matching keywords inside column names (e.g., updated_at)
+                        forbidden_keywords = ['UNION', 'DROP', 'DELETE', 'UPDATE', 'INSERT', 'ALTER', 'CREATE', 'TRUNCATE', 'SELECT']
+                        filter_upper = filter_condition.upper()
+
+                        for kw in forbidden_keywords:
+                            if re.search(r'\b' + kw + r'\b', filter_upper):
+                                flash(f'Forbidden keyword {kw} in filter condition.', 'danger')
+                                return redirect(url_for('superadmin_data_export'))
+
+                        # Check for SQL comment sequences separately as they don't have word boundaries
+                        if '--' in filter_condition or '/*' in filter_condition:
+                            flash('SQL comments are not allowed in filters.', 'danger')
+                            return redirect(url_for('superadmin_data_export'))
+
+                        sql_query_str += f" WHERE {filter_condition}"
                     
-                    # Execute query
-                    result = db.session.execute(sql_query)
-                    data = [dict(row) for row in result]
+                    # Execute query using sqlalchemy.text()
+                    result = db.session.execute(text(sql_query_str))
+                    # Convert result to list of dicts safely
+                    try:
+                        data = [dict(row) for row in result.mappings()]
+                    except AttributeError:
+                        # Fallback for older SQLAlchemy versions
+                        data = [dict(row) for row in result]
                     
                     # Create the export file based on format
                     timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
