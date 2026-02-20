@@ -1543,19 +1543,52 @@ def create_app():
                     flash('Query cannot be empty.', 'danger')
                     return redirect(url_for('superadmin_database'))
                     
-                # Check if query is read-only (SELECT only)
-                if not query.lower().startswith('select'):
+                # Validate query security
+                query_lower = query.lower().strip()
+
+                # Must start with select
+                if not query_lower.startswith('select'):
                     flash('Only SELECT queries are allowed for security reasons.', 'danger')
                     return redirect(url_for('superadmin_database'))
                 
+                # Block semicolons to prevent chaining (allow trailing semicolon)
+                if ';' in query.rstrip(';\n\r\t '):
+                    flash('Multiple statements (semicolons) are not allowed.', 'danger')
+                    return redirect(url_for('superadmin_database'))
+
+                # Block comments
+                if '--' in query or '/*' in query:
+                    flash('SQL comments are not allowed.', 'danger')
+                    return redirect(url_for('superadmin_database'))
+
+                # Block dangerous keywords using regex
+                # We block them even inside strings to be safe, as this is a superadmin tool
+                # and typical SELECTs shouldn't need these words.
+                # Use word boundaries to avoid blocking words like "update_at"
+                dangerous_keywords = ['drop', 'delete', 'update', 'insert', 'alter', 'truncate', 'create', 'grant', 'revoke', 'replace']
+                for kw in dangerous_keywords:
+                    if re.search(r'\b' + kw + r'\b', query_lower):
+                        flash(f'Dangerous keyword "{kw}" is not allowed.', 'danger')
+                        return redirect(url_for('superadmin_database'))
+
                 try:
                     # Start timing
                     start_time = time.time()
                     
-                    # Execute query
+                    # Execute query in a sandbox (rollback immediately)
+                    # This prevents any data modification even if checks are bypassed
                     result = db.session.execute(text(query))
-                    rows = result.fetchall()
-                    columns = result.keys()
+
+                    # Fetch data
+                    if result.returns_rows:
+                        rows = result.fetchall()
+                        columns = result.keys()
+                    else:
+                        rows = []
+                        columns = []
+
+                    # Always rollback to ensure read-only behavior
+                    db.session.rollback()
                     
                     # End timing
                     execution_time = round(time.time() - start_time, 3)
