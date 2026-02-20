@@ -367,8 +367,14 @@
             </ul>
             <p><a href="{{ url_for('appointments.calendar_view') }}">View Full Calendar &raquo;</a></p>
         {% else %}
-            <p class="no-upcoming-appointments">No upcoming appointments scheduled in the app.</p>
-            <p><a href="{{ url_for('appointments.add_appointment') }}" class="button button-primary" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">Schedule an Appointment</a></p>
+            <div class="empty-state-card" style="text-align: center; padding: 3rem 1rem; border: 2px dashed var(--border-color); border-radius: var(--border-radius); background-color: var(--secondary-light); margin-top: 1rem;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">📅</div>
+                <h3 style="margin-bottom: 0.5rem; color: var(--text-dark);">No Upcoming Appointments</h3>
+                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Your schedule is clear. Ready to book a new grooming session?</p>
+                <a href="{{ url_for('appointments.add_appointment') }}" class="button button-primary">
+                    Schedule an Appointment
+                </a>
+            </div>
         {% endif %}
     </div>
 
