@@ -11,6 +11,12 @@
   .receipt-table th { background: #f6f6f6; color: #5c4d7d; }
   .receipt-table tr:hover { background: #f1f1fa; }
   .receipt-actions button { margin-right: 0.3em; }
+
+  .pagination { display: flex; justify-content: center; gap: 5px; margin-top: 20px; align-items: center; }
+  .pagination a, .pagination span { padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; text-decoration: none; color: #5c4d7d; background: white; }
+  .pagination a:hover { background-color: #f1f1fa; border-color: #d1d1e0; }
+  .pagination .active { background-color: #5c4d7d; color: white; border-color: #5c4d7d; }
+  .pagination .disabled { color: #ccc; pointer-events: none; border-color: #eee; background: #f9f9f9; }
 </style>
 {% endblock %}
 
@@ -67,5 +73,37 @@
       {% endfor %}
     </tbody>
   </table>
+
+  <!-- Pagination Controls -->
+  {% if pagination and pagination.pages > 1 %}
+  <div class="pagination">
+    <!-- Previous Page -->
+    {% if pagination.has_prev %}
+      <a href="{{ url_for('appointments.receipts_management', page=pagination.prev_num, q=request.args.get('q'), start_date=request.args.get('start_date'), end_date=request.args.get('end_date'), min_total=request.args.get('min_total'), max_total=request.args.get('max_total')) }}">&laquo; Prev</a>
+    {% else %}
+      <span class="disabled">&laquo; Prev</span>
+    {% endif %}
+
+    <!-- Page Numbers -->
+    {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+      {% if page_num %}
+        {% if pagination.page == page_num %}
+          <span class="active">{{ page_num }}</span>
+        {% else %}
+          <a href="{{ url_for('appointments.receipts_management', page=page_num, q=request.args.get('q'), start_date=request.args.get('start_date'), end_date=request.args.get('end_date'), min_total=request.args.get('min_total'), max_total=request.args.get('max_total')) }}">{{ page_num }}</a>
+        {% endif %}
+      {% else %}
+        <span class="disabled">...</span>
+      {% endif %}
+    {% endfor %}
+
+    <!-- Next Page -->
+    {% if pagination.has_next %}
+      <a href="{{ url_for('appointments.receipts_management', page=pagination.next_num, q=request.args.get('q'), start_date=request.args.get('start_date'), end_date=request.args.get('end_date'), min_total=request.args.get('min_total'), max_total=request.args.get('max_total')) }}">Next &raquo;</a>
+    {% else %}
+      <span class="disabled">Next &raquo;</span>
+    {% endif %}
+  </div>
+  {% endif %}
 </div>
 {% endblock %}
