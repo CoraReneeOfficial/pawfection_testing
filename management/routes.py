@@ -22,8 +22,7 @@ from decimal import Decimal, InvalidOperation
 from functools import wraps
 import datetime
 from models import User, Service, Appointment, ActivityLog, Store, Dog, Owner, AppointmentRequest
-from utils import allowed_file # Keep allowed_file from utils
-from utils import log_activity   # IMPORT log_activity from utils.py
+from utils import allowed_file, log_activity, service_names_from_ids
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 import json
@@ -55,32 +54,6 @@ management_bp = Blueprint('management', __name__)
 # --- Helpers ---
 NOTIFICATION_SETTINGS_FILE = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'notification_settings.json')
 
-def service_names_from_ids(service_ids_text):
-    """Convert a comma-separated list of service IDs to a comma-separated list of service names."""
-    if not service_ids_text:
-        return ''
-        
-    # Import models here to avoid circular imports
-    from models import Service
-    
-    # Split the comma-separated IDs
-    service_ids = [int(sid) for sid in service_ids_text.split(',') if sid.strip().isdigit()]
-    
-    # If no valid IDs, return empty string
-    if not service_ids:
-        return ''
-        
-    # Get all services in one query
-    services = Service.query.filter(Service.id.in_(service_ids)).all()
-    
-    # Map IDs to names
-    id_to_name = {service.id: service.name for service in services}
-    
-    # Build names list in same order as IDs
-    service_names = [id_to_name.get(sid, f"Unknown ({sid})") for sid in service_ids]
-    
-    # Join with commas
-    return ', '.join(service_names)
 
 # Decorator for admin routes
 def admin_required(f):

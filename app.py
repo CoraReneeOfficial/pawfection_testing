@@ -17,10 +17,9 @@ from functools import wraps
 from werkzeug.middleware.proxy_fix import ProxyFix
 import logging
 from sqlalchemy.exc import IntegrityError
-from utils import log_activity, subscription_required
+from utils import log_activity, subscription_required, is_user_subscribed, service_names_from_ids
 from auth.routes import oauth
 import stripe
-from utils import is_user_subscribed
 from flask import request, jsonify, render_template
 from secure_headers import init_secure_headers  # Import secure headers
 # Removed import for datetime as it's not directly used at top level of app.py anymore
@@ -163,33 +162,7 @@ def create_app():
     register_commands(app)
     
     # Register custom Jinja2 filters
-    @app.template_filter('service_names_from_ids')
-    def service_names_from_ids(service_ids_text):
-        """Convert a comma-separated list of service IDs to a comma-separated list of service names."""
-        if not service_ids_text:
-            return ''
-            
-        # Import models here to avoid circular imports
-        from models import Service
-        
-        # Split the comma-separated IDs
-        service_ids = [int(sid) for sid in service_ids_text.split(',') if sid.strip().isdigit()]
-        
-        # If no valid IDs, return empty string
-        if not service_ids:
-            return ''
-            
-        # Get all services in one query
-        services = Service.query.filter(Service.id.in_(service_ids)).all()
-        
-        # Map IDs to names
-        id_to_name = {service.id: service.name for service in services}
-        
-        # Build names list in same order as IDs
-        service_names = [id_to_name.get(sid, f"Unknown ({sid})") for sid in service_ids]
-        
-        # Join with commas
-        return ', '.join(service_names)
+    app.template_filter('service_names_from_ids')(service_names_from_ids)
     
     @app.template_filter('timeago')
     def timeago_filter(dt):
