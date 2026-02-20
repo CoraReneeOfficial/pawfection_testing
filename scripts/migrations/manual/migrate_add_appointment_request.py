@@ -67,5 +67,5 @@ if __name__ == '__main__':
         migrate_postgres()
     else:
         # Default SQLite path used in app.py
-        db_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'grooming_business_v2.db')
+        db_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), '../../../grooming_business_v2.db')
         migrate_sqlite(db_path)

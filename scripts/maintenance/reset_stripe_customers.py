@@ -1,3 +1,6 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 """
 Reset all Stripe customer and subscription IDs for all stores in the database.
 Use this when switching between Stripe test/live environments or after changing API keys.

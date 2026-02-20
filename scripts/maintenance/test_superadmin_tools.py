@@ -1,3 +1,4 @@
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 """
 Test script for Superadmin Tools features.
 This script will help verify that all superadmin tools routes are functioning correctly.
