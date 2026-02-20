@@ -3,6 +3,7 @@ from models import Appointment, Dog, Owner, User, ActivityLog, Store, Service, R
 from appointments.details_needed_utils import appointment_needs_details
 from extensions import db
 from sqlalchemy import or_
+from sqlalchemy.orm import joinedload
 from functools import wraps
 import datetime
 from datetime import timezone
@@ -918,7 +919,10 @@ def checkout_start():
     store_id = session['store_id']
     
     # Get all scheduled appointments for this store that can be checked out
-    appointments = Appointment.query.filter_by(
+    appointments = Appointment.query.options(
+        joinedload(Appointment.dog).joinedload(Dog.owner),
+        joinedload(Appointment.groomer)
+    ).filter_by(
         store_id=store_id,
         status='Scheduled'
     ).all()
