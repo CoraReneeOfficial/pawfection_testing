@@ -103,3 +103,30 @@ def log_activity(action, details=None):
             current_app.logger.error(f"Unexpected error in log_activity: {e}", exc_info=True)
     else:
         current_app.logger.warning(f"Attempted to log activity '{action}' but no user in g.")
+
+def service_names_from_ids(service_ids_text):
+    """Convert a comma-separated list of service IDs to a comma-separated list of service names."""
+    if not service_ids_text:
+        return ''
+
+    # Import models here to avoid circular imports
+    from models import Service
+
+    # Split the comma-separated IDs
+    service_ids = [int(sid) for sid in service_ids_text.split(',') if sid.strip().isdigit()]
+
+    # If no valid IDs, return empty string
+    if not service_ids:
+        return ''
+
+    # Get all services in one query
+    services = Service.query.filter(Service.id.in_(service_ids)).all()
+
+    # Map IDs to names
+    id_to_name = {service.id: service.name for service in services}
+
+    # Build names list in same order as IDs
+    service_names = [id_to_name.get(sid, f"Unknown ({sid})") for sid in service_ids]
+
+    # Join with commas
+    return ', '.join(service_names)
