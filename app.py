@@ -3440,6 +3440,7 @@ def create_app():
     # Superadmin Create User route
     @app.route('/superadmin/create-user', methods=['POST'])
     def superadmin_create_user():
+        csrf.protect()
         from flask import request, flash, redirect, url_for
         import datetime
 
@@ -3498,6 +3499,7 @@ def create_app():
     # Superadmin Update User route
     @app.route('/superadmin/update-user', methods=['POST'])
     def superadmin_update_user():
+        csrf.protect()
         from flask import request, flash, redirect, url_for
 
         if not session.get('is_superadmin'):
@@ -3558,6 +3560,7 @@ def create_app():
     # Superadmin Reset User Password route
     @app.route('/superadmin/reset-user-password', methods=['POST'])
     def superadmin_reset_user_password():
+        csrf.protect()
         from flask import request, flash, redirect, url_for
 
         if not session.get('is_superadmin'):
@@ -3597,6 +3600,7 @@ def create_app():
     # Superadmin Delete User route
     @app.route('/superadmin/delete-user', methods=['POST'])
     def superadmin_delete_user():
+        csrf.protect()
         from flask import request, flash, redirect, url_for
 
         if not session.get('is_superadmin'):
