@@ -78,6 +78,19 @@
         transform: translateY(-3px); /* Lifts the card slightly on hover */
     }
 
+    /* Override default anchor styles for stat cards */
+    a.stat-card {
+        text-decoration: none;
+        color: inherit;
+        display: flex;
+        height: 100%;
+    }
+    a.stat-card:hover {
+        text-decoration: none;
+        color: inherit;
+        border-color: var(--primary-color);
+    }
+
     .stat-card .stat-value {
         font-size: 2.25rem; /* Larger font for impact */
         font-weight: 700;
@@ -262,22 +275,29 @@
 
     {# New Section: Key Metrics/Quick Stats for a quick overview #}
     <div class="dashboard-stats-grid">
-        <div class="stat-card">
+        <a href="{{ url_for('appointments.calendar_view') }}" class="stat-card">
             <div class="stat-value">{{ appointments_today }}</div>
             <div class="stat-label">Appointments Today</div>
-        </div>
-        <div class="stat-card">
+        </a>
+        <a href="{{ url_for('appointments.checkout_start') }}" class="stat-card">
             <div class="stat-value">{{ pending_checkouts }}</div>
             <div class="stat-label">Pending Checkouts</div>
-        </div>
-        <div class="stat-card">
+        </a>
+        <a href="{{ url_for('owners.directory') }}" class="stat-card">
             <div class="stat-value">{{ new_clients_week }}</div>
             <div class="stat-label">New Clients (Week)</div>
-        </div>
+        </a>
+        {% if g.user.is_admin %}
+        <a href="{{ url_for('management.view_sales_reports') }}" class="stat-card">
+            <div class="stat-value">${{ '{:,.2f}'.format(revenue_today) }}</div>
+            <div class="stat-label">Revenue Today</div>
+        </a>
+        {% else %}
         <div class="stat-card">
             <div class="stat-value">${{ '{:,.2f}'.format(revenue_today) }}</div>
             <div class="stat-label">Revenue Today</div>
         </div>
+        {% endif %}
     </div>
 
     {# Enhanced Quick Links Grid with additional common actions #}
