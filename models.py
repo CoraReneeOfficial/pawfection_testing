@@ -237,6 +237,11 @@ class Appointment(db.Model):
     store_id = db.Column(db.Integer, db.ForeignKey('store.id'), nullable=False) # Appointment belongs to a store
     details_needed = db.Column(db.Boolean, default=False, nullable=False)  # Flag for missing vital info
 
+    # Index to optimize dashboard query filtering by store, status, and date range
+    __table_args__ = (
+        db.Index('idx_appointment_store_status_date', 'store_id', 'status', 'appointment_datetime'),
+    )
+
     def __repr__(self):
         return f"<Appointment ID: {self.id}, Dog ID: {self.dog_id}, DateTime: {self.appointment_datetime}, Status: {self.status}, Store ID: {self.store_id}>"
 
