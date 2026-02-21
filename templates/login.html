@@ -47,6 +47,7 @@
             </div>
             {% endif %}
             <form method="POST" action="{{ url_for('auth.login') }}" novalidate x-data="{ submitting: false }" @submit="submitting = true">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group">
                     <label for="username">Username</label>
                     <input type="text" id="username" name="username" required class="form-input" autofocus value="{{ request.form.username or '' }}">

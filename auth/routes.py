@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, g, current_app, jsonify
 from models import User, ActivityLog, Store
-from extensions import db
+from extensions import db, csrf
 from functools import wraps
 import datetime
 from datetime import timezone
@@ -71,6 +71,7 @@ def login():
         return redirect(url_for('store_login'))
 
     if request.method == 'POST':
+        csrf.protect()
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
         

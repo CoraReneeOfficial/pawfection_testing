@@ -5,7 +5,7 @@ import re
 from sqlalchemy import text, inspect
 from flask import Flask, g, session, redirect, url_for, flash, send_from_directory, current_app
 from flask.wrappers import Request
-from extensions import db
+from extensions import db, csrf
 from models import User, Store # Only import models directly needed in app.py's top level
 from auth import auth_bp
 from owners import owners_bp
@@ -136,6 +136,9 @@ def create_app():
 
     # Initialize Flask-SQLAlchemy with the app.
     db.init_app(app)
+    # Initialize CSRF protection (opt-in mode)
+    app.config['WTF_CSRF_CHECK_DEFAULT'] = False
+    csrf.init_app(app)
     # Initialize OAuth for Google login
     oauth.init_app(app)
 
@@ -541,6 +544,7 @@ def create_app():
         """
         from flask import render_template, request
         if request.method == 'POST':
+            csrf.protect()
             username = request.form.get('username')
             password = request.form.get('password')
             store = Store.query.filter_by(username=username).first()
@@ -562,6 +566,7 @@ def create_app():
         """
         from flask import render_template, request
         if request.method == 'POST':
+            csrf.protect()
             username = request.form.get('username')
             password = request.form.get('password')
             user = User.query.filter_by(username=username, role='superadmin', store_id=None).first()
