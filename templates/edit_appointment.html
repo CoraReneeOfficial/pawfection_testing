@@ -45,6 +45,35 @@
         padding-top: 1rem;
         border-top: 1px solid var(--border-color-light);
     }
+
+    /* Service Chips Styles */
+    .service-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.35rem 0.75rem;
+        border: 1px solid var(--border-color);
+        border-radius: 9999px; /* Pill shape */
+        background-color: #fff;
+        color: var(--text-color);
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+        user-select: none;
+    }
+    .service-chip:hover {
+        background-color: var(--secondary-light);
+        border-color: var(--secondary-color);
+    }
+    .service-chip.selected {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+        color: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .service-chip .chip-icon {
+        margin-left: 0.35rem;
+        font-weight: bold;
+    }
 </style>
 {% endblock %}
 
@@ -125,17 +154,73 @@
                 </select>
             </div>
 
-            <div class="form-group">
-                <label for="services">Services/Fees Performed</label>
-                <select name="services" id="services" multiple class="form-input" style="height: auto; min-height: 100px;">
+            <div class="form-group" x-data="{
+                services: [
                     {% for service in services %}
-                    <option value="{{ service.id }}" 
-                        {% if appointment_data.get('services_text') and (service.id|string in appointment_data.get('services_text').split(',')) %}selected{% endif %}>
-                        {{ service.name }}
-                    </option>
+                    {
+                        id: '{{ service.id }}',
+                        name: {{ service.name|tojson }},
+                        selected: {{ 'true' if appointment_data.get('services_text') and (service.id|string in appointment_data.get('services_text').split(',')) else 'false' }}
+                    },
                     {% endfor %}
-                </select>
-                <small class="text-muted">Select the services/fees performed (hold Ctrl/Cmd to select multiple). These will appear on the calendar/history.</small>
+                ],
+                filter: ''
+            }">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                    <label id="services-label" style="margin-bottom: 0;">Services/Fees Performed</label>
+                    <button type="button"
+                            @click="services.forEach(s => s.selected = false)"
+                            x-show="services.some(s => s.selected)"
+                            class="button button-small"
+                            style="padding: 2px 8px; font-size: 0.75rem; background-color: var(--secondary-light); border: 1px solid var(--border-color); color: var(--text-dark); cursor: pointer; border-radius: 4px;"
+                            x-cloak>
+                        Clear Selection
+                    </button>
+                </div>
+
+                <!-- Search Input -->
+                <div style="position: relative; margin-bottom: 0.5rem;">
+                     <input type="text"
+                            x-model="filter"
+                            placeholder="Filter services..."
+                            class="form-input"
+                            style="padding-left: 2rem; font-size: 0.9rem;"
+                            aria-label="Filter services">
+                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="position: absolute; left: 0.6rem; top: 50%; transform: translateY(-50%); width: 1rem; height: 1rem; color: var(--text-muted);">
+                       <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                     </svg>
+                </div>
+
+                <!-- Chips Container -->
+                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; max-height: 300px; overflow-y: auto; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); background-color: #fafafa;"
+                     role="group" aria-labelledby="services-label">
+                    <template x-for="service in services" :key="service.id">
+                        <div x-show="service.name.toLowerCase().includes(filter.toLowerCase())"
+                             @click="service.selected = !service.selected"
+                             @keydown.enter.prevent="service.selected = !service.selected"
+                             @keydown.space.prevent="service.selected = !service.selected"
+                             class="service-chip"
+                             :class="{ 'selected': service.selected }"
+                             role="button"
+                             tabindex="0"
+                             :aria-pressed="service.selected"
+                             :aria-label="service.name + (service.selected ? ' (Selected)' : '')">
+                            <span x-text="service.name"></span>
+                            <span x-show="service.selected" class="chip-icon">&times;</span>
+                            <span x-show="!service.selected" class="chip-icon" style="opacity: 0.3;">+</span>
+                        </div>
+                    </template>
+                    <div x-show="services.filter(s => s.name.toLowerCase().includes(filter.toLowerCase())).length === 0" style="width: 100%; text-align: center; color: var(--text-muted); font-size: 0.9rem; padding: 1rem;">
+                        No services found matching "<span x-text="filter"></span>"
+                    </div>
+                </div>
+
+                <!-- Hidden Inputs for Form Submission -->
+                <template x-for="service in services.filter(s => s.selected)" :key="'input-' + service.id">
+                    <input type="hidden" name="services" :value="service.id">
+                </template>
+
+                <small class="text-muted">Select the services/fees performed. These will appear on the calendar/history.</small>
             </div>
 
             <div class="form-group">
