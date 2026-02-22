@@ -10,6 +10,7 @@
             <p class="form-subtitle">Set a security question and answer to help recover your account if you forget your password.</p>
 
             <form method="POST" action="{{ url_for('auth.set_security_question') }}" novalidate>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group">
                     <label for="security_question">Choose a Security Question</label>
                     <select id="security_question" name="security_question" class="form-input" required>
