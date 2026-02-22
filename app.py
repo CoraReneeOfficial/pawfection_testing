@@ -959,6 +959,7 @@ def create_app():
         
         # Process form submission
         if request.method == 'POST':
+            csrf.protect()
             try:
                 # Handle AJAX requests for updating role permissions
                 if request.is_json:
@@ -1106,6 +1107,7 @@ def create_app():
         
         # Process form submission
         if request.method == 'POST':
+            csrf.protect()
             try:
                 updated_settings = current_settings.copy()
                 
@@ -1351,6 +1353,7 @@ def create_app():
         
         # Process form submission
         if request.method == 'POST':
+            csrf.protect()
             action = request.form.get('action', '')
             
             if action == 'test_email':
@@ -1538,6 +1541,7 @@ def create_app():
         
         # Process form submission
         if request.method == 'POST':
+            csrf.protect()
             action = request.form.get('action', '')
             
             if action == 'run_query':
@@ -1753,6 +1757,7 @@ def create_app():
         """
         Allows superadmins to delete database backups.
         """
+        csrf.protect()
         from flask import redirect, url_for, flash, abort
         import os
         
@@ -1854,6 +1859,7 @@ def create_app():
         
         # Handle edit store form submission
         if request.method == 'POST':
+            csrf.protect()
             action = request.form.get('action', '')
             
             if action == 'edit_store':
@@ -2154,6 +2160,7 @@ def create_app():
         
         # Handle form submission
         if request.method == 'POST':
+            csrf.protect()
             action = request.form.get('action', '')
             
             if action == 'update_config':
@@ -2646,6 +2653,7 @@ def create_app():
         
         # Handle POST requests for alert actions
         if request.method == 'POST':
+            csrf.protect()
             action = request.form.get('action', '')
             alert_id = request.form.get('alert_id', '')
             
@@ -2801,6 +2809,7 @@ def create_app():
         
         # Handle POST requests for data export
         if request.method == 'POST':
+            csrf.protect()
             # Check if it's a regular form submission or AJAX
             if request.headers.get('Content-Type') == 'application/json':
                 data = request.get_json()
@@ -3010,6 +3019,7 @@ def create_app():
         """
         Creates a new store with admin user.
         """
+        csrf.protect()
         from flask import request
         from datetime import datetime
         import bcrypt
@@ -3080,6 +3090,7 @@ def create_app():
         """
         Edit an existing store's details.
         """
+        csrf.protect()
         from flask import request
         
         if not session.get('is_superadmin'):
@@ -3159,6 +3170,7 @@ def create_app():
         """
         Delete a store and all associated data.
         """
+        csrf.protect()
         if not session.get('is_superadmin'):
             flash('Access denied.', 'danger')
             return redirect(url_for('superadmin_login'))
@@ -3198,6 +3210,7 @@ def create_app():
         """
         Update a store's subscription details.
         """
+        csrf.protect()
         from flask import request
         from datetime import datetime
         

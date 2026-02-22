@@ -364,6 +364,7 @@
                     </div>
                     
                     <form action="/superadmin/database" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <input type="hidden" name="action" value="run_query">
                         
                         <div class="form-group">
@@ -443,6 +444,7 @@
                     <p>Create a backup of the database. Backups are stored in the application's backup directory.</p>
                     
                     <form action="/superadmin/database" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <input type="hidden" name="action" value="backup_database">
                         <div style="margin-bottom: 2rem;">
                             <button type="submit" class="button button-primary" onclick="return confirm('Are you sure you want to create a backup of the database?');">Create Backup</button>
@@ -467,6 +469,7 @@
                             <div class="backup-actions">
                                 <a href="/superadmin/backup/download/{{ backup.filename }}" class="button button-secondary button-sm" title="Download Backup"><i class="fas fa-download"></i></a>
                                 <form action="/superadmin/backup/delete/{{ backup.filename }}" method="POST" style="display: inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                     <button type="submit" class="button button-danger button-sm" onclick="return confirm('Are you sure you want to delete this backup?');" title="Delete Backup"><i class="fas fa-trash"></i></button>
                                 </form>
                             </div>

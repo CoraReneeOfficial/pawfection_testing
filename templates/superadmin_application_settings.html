@@ -212,6 +212,7 @@
         </div>
         
         <form action="/superadmin/application-settings" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="tab-container">
                 <div class="tab-buttons">
                     <button type="button" class="tab-button active" data-tab="appearance-tab">Appearance</button>
