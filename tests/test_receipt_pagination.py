@@ -139,5 +139,38 @@ class ReceiptPaginationTestCase(unittest.TestCase):
         self.assertEqual(view_count, 1, f"Expected 1 receipt, found {view_count}")
         self.assertIn('124.00', content)
 
+    def test_receipt_with_missing_fields_no_crash(self):
+        self.login()
+        with self.app.app_context():
+            # Create a receipt with missing fields
+            user = db.session.query(User).get(self.user.id)
+            store = db.session.query(Store).get(self.store.id)
+            dog = db.session.query(Dog).get(self.dog.id)
+
+            appt = Appointment(
+                dog_id=dog.id,
+                store_id=store.id,
+                created_by_user_id=user.id,
+                appointment_datetime=datetime.datetime.now(timezone.utc),
+                status='Completed',
+                checkout_total_amount=99.99
+            )
+            db.session.add(appt)
+            db.session.flush()
+
+            # Empty JSON or missing 'final_total'
+            receipt = Receipt(
+                appointment_id=appt.id,
+                store_id=store.id,
+                owner_id=self.owner.id,
+                receipt_json="{}",
+                created_at=datetime.datetime.now(timezone.utc)
+            )
+            db.session.add(receipt)
+            db.session.commit()
+
+        response = self.client.get('/receipts')
+        self.assertEqual(response.status_code, 200)
+
 if __name__ == '__main__':
     unittest.main()
