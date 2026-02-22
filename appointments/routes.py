@@ -203,7 +203,7 @@ def add_appointment():
     groomers_for_dropdown = User.query.filter_by(is_groomer=True, store_id=store_id).order_by(User.username).all()
     
     # Fetch services for the dropdown
-    services = Service.query.filter_by(store_id=store_id, item_type='service').order_by(Service.name.asc()).all()
+    services = Service.query.filter_by(store_id=store_id).order_by(Service.name.asc()).all()
 
     if request.method == 'POST':
         dog_id_str = request.form.get('dog_id')
@@ -333,7 +333,7 @@ def edit_appointment(appointment_id):
     current_app.logger.info(f"Current store_id from session: {store_id}")
     
     # Fetch services for the dropdown - do this early to ensure it's available for all render_template calls
-    services = Service.query.filter_by(store_id=store_id, item_type='service').order_by(Service.name.asc()).all()
+    services = Service.query.filter_by(store_id=store_id).order_by(Service.name.asc()).all()
     
     appt = Appointment.query.options(
         db.joinedload(Appointment.dog).joinedload(Dog.owner),
