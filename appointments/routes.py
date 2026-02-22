@@ -8,6 +8,7 @@ from functools import wraps
 import datetime
 from datetime import timezone
 from dateutil import tz, parser as dateutil_parser
+from urllib.parse import quote
 from utils import allowed_file, log_activity, subscription_required, service_names_from_ids
 from input_sanitization import sanitize_text_input  # Import sanitization
 from google.oauth2.credentials import Credentials
@@ -97,8 +98,11 @@ def calendar_view():
     is_google_calendar_connected = False
     # store is already loaded above
     if store and store.google_calendar_id:
+        # URL encode the calendar ID and timezone to ensure valid URL parameters
+        encoded_calendar_id = quote(store.google_calendar_id)
+        encoded_timezone = quote(store_timezone_name)
         pawfection_calendar_embed_url = (
-            f"https://calendar.google.com/calendar/embed?src={store.google_calendar_id}&ctz={store_timezone_name.replace('/', '%2F')}&mode=AGENDA&title=Dog%20Schedule"
+            f"https://calendar.google.com/calendar/embed?src={encoded_calendar_id}&ctz={encoded_timezone}&mode=AGENDA&title=Dog%20Schedule"
         )
         is_google_calendar_connected = True
 
