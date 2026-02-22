@@ -11,7 +11,7 @@ import shutil
 import werkzeug
 import calendar
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone, time
 from flask import (
     Blueprint, render_template, url_for, flash, redirect, request, 
     session, g, current_app, send_file, after_this_request
@@ -144,47 +144,55 @@ def _handle_user_picture_upload(user_instance, request_files):
         current_app.logger.warning(f"Rejected user picture upload: disallowed extension for file {file.filename}")
     return None
 
-def get_date_range(range_type, start_date_str=None, end_date_str=None):
+def get_date_range(range_type, start_date_str=None, end_date_str=None, store_timezone_str=None):
     """
     Calculates the start and end UTC datetimes for various report date ranges.
     """
     # NOTE: BUSINESS_TIMEZONE is currently set to timezone.utc.
     # If your application uses a specific business timezone, ensure it's properly configured
     # and used here for accurate date range calculations.
-    BUSINESS_TIMEZONE = timezone.utc
-    today_local = datetime.datetime.now(BUSINESS_TIMEZONE).date()
+    if store_timezone_str:
+        try:
+            BUSINESS_TIMEZONE = pytz.timezone(store_timezone_str)
+        except pytz.UnknownTimeZoneError:
+            current_app.logger.warning(f"Unknown timezone: {store_timezone_str}, falling back to UTC")
+            BUSINESS_TIMEZONE = pytz.UTC
+    else:
+        BUSINESS_TIMEZONE = pytz.UTC
+
+    today_local = datetime.now(BUSINESS_TIMEZONE).date()
     start_local, end_local = None, None
     period_display = "Invalid Range"
 
     if range_type == 'today':
-        start_local = datetime.datetime.combine(today_local, datetime.time.min, tzinfo=BUSINESS_TIMEZONE)
-        end_local = datetime.datetime.combine(today_local, datetime.time.max, tzinfo=BUSINESS_TIMEZONE)
+        start_local = BUSINESS_TIMEZONE.localize(datetime.combine(today_local, time.min))
+        end_local = BUSINESS_TIMEZONE.localize(datetime.combine(today_local, time.max))
         period_display = f"Today, {start_local.strftime('%B %d, %Y')}"
     elif range_type == 'this_week':
         start_of_week_local_date = today_local - timedelta(days=today_local.weekday())
         end_of_week_local_date = start_of_week_local_date + timedelta(days=6)
-        start_local = datetime.datetime.combine(start_of_week_local_date, datetime.time.min, tzinfo=BUSINESS_TIMEZONE)
-        end_local = datetime.datetime.combine(end_of_week_local_date, datetime.time.max, tzinfo=BUSINESS_TIMEZONE)
+        start_local = BUSINESS_TIMEZONE.localize(datetime.combine(start_of_week_local_date, time.min))
+        end_local = BUSINESS_TIMEZONE.localize(datetime.combine(end_of_week_local_date, time.max))
         period_display = f"This Week: {start_local.strftime('%b %d')} - {end_local.strftime('%b %d, %Y')}"
     elif range_type == 'this_month':
         start_of_month_local_date = today_local.replace(day=1)
         _, num_days_in_month = calendar.monthrange(today_local.year, today_local.month)
         end_of_month_local_date = today_local.replace(day=num_days_in_month)
-        start_local = datetime.datetime.combine(start_of_month_local_date, datetime.time.min, tzinfo=BUSINESS_TIMEZONE)
-        end_local = datetime.datetime.combine(end_of_month_local_date, datetime.time.max, tzinfo=BUSINESS_TIMEZONE)
+        start_local = BUSINESS_TIMEZONE.localize(datetime.combine(start_of_month_local_date, time.min))
+        end_local = BUSINESS_TIMEZONE.localize(datetime.combine(end_of_month_local_date, time.max))
         period_display = f"This Month: {start_local.strftime('%B %Y')}"
     elif range_type == 'custom':
         try:
             if not start_date_str or not end_date_str:
                 flash("Both start and end dates are required for a custom range.", "danger")
                 return None, None, "Error: Incomplete Custom Dates"
-            start_local_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
-            end_local_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            start_local_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_local_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
             if start_local_date > end_local_date:
                 flash("Start date cannot be after end date.", "danger")
                 return None, None, "Error: Invalid Custom Date Order"
-            start_local = datetime.datetime.combine(start_local_date, datetime.time.min, tzinfo=BUSINESS_TIMEZONE)
-            end_local = datetime.datetime.combine(end_local_date, datetime.time.max, tzinfo=BUSINESS_TIMEZONE)
+            start_local = BUSINESS_TIMEZONE.localize(datetime.combine(start_local_date, time.min))
+            end_local = BUSINESS_TIMEZONE.localize(datetime.combine(end_local_date, time.max))
             period_display = f"Custom: {start_local.strftime('%b %d, %Y')} - {end_local.strftime('%b %d, %Y')}"
         except ValueError:
             flash("Invalid custom date format. Please useYYYY-MM-DD.", "danger") 
@@ -194,8 +202,8 @@ def get_date_range(range_type, start_date_str=None, end_date_str=None):
         return None, None, "Error: Unknown Date Range"
     
     if start_local and end_local:
-        start_utc = start_local.astimezone(timezone.utc)
-        end_utc = end_local.astimezone(timezone.utc)
+        start_utc = start_local.astimezone(pytz.UTC)
+        end_utc = end_local.astimezone(pytz.UTC)
         return start_utc, end_utc, period_display
     return None, None, period_display
 
@@ -838,7 +846,8 @@ def view_sales_reports():
     Filters all data by the current store's ID.
     """
     store_id = session.get('store_id')  # Get store_id from session
-    
+    store = Store.query.get(store_id) if store_id else None
+
     # Filter groomers for the dropdown by the current store's ID
     all_groomers_for_dropdown = User.query.filter_by(store_id=store_id, is_groomer=True).order_by(User.username).all()
     
@@ -853,7 +862,8 @@ def view_sales_reports():
         end_date_str = request.form.get('end_date')
         groomer_id_str = request.form.get('groomer_id')
 
-        start_utc, end_utc, report_period_display = get_date_range(date_range_type, start_date_str, end_date_str)
+        store_timezone = store.timezone if store and store.timezone else 'UTC'
+        start_utc, end_utc, report_period_display = get_date_range(date_range_type, start_date_str, end_date_str, store_timezone)
 
         if not start_utc or not end_utc:
             return render_template('reports_form.html', all_groomers=all_groomers_for_dropdown, report_period_display=report_period_display)
