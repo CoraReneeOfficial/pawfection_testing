@@ -318,6 +318,7 @@
                     {% endif %}
                     
                     <form action="/superadmin/email-test" method="POST" id="test-email-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <input type="hidden" name="action" value="test_email">
                         
                         <div class="template-select">
@@ -385,6 +386,7 @@
                     </div>
                     
                     <form action="/superadmin/email-test" method="POST" id="email-config-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <input type="hidden" name="action" value="save_config">
                         
                         <div class="form-row">

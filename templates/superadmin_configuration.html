@@ -209,6 +209,7 @@
                         </div>
                         
                         <form action="/superadmin/global-configuration" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <input type="hidden" name="action" value="update_config">
                             <input type="hidden" name="category" value="app_settings">
                         
@@ -302,6 +303,7 @@
                         </div>
                         
                         <form action="/superadmin/global-configuration" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <input type="hidden" name="action" value="update_config">
                             <input type="hidden" name="category" value="notification_settings">
                             
@@ -363,6 +365,7 @@
                         </div>
                         
                         <form action="/superadmin/global-configuration" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <input type="hidden" name="action" value="update_config">
                             <input type="hidden" name="category" value="feature_flags">
                             
@@ -453,6 +456,7 @@
                         </div>
                         
                         <form action="/superadmin/global-configuration" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <input type="hidden" name="action" value="update_config">
                             <input type="hidden" name="category" value="api_settings">
                             
@@ -507,6 +511,7 @@
                         </div>
                         
                         <form action="/superadmin/global-configuration" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <input type="hidden" name="action" value="update_config">
                             <input type="hidden" name="category" value="security_settings">
                             

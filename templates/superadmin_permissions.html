@@ -408,6 +408,7 @@
         </div>
         
         <form action="/superadmin/permissions" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="form-group">
                 <label for="role_name" class="form-label">Role Name (system identifier)</label>
                 <input type="text" id="role_name" name="role_name" class="input-field" required pattern="[a-z0-9_]+" title="Lowercase letters, numbers, and underscores only">
@@ -447,6 +448,7 @@
         <div class="modal-footer">
             <button type="button" class="button button-secondary" onclick="closeDeleteRoleModal()">Cancel</button>
             <form action="/superadmin/delete-role" method="POST" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <input type="hidden" id="delete_role_id" name="role_name">
                 <button type="submit" class="button button-danger confirm-delete">Delete Role</button>
             </form>
@@ -511,6 +513,7 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
             },
             body: JSON.stringify({
                 role_name: roleName,

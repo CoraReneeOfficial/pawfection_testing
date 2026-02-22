@@ -176,6 +176,7 @@
         <div class="custom-alert-form">
             <h2 class="form-title">Create Custom Alert</h2>
             <form action="/superadmin/create-alert" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <div class="form-row">
                     <div class="form-group">
                         <label for="alertTitle">Alert Title</label>
@@ -269,11 +270,13 @@
                             <button class="button button-small button-outline" onclick="viewAlertDetails('{{ alert.id }}')">Details</button>
                             {% if not alert.resolved %}
                                 <form action="/superadmin/resolve-alert" method="post" style="display: inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                     <input type="hidden" name="alert_id" value="{{ alert.id }}">
                                     <button type="submit" class="button button-small button-success">Mark Resolved</button>
                                 </form>
                             {% endif %}
                             <form action="/superadmin/delete-alert" method="post" style="display: inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                 <input type="hidden" name="alert_id" value="{{ alert.id }}">
                                 <button type="submit" class="button button-small button-danger">Delete</button>
                             </form>
