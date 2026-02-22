@@ -6,6 +6,7 @@ from werkzeug.exceptions import abort
 from flask_login import login_required
 from datetime import datetime, timezone
 from sqlalchemy import or_
+from sqlalchemy.orm import joinedload
 
 bp = Blueprint('notification_system', __name__, url_prefix='/notifications')
 
@@ -129,28 +130,41 @@ def check_for_notifications(store_id):
             )
     
     # Check for appointments that need review (have details_needed flag)
-    appointments_needing_review = Appointment.query.filter_by(
+    # Optimized: Eager load dog to prevent N+1 queries when accessing dog.name
+    appointments_needing_review = Appointment.query.options(
+        joinedload(Appointment.dog)
+    ).filter_by(
         store_id=store_id,
         details_needed=True
     ).all()
     
-    for appointment in appointments_needing_review:
-        # Check if we already have a notification for this appointment
-        existing = Notification.query.filter_by(
+    # Optimized: Batch check for existing notifications to prevent N+1 queries
+    if appointments_needing_review:
+        existing_notifications = Notification.query.filter_by(
             store_id=store_id,
             type='appointment_needs_review',
-            reference_id=appointment.id,
             is_read=False
-        ).first()
+        ).all()
         
-        if not existing:
-            create_notification(
-                store_id=store_id,
-                notification_type='appointment_needs_review',
-                content=f'Appointment for {appointment.dog.name} needs review.',
-                reference_id=appointment.id,
-                reference_type='appointment'
-            )
+        existing_ref_ids = {n.reference_id for n in existing_notifications if n.reference_id}
+
+        notifications_to_add = []
+
+        for appointment in appointments_needing_review:
+            if appointment.id not in existing_ref_ids:
+                notification = Notification(
+                    store_id=store_id,
+                    type='appointment_needs_review',
+                    content=f'Appointment for {appointment.dog.name} needs review.',
+                    reference_id=appointment.id,
+                    reference_type='appointment',
+                    is_read=False
+                )
+                db.session.add(notification)
+                notifications_to_add.append(notification)
+
+        if notifications_to_add:
+            db.session.commit()
 
 @bp.route('/check_new', methods=['GET'])
 @login_required
