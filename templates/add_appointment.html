@@ -84,7 +84,7 @@
         <p class="form-description">Enter the details for the new appointment.</p>
 
         {# Form submits to the add_appointment route #}
-        <form method="POST" action="{{ url_for('appointments.add_appointment') }}" novalidate>
+        <form method="POST" action="{{ url_for('appointments.add_appointment') }}" novalidate x-data="{ submitting: false }" @submit="submitting = true">
 
             <div class="form-group">
                 <label for="dog_id">Dog *</label>
@@ -218,7 +218,10 @@
                  {# Cancel button goes back to the main calendar view #}
                  {# Corrected url_for to 'calendar_view' #}
                  <a href="{{ url_for('appointments.calendar_view') }}" class="button button-secondary">Cancel</a>
-                <button type="submit" class="button button-primary">Schedule Appointment</button>
+                <button type="submit" class="button button-primary" :disabled="submitting" :class="{ 'opacity-50 cursor-not-allowed': submitting }">
+                    <span x-show="!submitting">Schedule Appointment</span>
+                    <span x-show="submitting" x-cloak>Scheduling...</span>
+                </button>
             </div>
         </form>
     </div>
