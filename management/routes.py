@@ -1307,22 +1307,13 @@ def sync_google_calendar_for_store(store, user):
             store_tz = pytz.timezone(store_tz_str)
         except Exception:
             store_tz = pytz.UTC
-        token_data = json.loads(store.google_token_json)
-        credentials = GoogleCredentials(
-            token=token_data.get('token') or token_data.get('access_token'),
-            refresh_token=token_data.get('refresh_token'),
-            token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
-            client_id=token_data.get('client_id') or os.environ.get('GOOGLE_CLIENT_ID'),
-            client_secret=token_data.get('client_secret') or os.environ.get('GOOGLE_CLIENT_SECRET'),
-            scopes=[
-                "https://www.googleapis.com/auth/calendar",
-                "https://www.googleapis.com/auth/calendar.events",
-                "https://www.googleapis.com/auth/calendar.readonly",
-                "openid",
-                "https://www.googleapis.com/auth/userinfo.email",
-                "https://www.googleapis.com/auth/userinfo.profile"
-            ]
-        )
+
+        from appointments.google_calendar_sync import get_google_credentials
+        credentials = get_google_credentials(store)
+        if not credentials:
+            current_app.logger.warning("[SYNC] Failed to obtain valid Google credentials.")
+            return 0
+
         service = build('calendar', 'v3', credentials=credentials)
         now_utc = datetime.utcnow().replace(tzinfo=pytz.UTC)
         now = now_utc.astimezone(store_tz).isoformat()
