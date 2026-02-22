@@ -98,7 +98,7 @@
 
         {# Form submits data to the /appointment/<appointment_id>/edit route using POST #}
         {# Use appointment_data.id or the passed appointment_id for the action URL #}
-        <form method="POST" action="{{ url_for('appointments.edit_appointment', appointment_id=appointment_data.id) }}" novalidate>
+        <form method="POST" action="{{ url_for('appointments.edit_appointment', appointment_id=appointment_data.id) }}" novalidate x-data="{ submitting: false }" @submit="submitting = true">
 
             <div class="form-group">
                 <label for="dog_id">Dog *</label>
@@ -234,7 +234,10 @@
             <div class="form-button-wrapper">
                  {# Corrected url_for to 'appointments.calendar_view' #}
                  <a href="{{ url_for('appointments.calendar_view') }}" class="button button-secondary">Cancel</a>
-                <button type="submit" class="button button-primary">Save Changes</button>
+                <button type="submit" class="button button-primary" :disabled="submitting" :class="{ 'opacity-50 cursor-not-allowed': submitting }">
+                    <span x-show="!submitting">Save Changes</span>
+                    <span x-show="submitting" x-cloak>Saving...</span>
+                </button>
             </div>
         </form>
     </div>
