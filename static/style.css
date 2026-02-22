@@ -1139,3 +1139,51 @@ textarea.form-input { min-height: 80px; }
         margin: 0;
     }
 }
+
+/* --- Notification Icon Styles --- */
+.nav-notification {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.nav-notification-button {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--text-light);
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.nav-notification-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.notification-icon {
+    width: 24px;
+    height: 24px;
+    stroke: currentColor;
+    stroke-width: 1.5;
+}
+
+.notification-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background-color: var(--white);
+    color: var(--primary-color);
+    font-size: 0.7rem;
+    font-weight: bold;
+    padding: 0.1rem 0.35rem;
+    border-radius: 9999px;
+    min-width: 16px;
+    text-align: center;
+    line-height: 1;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
