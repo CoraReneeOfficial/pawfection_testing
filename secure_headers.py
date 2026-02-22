@@ -18,11 +18,14 @@ def init_secure_headers(app):
         # Content Security Policy (CSP) - adjust as needed
         response.headers['Content-Security-Policy'] = (
             "default-src 'self'; "
-            "img-src 'self' data:; "
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com; "
-            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: https://*.googleusercontent.com https://*.gstatic.com; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://apis.google.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
             "object-src 'none'; "
+            "base-uri 'self'; "
             "frame-ancestors 'self'; "
-            "frame-src 'self' https://calendar.google.com;"
+            "frame-src 'self' https://calendar.google.com https://accounts.google.com https://www.google.com; "
+            "connect-src 'self' https://*.googleapis.com;"
         )
         return response
