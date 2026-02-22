@@ -3,6 +3,7 @@ from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileRequired, FileAllowed
 from werkzeug.utils import secure_filename
 import os
+import imghdr
 import sqlite3
 import tempfile
 import zipfile
@@ -1187,39 +1188,50 @@ def edit_store():
         # Handle logo upload - Simplified and direct approach
         logo_file = request.files.get('logo')
         if logo_file and logo_file.filename and logo_file.filename != '':
-            try:
-                # Get a clean filename
-                filename = secure_filename(logo_file.filename)
-                
-                # Ensure directory exists
-                upload_folder = os.path.join(current_app.static_folder, 'uploads', 'store_logos')
-                os.makedirs(upload_folder, exist_ok=True)
-                
-                # Save file directly using open/write method instead of save()
-                file_path = os.path.join(upload_folder, filename)
-                with open(file_path, 'wb') as f:
-                    logo_file.save(f)
-                
-                # Confirm file was saved
-                if os.path.exists(file_path):
-                    flash('Logo uploaded successfully!', 'success')
-                    print(f"Logo saved to: {file_path}")
-                else:
-                    flash('Logo upload failed - file not created.', 'danger')
-                    print(f"Failed to save logo to: {file_path}")
-            except Exception as e:
-                flash(f'Error uploading logo: {str(e)}', 'danger')
-                print(f"Exception during logo upload: {str(e)}")
-                return render_template('edit_store.html', store=store, form=form, errors=errors, title='Edit Store')
-            # Optionally delete old logo file
-            if store.logo_filename and store.logo_filename != filename:
-                old_path = os.path.join(upload_folder, store.logo_filename)
+            if not allowed_file(logo_file.filename):
+                flash('Invalid file type. Only PNG, JPG, JPEG, GIF, and WEBP allowed.', 'danger')
+            else:
                 try:
-                    if os.path.exists(old_path):
-                        os.remove(old_path)
-                except Exception:
-                    pass
-            store.logo_filename = filename
+                    # Validate MIME type content
+                    logo_file.stream.seek(0)
+                    header_bytes = logo_file.read(512)
+                    logo_file.stream.seek(0)
+                    detected_type = imghdr.what(None, h=header_bytes)
+                    if detected_type not in {'jpeg', 'png', 'gif', 'webp'}:
+                        flash('Invalid image content.', 'danger')
+                    else:
+                        # Get a clean filename
+                        filename = secure_filename(logo_file.filename)
+
+                        # Ensure directory exists
+                        upload_folder = os.path.join(current_app.static_folder, 'uploads', 'store_logos')
+                        os.makedirs(upload_folder, exist_ok=True)
+
+                        # Save file directly using open/write method instead of save()
+                        file_path = os.path.join(upload_folder, filename)
+                        with open(file_path, 'wb') as f:
+                            logo_file.save(f)
+
+                        # Confirm file was saved
+                        if os.path.exists(file_path):
+                            flash('Logo uploaded successfully!', 'success')
+                            print(f"Logo saved to: {file_path}")
+                            # Optionally delete old logo file
+                            if store.logo_filename and store.logo_filename != filename:
+                                old_path = os.path.join(upload_folder, store.logo_filename)
+                                try:
+                                    if os.path.exists(old_path):
+                                        os.remove(old_path)
+                                except Exception:
+                                    pass
+                            store.logo_filename = filename
+                        else:
+                            flash('Logo upload failed - file not created.', 'danger')
+                            print(f"Failed to save logo to: {file_path}")
+                except Exception as e:
+                    flash(f'Error uploading logo: {str(e)}', 'danger')
+                    print(f"Exception during logo upload: {str(e)}")
+                    return render_template('edit_store.html', store=store, form=form, errors=errors, title='Edit Store')
         # Password logic
         password = request.form.get('password', '')
         if password:
