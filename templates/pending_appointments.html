@@ -4,11 +4,11 @@
 
 {% block content %}
 <div class="main-content container">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
         <div>
             <h1 class="store-title">Pending Appointment Requests</h1>
             {% if public_page_url %}
-            <p class="store-description" style="font-size: 1rem; color: var(--secondary-dark); margin-bottom: 0;">
+            <p class="store-description" style="font-size: 1rem; color: var(--secondary-dark); margin-bottom: 0; word-break: break-all;">
                 Customer-facing page: <a href="{{ public_page_url }}" target="_blank">{{ public_page_url }}</a>
             </p>
             {% endif %}
@@ -21,8 +21,8 @@
     </div>
 
     {% if requests %}
-    <div class="content-card" style="overflow-x: auto;">
-        <table class="appointments-table" style="width: 100%; border-collapse: collapse; min-width: 900px;">
+    <div class="content-card">
+        <table class="appointments-table">
             <thead>
                 <tr>
                     <th class="appt-th">Submitted</th>
@@ -31,7 +31,7 @@
                     <th class="appt-th">Dog</th>
                     <th class="appt-th">Preferred Time</th>
                     <th class="appt-th">Notes</th>
-                    <th class="appt-th" style="text-align: right;">Actions</th>
+                    <th class="appt-th text-right">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -52,9 +52,9 @@
                             <div style="color: var(--text-muted); font-size: 0.9em;">{{ r.preferred_datetime.strftime('%I:%M %p') }}</div>
                         {% endif %}
                     </td>
-                    <td class="appt-td" style="max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ r.notes }}">{{ r.notes or 'No notes' }}</td>
-                    <td class="appt-td" style="text-align: right;">
-                        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <td class="appt-td notes-cell" title="{{ r.notes }}">{{ r.notes or 'No notes' }}</td>
+                    <td class="appt-td text-right">
+                        <div class="actions-wrapper">
                             <a href="{{ url_for('management.edit_appointment_request', req_id=r.id) }}" class="button" style="padding: 0.3em 0.9em; font-size: 0.95em; background: var(--primary-light); color: var(--primary-color); border: 1px solid var(--primary-border);">Edit</a>
                             <form action="{{ url_for('management.approve_appointment_request', req_id=r.id) }}" method="POST" style="display: inline;">
                                 <button type="submit" class="button button-primary" style="padding: 0.3em 0.9em; font-size: 0.95em;">Approve</button>
@@ -112,6 +112,26 @@
 }
 .appointments-table td {
   color: var(--text-dark);
+}
+.appointments-table .text-right {
+    text-align: right;
+}
+.appointments-table .notes-cell {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.actions-wrapper {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+@media (max-width: 768px) {
+    .appointments-table .notes-cell {
+        max-width: none;
+        white-space: normal;
+    }
 }
 </style>
 {% endblock %}

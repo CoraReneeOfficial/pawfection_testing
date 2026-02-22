@@ -210,6 +210,7 @@
         display: flex;
         gap: 1rem;
         margin-bottom: 1.5rem;
+        flex-wrap: wrap;
     }
     .search-container .input-field {
         flex: 1;
@@ -250,16 +251,33 @@
         margin-bottom: 1rem;
         color: #adb5bd;
     }
+
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    @media (max-width: 768px) {
+        .store-section {
+            padding: 1rem;
+        }
+        .form-container-responsive {
+            padding: 1rem !important;
+        }
+        .section-title {
+            flex-wrap: wrap;
+        }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="logo-image-login">
-    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pawfection Grooming Solutions Logo" style="max-width: 350px; margin-bottom: 1rem; align-items:center;">
+    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pawfection Grooming Solutions Logo" style="max-width: 100%; width: 350px; margin-bottom: 1rem; align-items:center;">
 </div>
 <div class="form-wrapper" style="max-width: 1200px;">
-    <div class="form-container" style="padding: 2rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <div class="form-container form-container-responsive" style="padding: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
             <h1 class="form-title">Store Management</h1>
             <div>
                 <a href="/superadmin/tools" class="button button-secondary">Back to Tools</a>

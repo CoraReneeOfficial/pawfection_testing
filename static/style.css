@@ -1043,3 +1043,99 @@ textarea.form-input { min-height: 80px; }
 .btn-primary:hover {
     background-color: var(--primary-hover);
 }
+
+/* Responsive Table Styles & Mobile Fixes */
+@media (max-width: 768px) {
+    /* Responsive Table Transformation */
+    .data-table, .store-table, .appointments-table, .table, .log-table, .receipt-table, .user-table, .system-info-table, .report-table, .permissions-table, .history-table, .result-table {
+        display: block;
+        width: 100%;
+        min-width: 0 !important; /* Override fixed min-widths */
+    }
+
+    .data-table thead, .store-table thead, .appointments-table thead, .table thead, .log-table thead, .receipt-table thead, .user-table thead, .system-info-table thead, .report-table thead, .permissions-table thead, .history-table thead, .result-table thead {
+        display: none;
+    }
+
+    .data-table tbody, .store-table tbody, .appointments-table tbody, .table tbody, .log-table tbody, .receipt-table tbody, .user-table tbody, .system-info-table tbody, .report-table tbody, .permissions-table tbody, .history-table tbody, .result-table tbody {
+        display: block;
+        width: 100%;
+    }
+
+    .data-table tr, .store-table tr, .appointments-table tr, .table tr, .log-table tr, .receipt-table tr, .user-table tr, .system-info-table tr, .report-table tr, .permissions-table tr, .history-table tr, .result-table tr {
+        display: block;
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        background: var(--white);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        padding: 0;
+        overflow: hidden;
+    }
+
+    .data-table td, .store-table td, .appointments-table td, .table td, .log-table td, .receipt-table td, .user-table td, .system-info-table td, .report-table td, .permissions-table td, .history-table td, .result-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        text-align: right;
+        padding: 0.8rem 1rem;
+        border-bottom: 1px solid var(--border-color);
+        min-height: 3rem;
+        font-size: 0.95rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .data-table td:last-child, .store-table td:last-child, .appointments-table td:last-child, .table td:last-child, .log-table td:last-child, .receipt-table td:last-child, .user-table td:last-child, .system-info-table td:last-child, .report-table td:last-child, .permissions-table td:last-child, .history-table td:last-child, .result-table td:last-child {
+        border-bottom: none;
+    }
+
+    .data-table td::before, .store-table td::before, .appointments-table td::before, .table td::before, .log-table td::before, .receipt-table td::before, .user-table td::before, .system-info-table td::before, .report-table td::before, .permissions-table td::before, .history-table td::before, .result-table td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        text-align: left;
+        margin-right: auto;
+        color: var(--secondary-dark);
+        flex-shrink: 0;
+        max-width: 40%;
+        word-break: break-word;
+    }
+
+    /* Specific fix for Actions column */
+    td[data-label="Actions"] {
+        display: block;
+        text-align: center;
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+        background-color: var(--primary-lighter);
+    }
+    td[data-label="Actions"]::before {
+        display: none;
+    }
+    td[data-label="Actions"] > div {
+        justify-content: center !important;
+        flex-wrap: wrap;
+        width: 100%;
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    /* Directory Action Links fix */
+    .action-links {
+        justify-content: flex-start !important;
+        flex-shrink: 1 !important;
+        flex-wrap: wrap !important;
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+
+    .action-links a, .action-links form, .action-links .button {
+        margin-bottom: 0.5rem;
+    }
+
+    /* Ensure forms in tables don't break layout */
+    td form {
+        display: inline-block;
+        margin: 0;
+    }
+}
