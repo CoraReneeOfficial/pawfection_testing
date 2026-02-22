@@ -9,6 +9,14 @@ from models import Appointment, Store
 from extensions import db
 from flask import current_app
 
+class TimeoutRequest(Request):
+    """
+    A subclass of google.auth.transport.requests.Request that enforces a custom timeout
+    to prevent Gunicorn worker timeouts.
+    """
+    def __call__(self, url, method="GET", body=None, headers=None, timeout=20, **kwargs):
+        return super().__call__(url, method=method, body=body, headers=headers, timeout=timeout, **kwargs)
+
 # Utility to get Google API credentials from a store
 def get_google_credentials(store):
     """Get Google API credentials from a store, with improved error handling and token refresh."""
@@ -52,7 +60,8 @@ def get_google_credentials(store):
         if creds.expired:
             current_app.logger.info(f"[GCAL SYNC] Token expired for store {store.id}, attempting refresh")
             try:
-                creds.refresh(Request())
+                # Use TimeoutRequest for refresh
+                creds.refresh(TimeoutRequest())
                 
                 # Update the stored token
                 new_token_data = {
@@ -64,8 +73,11 @@ def get_google_credentials(store):
                     'scopes': creds.scopes
                 }
                 store.google_token_json = json.dumps(new_token_data)
-                db.session.add(store)
-                db.session.commit()
+
+                # Use no_autoflush to prevent flushing other pending changes
+                with db.session.no_autoflush:
+                    db.session.add(store)
+                    db.session.commit()
                 current_app.logger.info(f"[GCAL SYNC] Successfully refreshed and updated token for store {store.id}")
             except Exception as e:
                 current_app.logger.error(f"[GCAL SYNC] Failed to refresh token: {e}")

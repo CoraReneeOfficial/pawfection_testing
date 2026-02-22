@@ -258,13 +258,23 @@ def add_appointment():
             details_needed=details_needed
         )
         
+        # 1. Save to Database
         try:
             db.session.add(new_appt)
             db.session.commit()
             # Refresh with joined relationships
             new_appt = Appointment.query.options(db.joinedload(Appointment.dog).joinedload(Dog.owner), db.joinedload(Appointment.groomer)).get(new_appt.id)
             log_activity("Added Local Appt", details=f"Dog: {selected_dog.name}, Time: {local_dt_for_log.strftime('%Y-%m-%d %I:%M %p %Z') if local_dt_for_log else 'N/A'}")
-            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error saving appointment to DB: {e}", exc_info=True)
+            flash("Error adding appointment.", "danger")
+            return render_template('add_appointment.html', dogs=dogs, users=groomers_for_dropdown, services=services, appointment_data=request.form.to_dict()), 500
+
+        # 2. Sync with External Services (Google Calendar, Email)
+        # We use a separate try/except block so that if these fail, we don't rollback the successfully saved appointment
+        # or show an error page to the user.
+        try:
             # --- Google Calendar Sync ---
             store = db.session.get(Store, g.user.store_id)
             if store and store.google_token_json:
@@ -311,12 +321,11 @@ def add_appointment():
                 groomer = selected_groomer
                 send_appointment_confirmation_email(store, owner, selected_dog, new_appt, groomer=groomer, services_text=services_text)
 
-            return redirect(url_for('appointments.calendar_view'))
         except Exception as e:
-            db.session.rollback()
-            current_app.logger.error(f"Error adding appt: {e}", exc_info=True)
-            flash("Error adding appointment.", "danger")
-            return render_template('add_appointment.html', dogs=dogs, users=groomers_for_dropdown, services=services, appointment_data=request.form.to_dict()), 500
+            current_app.logger.error(f"Error in post-appointment actions (Sync/Email): {e}", exc_info=True)
+            flash("Appointment saved, but there was an error with background tasks.", "warning")
+
+        return redirect(url_for('appointments.calendar_view'))
     
     log_activity("Viewed Add Appointment page")
     return render_template('add_appointment.html', dogs=dogs, users=groomers_for_dropdown, services=services, appointment_data={})
