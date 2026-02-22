@@ -119,14 +119,29 @@ def service_names_from_ids(service_ids_text):
     if not service_ids:
         return ''
 
-    # Get all services in one query
-    services = Service.query.filter(Service.id.in_(service_ids)).all()
+    # Use request-scoped caching to avoid N+1 queries
+    if not hasattr(g, 'service_names_cache'):
+        g.service_names_cache = {}
 
-    # Map IDs to names
-    id_to_name = {service.id: service.name for service in services}
+    # Identify which IDs are missing from cache
+    missing_ids = [sid for sid in service_ids if sid not in g.service_names_cache]
+
+    if missing_ids:
+        # Get missing services in one query
+        services = Service.query.filter(Service.id.in_(missing_ids)).all()
+
+        # Update cache with found services
+        for service in services:
+            g.service_names_cache[service.id] = service.name
+
+        # Mark IDs that were not found in DB as "Unknown (ID)" in cache to prevent repeated queries for invalid IDs
+        found_ids = {service.id for service in services}
+        for sid in missing_ids:
+            if sid not in found_ids:
+                g.service_names_cache[sid] = f"Unknown ({sid})"
 
     # Build names list in same order as IDs
-    service_names = [id_to_name.get(sid, f"Unknown ({sid})") for sid in service_ids]
+    service_names = [g.service_names_cache.get(sid, f"Unknown ({sid})") for sid in service_ids]
 
     # Join with commas
     return ', '.join(service_names)
