@@ -179,10 +179,9 @@ class TestCheckoutFinalize(unittest.TestCase):
             follow_redirects=False
         )
 
-        # Should redirect to checkout_success
+        # Should redirect to dashboard
         self.assertEqual(response.status_code, 302)
-        # We can't easily check the exact ID in the URL without parsing, but we can check the prefix
-        self.assertIn('/checkout/success/', response.location)
+        self.assertIn('/dashboard', response.location)
 
         # Verify DB updates
         updated_appt = db.session.get(Appointment, self.appointment.id)

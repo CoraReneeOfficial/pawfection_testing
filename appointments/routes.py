@@ -1287,8 +1287,9 @@ def finalize_checkout(appointment_id):
         session.pop('checkout_tip', None)
         session.pop('checkout_payment', None)
 
-        # Redirect to success page
-        return redirect(url_for('appointments.checkout_success', receipt_id=new_receipt.id))
+        # Redirect to dashboard
+        flash('Checkout complete! Receipt created.', 'success')
+        return redirect(url_for('dashboard'))
 
     except Exception as e:
         db.session.rollback()
