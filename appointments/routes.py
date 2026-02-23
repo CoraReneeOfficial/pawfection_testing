@@ -1222,25 +1222,53 @@ def preview_receipt(appointment_id):
 @subscription_required
 def finalize_checkout(appointment_id):
     """Finalizes the checkout: marks appointment as completed, saves receipt, clears session."""
+    current_app.logger.info(f"Starting finalize_checkout for appointment {appointment_id}")
+
     if 'store_id' not in session or 'checkout_data' not in session:
+        current_app.logger.warning("finalize_checkout: Missing store_id or checkout_data in session")
         return redirect(url_for('appointments.checkout_start'))
         
     store_id = session['store_id']
     checkout_data = session['checkout_data']
     
+    # Log checkout_data keys for debugging (avoid logging PII)
+    current_app.logger.info(f"finalize_checkout: checkout_data keys: {list(checkout_data.keys())}")
+
     # Get the appointment
     appointment = Appointment.query.filter_by(id=appointment_id, store_id=store_id).first()
     if not appointment:
+        current_app.logger.error(f"finalize_checkout: Appointment {appointment_id} not found or access denied")
         flash('Appointment not found or access denied.', 'error')
         return redirect(url_for('dashboard'))
 
+    # Safety Check: Validate relationships
+    if appointment.dog is None:
+        current_app.logger.error(f"finalize_checkout: CRITICAL - Appointment {appointment_id} has no associated Dog")
+        flash('Data integrity error: Appointment has no associated dog.', 'error')
+        return redirect(url_for('dashboard'))
+
+    owner_id = None
+    if appointment.dog.owner:
+        owner_id = appointment.dog.owner.id
+    else:
+        current_app.logger.warning(f"finalize_checkout: Appointment {appointment_id} (Dog: {appointment.dog.name}) has no associated Owner")
+
     try:
+        current_app.logger.info(f"finalize_checkout: Creating receipt for appointment {appointment_id}")
+
+        # Serialize checkout_data
+        try:
+            receipt_json_str = json.dumps(checkout_data)
+        except Exception as json_err:
+            current_app.logger.error(f"finalize_checkout: Error serializing checkout_data: {json_err}")
+            raise
+
         # Create Receipt object
         new_receipt = Receipt(
             appointment_id=appointment.id,
             store_id=store_id,
-            owner_id=appointment.dog.owner.id if appointment.dog and appointment.dog.owner else None,
-            receipt_json=json.dumps(checkout_data),
+            owner_id=owner_id,
+            receipt_json=receipt_json_str,
             created_at=datetime.datetime.now(timezone.utc)
         )
         db.session.add(new_receipt)
@@ -1249,7 +1277,9 @@ def finalize_checkout(appointment_id):
         appointment.status = 'Completed'
         appointment.checkout_total_amount = checkout_data.get('total', 0)
 
+        current_app.logger.info(f"finalize_checkout: Committing transaction for appointment {appointment_id}")
         db.session.commit()
+        current_app.logger.info(f"finalize_checkout: Transaction committed successfully. Receipt ID: {new_receipt.id}")
 
         # Clear session data
         session.pop('checkout_data', None)
@@ -1261,7 +1291,7 @@ def finalize_checkout(appointment_id):
 
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Error finalizing checkout: {e}", exc_info=True)
+        current_app.logger.error(f"Error finalizing checkout for appointment {appointment_id}: {e}", exc_info=True)
         flash('An error occurred while finalizing the checkout.', 'error')
         return redirect(url_for('appointments.preview_receipt', appointment_id=appointment_id))
 
