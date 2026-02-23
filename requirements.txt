@@ -43,3 +43,4 @@ google-auth-httplib2
 # typing-extensions (often a dependency for type hinting)
 pandas
 xlsxwriter
+fpdf2
