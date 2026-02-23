@@ -76,16 +76,27 @@ def calendar_view():
     except Exception as e:
         current_app.logger.error(f"Error syncing Google Calendar: {str(e)}", exc_info=True)
     
-    # Optimized: Only fetch the top 5 scheduled appointments needed for display
-    # This prevents loading all historical appointments which was causing performance issues
-    current_app.logger.info("Querying scheduled appointments for display...")
+    # Optimized: Fetch appointments for a specific date range (last 7 days to next 30 days)
+    # This prevents loading all historical appointments while showing relevant context
+    current_app.logger.info("Querying local appointments with date range...")
+
+    # Calculate date range in store's timezone
+    now_store_tz = datetime.datetime.now(store_timezone)
+    start_date = (now_store_tz - datetime.timedelta(days=7)).replace(hour=0, minute=0, second=0, microsecond=0)
+    end_date = (now_store_tz + datetime.timedelta(days=30)).replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    # Convert to UTC for database query
+    start_dt_utc = start_date.astimezone(timezone.utc)
+    end_dt_utc = end_date.astimezone(timezone.utc)
+
     local_appointments_display = Appointment.query.options(
         db.joinedload(Appointment.dog).joinedload(Dog.owner),
         db.joinedload(Appointment.groomer)
     ).filter(
         Appointment.store_id == store_id,
-        Appointment.status == 'Scheduled'
-    ).order_by(Appointment.appointment_datetime.asc()).limit(5).all()
+        Appointment.status.in_(['Scheduled', 'Completed', 'Cancelled', 'No Show']),
+        Appointment.appointment_datetime.between(start_dt_utc, end_dt_utc)
+    ).order_by(Appointment.appointment_datetime.asc()).all()
 
     current_app.logger.info(f"Retrieved {len(local_appointments_display)} scheduled appointments")
     
