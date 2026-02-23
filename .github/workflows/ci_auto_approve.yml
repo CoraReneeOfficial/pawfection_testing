@@ -43,6 +43,7 @@ jobs:
     # Checking for 'bot' in the actor name is a heuristic, adjust specifically for 'Jules-AI' or the actual bot username.
     if: contains(github.actor, 'google-labs-jules') || contains(github.actor, 'jules') || github.actor == 'github-actions[bot]'
     permissions:
+      contents: write
       pull-requests: write
     steps:
     - uses: actions/checkout@v3 # Checkout is needed for gh cli context sometimes, though not strictly for pr review command if passing number
@@ -53,3 +54,9 @@ jobs:
       run: |
         echo "Approving PR #${{ github.event.pull_request.number }} from ${{ github.actor }}"
         gh pr review ${{ github.event.pull_request.number }} --approve --body "Automated approval: CI Health Checks passed successfully. App starts, DB initializes, and Login page is accessible."
+
+    - name: Auto-merge PR
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh pr merge ${{ github.event.pull_request.number }} --auto --squash
