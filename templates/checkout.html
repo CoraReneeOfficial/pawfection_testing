@@ -15,7 +15,7 @@
     
     <div class="checkout-card">
 
-    <form method="POST" action="{{ url_for('appointments.checkout') }}">
+    <form method="POST" action="{{ url_for('appointments.checkout') }}" x-data="checkoutCalculator()">
         {# Section 1: Select Appointment #}
         <div class="checkout-form-section">
             <h2><i class="far fa-calendar-alt"></i> 1. Select Appointment</h2>
@@ -59,7 +59,9 @@
                                 <li>
                                     <div class="custom-checkbox">
                                         <input type="checkbox" name="service_ids" id="service_{{ service.id }}" value="{{ service.id }}"
-                                               {% if service.id in selected_item_ids %}checked{% endif %}>
+                                               {% if service.id in selected_item_ids %}checked{% endif %}
+                                               data-price="{{ service.base_price }}"
+                                               @change="updateTotal()">
                                         <label for="service_{{ service.id }}" class="custom-checkbox-label"></label>
                                     </div>
                                     <label for="service_{{ service.id }}" class="service-label">{{ service.name }}</label>
@@ -88,7 +90,9 @@
                                 <li>
                                     <div class="custom-checkbox">
                                         <input type="checkbox" name="fee_ids" id="fee_{{ fee.id }}" value="{{ fee.id }}"
-                                               {% if fee.id in selected_item_ids or fee.id|string in selected_item_ids|map('string') %}checked{% endif %}>
+                                               {% if fee.id in selected_item_ids or fee.id|string in selected_item_ids|map('string') %}checked{% endif %}
+                                               data-price="{{ fee.base_price }}"
+                                               @change="updateTotal()">
                                         <label for="fee_{{ fee.id }}" class="custom-checkbox-label"></label>
                                     </div>
                                     <label for="fee_{{ fee.id }}" class="service-label">{{ fee.name }}</label>
@@ -109,7 +113,10 @@
         </div>
 
         {# Section 3: Calculate/Complete Buttons #}
-        <div class="checkout-buttons">
+        <div class="checkout-buttons" style="flex-wrap: wrap; justify-content: flex-end;">
+            <div class="estimated-total">
+                Estimated Total: $<span x-text="total.toFixed(2)">0.00</span>
+            </div>
             <button type="submit" name="action" value="calculate_total" class="button button-secondary">
                 <i class="fas fa-calculator"></i> Calculate Total
             </button>
@@ -167,4 +174,25 @@
     {% endif %}
 
 </div>
+
+<script>
+    function checkoutCalculator() {
+        return {
+            total: 0.0,
+            init() {
+                // Initialize total based on checked items
+                this.updateTotal();
+            },
+            updateTotal() {
+                let sum = 0.0;
+                // Select all checkboxes inside the form that have data-price
+                // Use this.$el to scope to the form
+                this.$el.querySelectorAll('input[type=checkbox][data-price]:checked').forEach(el => {
+                    sum += parseFloat(el.getAttribute('data-price') || 0);
+                });
+                this.total = sum;
+            }
+        }
+    }
+</script>
 {% endblock %}
