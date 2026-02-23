@@ -18,6 +18,7 @@ import json
 import re
 import os
 import base64
+import traceback
 from email.mime.text import MIMEText
 from notifications.email_utils import send_appointment_confirmation_email, send_appointment_edited_email, send_appointment_cancelled_email
 import pytz
@@ -1234,26 +1235,26 @@ def finalize_checkout(appointment_id):
     # Log checkout_data keys for debugging (avoid logging PII)
     current_app.logger.info(f"finalize_checkout: checkout_data keys: {list(checkout_data.keys())}")
 
-    # Get the appointment
-    appointment = Appointment.query.filter_by(id=appointment_id, store_id=store_id).first()
-    if not appointment:
-        current_app.logger.error(f"finalize_checkout: Appointment {appointment_id} not found or access denied")
-        flash('Appointment not found or access denied.', 'error')
-        return redirect(url_for('dashboard'))
-
-    # Safety Check: Validate relationships
-    if appointment.dog is None:
-        current_app.logger.error(f"finalize_checkout: CRITICAL - Appointment {appointment_id} has no associated Dog")
-        flash('Data integrity error: Appointment has no associated dog.', 'error')
-        return redirect(url_for('dashboard'))
-
-    owner_id = None
-    if appointment.dog.owner:
-        owner_id = appointment.dog.owner.id
-    else:
-        current_app.logger.warning(f"finalize_checkout: Appointment {appointment_id} (Dog: {appointment.dog.name}) has no associated Owner")
-
     try:
+        # Get the appointment
+        appointment = Appointment.query.filter_by(id=appointment_id, store_id=store_id).first()
+        if not appointment:
+            current_app.logger.error(f"finalize_checkout: Appointment {appointment_id} not found or access denied")
+            flash('Appointment not found or access denied.', 'error')
+            return redirect(url_for('dashboard'))
+
+        # Safety Check: Validate relationships
+        if appointment.dog is None:
+            current_app.logger.error(f"finalize_checkout: CRITICAL - Appointment {appointment_id} has no associated Dog")
+            flash('Data integrity error: Appointment has no associated dog.', 'error')
+            return redirect(url_for('dashboard'))
+
+        owner_id = None
+        if appointment.dog.owner:
+            owner_id = appointment.dog.owner.id
+        else:
+            current_app.logger.warning(f"finalize_checkout: Appointment {appointment_id} (Dog: {appointment.dog.name}) has no associated Owner")
+
         current_app.logger.info(f"finalize_checkout: Creating receipt for appointment {appointment_id}")
 
         # Serialize checkout_data
@@ -1291,8 +1292,10 @@ def finalize_checkout(appointment_id):
 
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Error finalizing checkout for appointment {appointment_id}: {e}", exc_info=True)
-        flash('An error occurred while finalizing the checkout.', 'error')
+        error_trace = traceback.format_exc()
+        current_app.logger.error(f"Checkout crash for appointment {appointment_id}: {e}\nTraceback: {error_trace}")
+        flash('An error occurred while finalizing the checkout. Please check logs.', 'error')
+        # Redirect to preview receipt to try again if safe, or dashboard if appt issue
         return redirect(url_for('appointments.preview_receipt', appointment_id=appointment_id))
 
 @appointments_bp.route('/checkout/success/<int:receipt_id>', methods=['GET'])
