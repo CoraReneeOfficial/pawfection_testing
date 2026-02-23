@@ -3,6 +3,7 @@ import os
 import bcrypt
 import re
 from sqlalchemy import text, inspect
+from sqlalchemy.orm import joinedload
 from flask import Flask, g, session, redirect, url_for, flash, send_from_directory, current_app
 from flask.wrappers import Request
 from extensions import db, csrf
@@ -84,7 +85,9 @@ def create_app():
     # Register user loader
     @login_manager.user_loader
     def load_user(user_id):
-        return db.session.get(User, int(user_id))
+        # Eager load the store relationship to avoid N+1 queries in subscription checks
+        # Using db.session.query because db.session.get doesn't support options directly
+        return db.session.query(User).options(joinedload(User.store)).filter(User.id == int(user_id)).first()
 
     # Initialize Stripe
     app.config['STRIPE_PUBLISHABLE_KEY'] = os.environ.get('STRIPE_PUBLISHABLE_KEY')
