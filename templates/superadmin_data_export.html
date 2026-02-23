@@ -230,24 +230,25 @@
                         <h2>Create New Export</h2>
                     </div>
                     
-                    <form action="/superadmin/generate-export" method="POST" class="export-form">
+                    <form action="{{ url_for('superadmin_data_export') }}" method="POST" class="export-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="data_table" class="form-label">Select Data to Export</label>
-                                <select id="data_table" name="data_table" class="form-control" required>
+                                <label for="table" class="form-label">Select Data to Export</label>
+                                <select id="table" name="table" class="form-control" required onchange="loadColumns(this.value)">
                                     <option value="">-- Select Data Table --</option>
-                                    {% for table in export_tables %}
-                                    <option value="{{ table.name }}">{{ table.label }} - {{ table.description }}</option>
+                                    {% for table in tables %}
+                                    <option value="{{ table.name }}">{{ table.display_name }} ({{ table.record_count }} records)</option>
                                     {% endfor %}
                                 </select>
                             </div>
                             
                             <div class="form-group">
-                                <label for="export_format" class="form-label">Export Format</label>
-                                <select id="export_format" name="export_format" class="form-control" required>
+                                <label for="format" class="form-label">Export Format</label>
+                                <select id="format" name="format" class="form-control" required>
                                     <option value="">-- Select Format --</option>
                                     {% for format in export_formats %}
-                                    <option value="{{ format }}">{{ format|upper }}</option>
+                                    <option value="{{ format.value }}">{{ format.name }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
@@ -255,13 +256,27 @@
                         
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="date_from" class="form-label">Date Range (Start)</label>
-                                <input type="date" id="date_from" name="date_from" class="form-control">
+                                <label for="filter_column" class="form-label">Filter Column (Optional)</label>
+                                <select id="filter_column" name="filter_column" class="form-control">
+                                    <option value="">-- Select Column --</option>
+                                </select>
                             </div>
-                            
                             <div class="form-group">
-                                <label for="date_to" class="form-label">Date Range (End)</label>
-                                <input type="date" id="date_to" name="date_to" class="form-control">
+                                <label for="filter_operator" class="form-label">Operator</label>
+                                <select id="filter_operator" name="filter_operator" class="form-control">
+                                    <option value="=">Equals (=)</option>
+                                    <option value="!=">Not Equals (!=)</option>
+                                    <option value=">">Greater Than (&gt;)</option>
+                                    <option value="<">Less Than (&lt;)</option>
+                                    <option value=">=">Greater/Equal (&gt;=)</option>
+                                    <option value="<=">Less/Equal (&lt;=)</option>
+                                    <option value="LIKE">Like (Wildcard %)</option>
+                                    <option value="ILIKE">ILike (Case Insensitive)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="filter_value" class="form-label">Filter Value</label>
+                                <input type="text" id="filter_value" name="filter_value" class="form-control" placeholder="Value...">
                             </div>
                         </div>
                         
@@ -451,5 +466,37 @@
         filterTable.addEventListener('change', filterHistory);
         filterFormat.addEventListener('change', filterHistory);
     });
+
+    function loadColumns(tableName) {
+        if (!tableName) return;
+
+        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
+        fetch("{{ url_for('superadmin_data_export') }}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken
+            },
+            body: JSON.stringify({
+                action: "get_table_columns",
+                table_name: tableName
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const select = document.getElementById('filter_column');
+                select.innerHTML = '<option value="">-- Select Column --</option>';
+                data.columns.forEach(col => {
+                    const option = document.createElement('option');
+                    option.value = col;
+                    option.textContent = col;
+                    select.appendChild(option);
+                });
+            }
+        })
+        .catch(error => console.error('Error loading columns:', error));
+    }
 </script>
 {% endblock %}
