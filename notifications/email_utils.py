@@ -8,6 +8,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 import base64
 from email.mime.text import MIMEText
+from utils import service_names_from_ids
 
 def send_appointment_confirmation_email(store, owner, dog, appointment, groomer=None, services_text=None):
     """
@@ -36,13 +37,17 @@ def send_appointment_confirmation_email(store, owner, dog, appointment, groomer=
         logger.error(error_msg)
         return False
     
+    # Resolve service names
+    services_names = service_names_from_ids(services_text)
+
     logger.info(f"Preparing to send email to: {owner.email}")
     logger.debug(f"Store name: {getattr(store, 'name', 'N/A')}")
     logger.debug(f"Owner name: {getattr(owner, 'name', 'N/A')}")
     logger.debug(f"Dog name: {getattr(dog, 'name', 'N/A')}")
     logger.debug(f"Appointment time: {getattr(appointment, 'appointment_datetime', 'N/A')}")
     logger.debug(f"Groomer: {getattr(groomer, 'username', 'Not assigned')}")
-    logger.debug(f"Services: {services_text or 'Not specified'}")
+    logger.debug(f"Services (IDs): {services_text or 'Not specified'}")
+    logger.debug(f"Services (Names): {services_names or 'Not specified'}")
     
     # Check if token is valid JSON
     try:
@@ -112,6 +117,7 @@ def send_appointment_confirmation_email(store, owner, dog, appointment, groomer=
             'business_name': business_name,
             'appointment_datetime_local': appointment_datetime_local,
             'services_text': services_text,
+            'services_names': services_names,
             'groomer_name': groomer_name,
             'BUSINESS_TIMEZONE_NAME': store_tz_str,
             'now': datetime.datetime.now,
@@ -205,12 +211,19 @@ def send_appointment_edited_email(store, owner, dog, appointment, groomer=None, 
             BUSINESS_TIMEZONE = pytz.UTC
         appointment_datetime_local = appointment.appointment_datetime.replace(tzinfo=datetime.timezone.utc).astimezone(BUSINESS_TIMEZONE)
         groomer_name = groomer.username if groomer else None
+
+        # Resolve service names
+        services_names = service_names_from_ids(services_text)
+        current_app.logger.debug(f"Services (IDs): {services_text}")
+        current_app.logger.debug(f"Services (Names): {services_names}")
+
         html_body = render_template('email/appointment_edited.html',
             owner_name=owner.name,
             dog_name=dog.name,
             business_name=business_name,
             appointment_datetime_local=appointment_datetime_local,
             services_text=services_text,
+            services_names=services_names,
             groomer_name=groomer_name,
             BUSINESS_TIMEZONE_NAME=store_tz_str,
             now=datetime.datetime.now,
@@ -271,12 +284,19 @@ def send_appointment_cancelled_email(store, owner, dog, appointment, groomer=Non
             BUSINESS_TIMEZONE = pytz.UTC
         appointment_datetime_local = appointment.appointment_datetime.replace(tzinfo=datetime.timezone.utc).astimezone(BUSINESS_TIMEZONE)
         groomer_name = groomer.username if groomer else None
+
+        # Resolve service names
+        services_names = service_names_from_ids(services_text)
+        current_app.logger.debug(f"Services (IDs): {services_text}")
+        current_app.logger.debug(f"Services (Names): {services_names}")
+
         html_body = render_template('email/appointment_cancelled.html',
             owner_name=owner.name,
             dog_name=dog.name,
             business_name=business_name,
             appointment_datetime_local=appointment_datetime_local,
             services_text=services_text,
+            services_names=services_names,
             groomer_name=groomer_name,
             BUSINESS_TIMEZONE_NAME=store_tz_str,
             now=datetime.datetime.now,
@@ -296,4 +316,4 @@ def send_appointment_cancelled_email(store, owner, dog, appointment, groomer=Non
         return True
     except Exception as e:
         current_app.logger.error(f"Failed to send appointment cancelled email: {e}", exc_info=True)
-        return False 
+        return False
