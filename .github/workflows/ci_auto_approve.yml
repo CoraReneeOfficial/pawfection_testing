@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     # Only run if the PR author is the Jules bot (adjust username as needed)
     # Checking for 'bot' in the actor name is a heuristic, adjust specifically for 'Jules-AI' or the actual bot username.
-    if: contains(github.actor, 'Jules') || contains(github.actor, 'jules') || github.actor == 'github-actions[bot]'
+    if: contains(github.actor, 'google-labs-jules') || contains(github.actor, 'jules') || github.actor == 'github-actions[bot]'
     permissions:
       pull-requests: write
     steps:
