@@ -8,3 +8,12 @@
       }
     </style>
 {% endblock %}
+
+{% block body %}
+    {{ super() }}
+    <script>
+      window.addEventListener('load', function() {
+        window.print();
+      });
+    </script>
+{% endblock %}
