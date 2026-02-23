@@ -17,9 +17,6 @@ def appointment_needs_details(dog, groomer, services_text):
     owner = getattr(dog, 'owner', None)
     if owner and hasattr(owner, 'name') and owner.name and owner.name.strip().lower() == 'unknown owner':
         return True
-    # Groomer must exist and have a non-empty username
-    if not groomer or not getattr(groomer, 'username', None) or not groomer.username.strip():
-        return True
     # Services must be non-empty (strip whitespace)
     if not services_text or not services_text.strip():
         return True

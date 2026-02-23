@@ -94,7 +94,7 @@ def calendar_view():
         db.joinedload(Appointment.groomer)
     ).filter(
         Appointment.store_id == store_id,
-        Appointment.status.in_(['Scheduled', 'Completed', 'Cancelled', 'No Show']),
+        Appointment.status.in_(['Scheduled', 'Cancelled', 'No Show']),
         Appointment.appointment_datetime.between(start_dt_utc, end_dt_utc)
     ).order_by(Appointment.appointment_datetime.asc()).all()
 
@@ -155,7 +155,8 @@ def api_appointments():
         db.joinedload(Appointment.dog).joinedload(Dog.owner),
         db.joinedload(Appointment.groomer)
     ).filter(
-        Appointment.store_id == store_id  # Filter appointments by the current store
+        Appointment.store_id == store_id,  # Filter appointments by the current store
+        Appointment.status.in_(['Scheduled', 'Cancelled', 'No Show'])
     )
 
     if start_dt and end_dt: 
