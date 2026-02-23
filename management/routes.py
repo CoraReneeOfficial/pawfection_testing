@@ -26,6 +26,7 @@ from models import User, Service, Appointment, ActivityLog, Store, Dog, Owner, A
 from utils import allowed_file, log_activity, service_names_from_ids
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
+from appointments.google_calendar_sync import get_google_service
 import json
 from google.oauth2.credentials import Credentials as GoogleCredentials
 import pytz
@@ -293,14 +294,11 @@ def approve_appointment_request(req_id):
         # Sync with Google Calendar if enabled
         if store and store.google_token_json:
             try:
-                # Use the improved get_google_credentials function
-                from appointments.google_calendar_sync import get_google_credentials
-                
-                credentials = get_google_credentials(store)
-                if not credentials:
-                    raise Exception("Failed to obtain valid Google credentials")
+                # Use the improved get_google_service function with timeout
+                service = get_google_service('calendar', 'v3', store=store)
+                if not service:
+                    raise Exception("Failed to build Google Calendar service")
                     
-                service = build('calendar', 'v3', credentials=credentials)
                 # Make sure we have a calendar ID
                 calendar_id = store.google_calendar_id if store.google_calendar_id else 'primary'
                 
@@ -1137,7 +1135,10 @@ def google_oauth2callback():
                     scopes=token_data['scopes']
                 )
                 current_app.logger.info(f"[Google OAuth] Built test credentials. About to call Calendar API...")
-                service = build('calendar', 'v3', credentials=test_credentials)
+                service = get_google_service('calendar', 'v3', credentials=test_credentials)
+                if not service:
+                    raise Exception("Failed to build Google Calendar service for testing")
+
                 try:
                     result = service.calendarList().list(maxResults=1).execute()
                     current_app.logger.info(f"[Google OAuth] Calendar API test succeeded for store {store.id}. Result: {result}")
@@ -1318,13 +1319,11 @@ def sync_google_calendar_for_store(store, user):
         except Exception:
             store_tz = pytz.UTC
 
-        from appointments.google_calendar_sync import get_google_credentials
-        credentials = get_google_credentials(store)
-        if not credentials:
-            current_app.logger.warning("[SYNC] Failed to obtain valid Google credentials.")
+        service = get_google_service('calendar', 'v3', store=store)
+        if not service:
+            current_app.logger.warning("[SYNC] Failed to build Google Calendar service.")
             return 0
 
-        service = build('calendar', 'v3', credentials=credentials)
         now_utc = datetime.utcnow().replace(tzinfo=pytz.UTC)
         now = now_utc.astimezone(store_tz).isoformat()
         events_result = service.events().list(

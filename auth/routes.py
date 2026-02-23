@@ -566,7 +566,7 @@ def google_store_callback():
     # --- Google Calendar: Find or create 'Pawfection Appointments' calendar ---
     try:
         from google.oauth2.credentials import Credentials as GoogleCredentials
-        from googleapiclient.discovery import build
+        from appointments.google_calendar_sync import get_google_service
         import json as _json
         token_data = _json.loads(store.google_token_json)
         creds = GoogleCredentials(
@@ -577,7 +577,10 @@ def google_store_callback():
             client_secret=token_data.get('client_secret'),
             scopes=token_data.get('scopes') if 'scopes' in token_data else token_data.get('scope', '').split()
         )
-        service = build('calendar', 'v3', credentials=creds)
+        service = get_google_service('calendar', 'v3', credentials=creds)
+        if not service:
+            raise Exception("Failed to build Google Calendar service")
+
         # List calendars
         calendar_list = service.calendarList().list().execute()
         pawfection_calendar = None

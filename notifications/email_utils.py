@@ -6,6 +6,7 @@ import pytz
 from flask import render_template, current_app
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from appointments.google_calendar_sync import get_google_service
 import base64
 from email.mime.text import MIMEText
 from utils import service_names_from_ids
@@ -88,7 +89,10 @@ def send_appointment_confirmation_email(store, owner, dog, appointment, groomer=
         )
         
         logger.debug("Building Gmail service")
-        service = build('gmail', 'v1', credentials=credentials, cache_discovery=False)
+        service = get_google_service('gmail', 'v1', credentials=credentials)
+        if not service:
+            logger.error("Failed to build Gmail service")
+            return False
         
         # Prepare email content
         business_name = store.name if hasattr(store, 'name') and store.name else 'Pawfection Grooming'
@@ -202,7 +206,11 @@ def send_appointment_edited_email(store, owner, dog, appointment, groomer=None, 
             client_secret=token_data.get('client_secret') or os.environ.get('GOOGLE_CLIENT_SECRET'),
             scopes=SCOPES
         )
-        service = build('gmail', 'v1', credentials=credentials)
+        service = get_google_service('gmail', 'v1', credentials=credentials)
+        if not service:
+            current_app.logger.error("Failed to build Gmail service")
+            return False
+
         business_name = store.name if hasattr(store, 'name') and store.name else 'Pawfection Grooming'
         store_tz_str = getattr(store, 'timezone', None) or 'UTC'
         try:
@@ -275,7 +283,11 @@ def send_appointment_cancelled_email(store, owner, dog, appointment, groomer=Non
             client_secret=token_data.get('client_secret') or os.environ.get('GOOGLE_CLIENT_SECRET'),
             scopes=SCOPES
         )
-        service = build('gmail', 'v1', credentials=credentials)
+        service = get_google_service('gmail', 'v1', credentials=credentials)
+        if not service:
+            current_app.logger.error("Failed to build Gmail service")
+            return False
+
         business_name = store.name if hasattr(store, 'name') and store.name else 'Pawfection Grooming'
         store_tz_str = getattr(store, 'timezone', None) or 'UTC'
         try:
