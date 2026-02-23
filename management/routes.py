@@ -1395,7 +1395,7 @@ def sync_google_calendar_for_store(store, user):
             owner_obj = Owner.query.filter(
                 Owner.store_id == store.id,
                 or_(func.lower(Owner.name) == owner.lower(),
-                    func.lower(func.substr(Owner.name, 1, func.instr(Owner.name, ' ') - 1)) == owner_first.lower() if owner_first else False)
+                    Owner.name.ilike(f"{owner_first} %") if owner_first else False)
             ).first()
             # --- BEGIN: Updated logic for unknown dog/owner ---
             owner_obj_found = True
@@ -1409,7 +1409,7 @@ def sync_google_calendar_for_store(store, user):
                     Dog.owner_id == owner_obj.id,
                     Dog.store_id == store.id,
                     or_(func.lower(Dog.name) == dog.lower(),
-                        func.lower(func.substr(Dog.name, 1, func.instr(Dog.name, ' ') - 1)) == dog_first.lower() if dog_first else False)
+                        Dog.name.ilike(f"{dog_first} %") if dog_first else False)
                 ).first()
             if not dog_obj:
                 dog_obj_found = False
@@ -1451,7 +1451,7 @@ def sync_google_calendar_for_store(store, user):
                     User.is_groomer == True,
                     User.store_id == store.id,
                     or_(func.lower(User.username) == groomer.lower(),
-                        func.lower(func.substr(User.username, 1, func.instr(User.username, ' ') - 1)) == groomer_first.lower() if groomer_first else False)
+                        User.username.ilike(f"{groomer_first} %") if groomer_first else False)
                 ).first()
             # Add missing info to notes
             notes_with_missing = notes or ''
