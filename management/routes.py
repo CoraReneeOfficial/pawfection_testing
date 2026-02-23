@@ -1931,6 +1931,12 @@ def export_all_data():
 @admin_required
 def import_database():
     """Import a database file, either overwriting or merging with the current one."""
+    # Security fix: Only allow superadmins to import database files
+    # Regular store admins should not be able to overwrite or modify the system database
+    if not (g.user.role == 'superadmin' or session.get('is_superadmin')):
+        flash("Only Superadmins can import database files.", "danger")
+        return redirect(url_for('management.data_management'))
+
     form = DatabaseImportForm()
     
     if form.validate_on_submit():

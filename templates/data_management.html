@@ -118,6 +118,7 @@
         </div>
     </div>
     
+    {% if g.user and (g.user.role == 'superadmin' or session.get('is_superadmin')) %}
     <div class="section-card">
         <h2><span class="icon">📥</span> Import Data</h2>
         <p>Import a database file to restore or migrate your store's data.</p>
@@ -169,6 +170,7 @@
             </div>
         </form>
     </div>
+    {% endif %}
 
     <div style="margin-top: 2rem;">
         <a href="{{ url_for('management.management') }}" class="button button-secondary">Back to Management</a>
