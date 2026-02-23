@@ -2746,7 +2746,7 @@ def create_app():
             tables.append({
                 'name': table_name,
                 'display_name': table_name.replace('_', ' ').title(),
-                'record_count': db.session.execute(f"SELECT COUNT(*) FROM {table_name}").scalar()
+                'record_count': db.session.execute(text(f"SELECT COUNT(*) FROM {table_name}")).scalar()
             })
         
         # Define supported export formats
@@ -2846,7 +2846,12 @@ def create_app():
                 # Regular form submission for exporting data
                 table_name = request.form.get('table')
                 export_format = request.form.get('format')
-                filter_condition = request.form.get('filter')
+
+                # Structured filter inputs (Safer than raw SQL)
+                filter_column = request.form.get('filter_column')
+                filter_operator = request.form.get('filter_operator')
+                filter_value = request.form.get('filter_value')
+
                 selected_columns = request.form.getlist('columns')
                 
                 # Check required fields
@@ -2882,33 +2887,29 @@ def create_app():
                     # table_name and columns_str are now whitelisted
                     sql_query_str = f"SELECT {columns_str} FROM {table_name}"
                     
-                    # Add filter condition if provided, with robust sanitization
-                    if filter_condition:
-                        # Allow only a safe subset of characters for the filter
-                        # This prevents semicolons, comments, and other dangerous constructs
-                        if not re.match(r'^[a-zA-Z0-9_ \.\(\)\',=><!%@\+\-]+$', filter_condition):
-                            flash('Invalid characters in filter condition.', 'danger')
+                    query_params = {}
+
+                    # Safer structured filter logic using parameterized queries
+                    if filter_column and filter_operator and filter_value:
+                        # Validate column
+                        if filter_column not in all_columns:
+                            flash(f'Invalid filter column: {filter_column}', 'danger')
                             return redirect(url_for('superadmin_data_export'))
 
-                        # Further check to prevent UNION or other dangerous keywords
-                        # We use word boundaries to avoid matching keywords inside column names (e.g., updated_at)
-                        forbidden_keywords = ['UNION', 'DROP', 'DELETE', 'UPDATE', 'INSERT', 'ALTER', 'CREATE', 'TRUNCATE', 'SELECT']
-                        filter_upper = filter_condition.upper()
-
-                        for kw in forbidden_keywords:
-                            if re.search(r'\b' + kw + r'\b', filter_upper):
-                                flash(f'Forbidden keyword {kw} in filter condition.', 'danger')
-                                return redirect(url_for('superadmin_data_export'))
-
-                        # Check for SQL comment sequences separately as they don't have word boundaries
-                        if '--' in filter_condition or '/*' in filter_condition:
-                            flash('SQL comments are not allowed in filters.', 'danger')
+                        # Validate operator against whitelist
+                        allowed_operators = ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'ILIKE']
+                        if filter_operator not in allowed_operators:
+                            flash(f'Invalid filter operator: {filter_operator}', 'danger')
                             return redirect(url_for('superadmin_data_export'))
 
-                        sql_query_str += f" WHERE {filter_condition}"
+                        # Add condition with parameterized value to prevent SQL injection
+                        sql_query_str += f" WHERE {filter_column} {filter_operator} :filter_val"
+                        query_params['filter_val'] = filter_value
+
+                        app.logger.info(f"Applying filter: {filter_column} {filter_operator} [REDACTED]")
                     
-                    # Execute query using sqlalchemy.text()
-                    result = db.session.execute(text(sql_query_str))
+                    # Execute query using sqlalchemy.text() and parameters
+                    result = db.session.execute(text(sql_query_str), query_params)
                     # Convert result to list of dicts safely
                     try:
                         data = [dict(row) for row in result.mappings()]
