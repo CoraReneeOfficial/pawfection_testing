@@ -1,5 +1,9 @@
 # app.py
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import bcrypt
 import re
 from sqlalchemy import text, inspect
