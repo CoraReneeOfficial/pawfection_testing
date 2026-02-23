@@ -1,3 +1,4 @@
+
 import unittest
 from unittest.mock import MagicMock, patch
 import os
@@ -114,6 +115,20 @@ sys.modules['xlsxwriter'] = MagicMock()
 sys.modules['psycopg2'] = MagicMock()
 
 # Ensure DATABASE_URL doesn't trigger postgres connection during create_app
+if 'DATABASE_URL' in os.environ:
+    del os.environ['DATABASE_URL']
+
+# Additional mocks needed for CI environment
+sys.modules['fpdf'] = MagicMock()
+sys.modules['pandas'] = MagicMock()
+sys.modules['xlsxwriter'] = MagicMock()
+sys.modules['psycopg2'] = MagicMock()
+sys.modules['psycopg2.binary'] = MagicMock()
+sys.modules['psutil'] = MagicMock()
+
+# Unset DATABASE_URL to avoid connecting to production DB during import
+# Save it to restore later if needed (though os.environ changes are process-local)
+original_db_url = os.environ.get('DATABASE_URL')
 if 'DATABASE_URL' in os.environ:
     del os.environ['DATABASE_URL']
 
