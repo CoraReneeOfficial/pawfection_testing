@@ -13,6 +13,7 @@ from utils import allowed_file, log_activity, subscription_required, service_nam
 from input_sanitization import sanitize_text_input  # Import sanitization
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from appointments.google_calendar_sync import get_google_service
 import json
 import re
 import os
@@ -279,14 +280,11 @@ def add_appointment():
             store = db.session.get(Store, g.user.store_id)
             if store and store.google_token_json:
                 try:
-                    # Use the improved get_google_credentials function
-                    from appointments.google_calendar_sync import get_google_credentials
-                    
-                    credentials = get_google_credentials(store)
-                    if not credentials:
-                        raise Exception("Failed to obtain valid Google credentials")
+                    # Use the improved get_google_service function with timeout
+                    service = get_google_service('calendar', 'v3', store=store)
+                    if not service:
+                        raise Exception("Failed to build Google Calendar service")
                         
-                    service = build('calendar', 'v3', credentials=credentials)
                     event = {
                         'summary': f"[{status.upper() if 'status' in locals() else 'SCHEDULED'}] ({selected_dog.name}) Appointment",
                         'description': f"Owner: {selected_dog.owner.name if selected_dog and selected_dog.owner else ''}\n" +
@@ -468,14 +466,11 @@ def edit_appointment(appointment_id):
             store = db.session.get(Store, store_id)
             if store and store.google_token_json:
                 try:
-                    # Use the improved get_google_credentials function
-                    from appointments.google_calendar_sync import get_google_credentials
-                    
-                    credentials = get_google_credentials(store)
-                    if not credentials:
-                        raise Exception("Failed to obtain valid Google credentials")
+                    # Use the improved get_google_service function with timeout
+                    service = get_google_service('calendar', 'v3', store=store)
+                    if not service:
+                        raise Exception("Failed to build Google Calendar service")
                         
-                    service = build('calendar', 'v3', credentials=credentials)
                     event = {
                         'summary': f"[{status.upper() if 'status' in locals() else 'SCHEDULED'}] ({selected_dog.name}) Appointment",
                         'description': f"Owner: {selected_dog.owner.name if selected_dog and selected_dog.owner else ''}\n" +
@@ -517,114 +512,6 @@ def edit_appointment(appointment_id):
                     current_app.logger.error(f"Google Calendar setup failed: {e}", exc_info=True)
                     google_sync_success = False
                     
-            # Show appropriate flash message based on sync status
-            if store and store.google_token_json:
-                if google_sync_success:
-                    flash("Appointment updated and synced to Google Calendar.", "success")
-                else:
-                    flash("Appointment updated, but there was an issue syncing with Google Calendar.", "warning")
-            else:
-                flash("Appointment updated. Google Calendar is not connected for this store.", "info")
-                
-            # --- Send Edited Email if enabled ---
-            notification_settings_path = os.path.join(current_app.root_path, 'notification_settings.json')
-            try:
-                with open(notification_settings_path, 'r') as f:
-                    notification_settings = json.load(f)
-            except Exception as e:
-                notification_settings = {}
-                current_app.logger.error(f"Could not load notification settings: {e}")
-            if notification_settings.get('send_confirmation_email', False):
-                owner = selected_dog.owner
-                groomer = selected_groomer
-                send_appointment_edited_email(store, owner, selected_dog, appt, groomer=groomer, services_text=services_text)
-            return redirect(url_for('appointments.calendar_view'))
-            
-        except Exception as e:
-            db.session.rollback()
-            error_msg = f"Error editing appointment {appointment_id}: {str(e)}"
-            current_app.logger.error(error_msg, exc_info=True)
-            
-            # Log the full traceback
-            import traceback
-            current_app.logger.error(f"Traceback: {traceback.format_exc()}")
-            
-            flash("Error editing appointment. Please check the logs for more details.", "danger")
-            form_data = request.form.to_dict()
-            form_data.update({'id': appointment_id, 'dog': appt.dog, 'groomer': appt.groomer})
-            return render_template('edit_appointment.html', 
-                               dogs=dogs, 
-                               users=groomers_for_dropdown, 
-                               appointment_data=form_data, 
-                               appointment_id=appointment_id), 500
-
-        # Log the changes
-        log_message = f"Edited Local Appt - ID: {appointment_id}, Status: {status}, " \
-                    f"Time: {local_dt_for_log.strftime('%Y-%m-%d %I:%M %p %Z') if local_dt_for_log else 'N/A'}, " \
-                    f"Dog: {selected_dog.name if selected_dog else 'None'}, " \
-                    f"Groomer: {selected_groomer.username if selected_groomer else 'Unassigned'}"
-        
-        current_app.logger.info(log_message)
-        log_activity("Edited Local Appt", log_message)
-        
-        # --- Google Calendar Sync ---
-        google_sync_success = True
-        if store and store.google_token_json:
-            try:
-                # Create a new session for Google Calendar operations
-                with db.session.no_autoflush:
-                    token_data = json.loads(store.google_token_json)
-                    credentials = Credentials(
-                        token=token_data.get('token') or token_data.get('access_token'),
-                        refresh_token=token_data.get('refresh_token'),
-                        token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
-                        client_id=token_data.get('client_id') or os.environ.get('GOOGLE_CLIENT_ID'),
-                        client_secret=token_data.get('client_secret') or os.environ.get('GOOGLE_CLIENT_SECRET'),
-                        scopes=SCOPES
-                    )
-                    service = build('calendar', 'v3', credentials=credentials)
-                    event = {
-                        'summary': f"[{status.upper() if 'status' in locals() else 'SCHEDULED'}] ({selected_dog.name}) Appointment",
-                        'description': f"Owner: {selected_dog.owner.name if selected_dog and selected_dog.owner else ''}\n" +
-                                       f"Groomer: {selected_groomer.username if selected_groomer else ''}\n" +
-                                       f"Services: {services_text if services_text else ''}\n" +
-                                       f"Notes: {notes if notes else ''}\n" +
-                                       f"Status: {status}",
-                        'start': {'dateTime': utc_dt.isoformat(), 'timeZone': 'UTC'},
-                        'end': {'dateTime': (utc_dt + datetime.timedelta(hours=1)).isoformat(), 'timeZone': 'UTC'},
-                    }
-                    calendar_id = store.google_calendar_id if store.google_calendar_id else 'primary'
-                    
-                    # Execute Google Calendar operation in a separate try-except
-                    try:
-                        if appt.google_event_id:
-                            service.events().update(
-                                calendarId=calendar_id, 
-                                eventId=appt.google_event_id, 
-                                body=event
-                            ).execute()
-                        else:
-                            created_event = service.events().insert(
-                                calendarId=calendar_id, 
-                                body=event
-                            ).execute()
-                            # Update the Google event ID in a separate transaction
-                            try:
-                                appt.google_event_id = created_event.get('id')
-                                db.session.commit()
-                            except Exception as e:
-                                current_app.logger.error(f"Failed to update Google event ID: {e}", exc_info=True)
-                                google_sync_success = False
-                                
-                    except Exception as e:
-                        current_app.logger.error(f"Google Calendar API error: {e}", exc_info=True)
-                        google_sync_success = False
-                        
-            except Exception as e:
-                current_app.logger.error(f"Google Calendar setup failed: {e}", exc_info=True)
-                google_sync_success = False
-                
-        try:
             # Show appropriate flash message based on sync status
             if store and store.google_token_json:
                 if google_sync_success:
@@ -720,16 +607,10 @@ def delete_appointment(appointment_id):
             if store and store.google_token_json and google_event_id:
                 try:
                     # Build credentials and Google Calendar service
-                    token_data = json.loads(store.google_token_json)
-                    credentials = Credentials(
-                        token=token_data.get('token') or token_data.get('access_token'),
-                        refresh_token=token_data.get('refresh_token'),
-                        token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
-                        client_id=token_data.get('client_id') or os.environ.get('GOOGLE_CLIENT_ID'),
-                        client_secret=token_data.get('client_secret') or os.environ.get('GOOGLE_CLIENT_SECRET'),
-                        scopes=SCOPES
-                    )
-                    service = build('calendar', 'v3', credentials=credentials)
+                    service = get_google_service('calendar', 'v3', store=store)
+                    if not service:
+                        raise Exception("Failed to build Google Calendar service")
+
                     calendar_id = store.google_calendar_id if store.google_calendar_id else 'primary'
 
                     # Delete the event from Google Calendar
@@ -762,16 +643,10 @@ def delete_appointment(appointment_id):
             if store and store.google_token_json and google_event_id:
                 try:
                     # Build credentials and Google Calendar service
-                    token_data = json.loads(store.google_token_json)
-                    credentials = Credentials(
-                        token=token_data.get('token') or token_data.get('access_token'),
-                        refresh_token=token_data.get('refresh_token'),
-                        token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
-                        client_id=token_data.get('client_id') or os.environ.get('GOOGLE_CLIENT_ID'),
-                        client_secret=token_data.get('client_secret') or os.environ.get('GOOGLE_CLIENT_SECRET'),
-                        scopes=SCOPES
-                    )
-                    service = build('calendar', 'v3', credentials=credentials)
+                    service = get_google_service('calendar', 'v3', store=store)
+                    if not service:
+                        raise Exception("Failed to build Google Calendar service")
+
                     calendar_id = store.google_calendar_id if store.google_calendar_id else 'primary'
 
                     # Mark the event as cancelled in Google Calendar (soft delete so history remains)
@@ -1537,7 +1412,7 @@ def email_receipt_by_id(receipt_id):
     try:
         token_data = json.loads(store.google_token_json)
         creds = Credentials.from_authorized_user_info(token_data)
-        service = build('gmail', 'v1', credentials=creds)
+        service = get_google_service('gmail', 'v1', credentials=creds)
         # Render HTML body using receipt_email.html
         html_body = render_template(
             'email/receipt_email.html',
@@ -1676,7 +1551,10 @@ def email_receipt(appointment_id):
     # Get credentials from store model
     creds_dict = json.loads(store.google_token_json)
     creds = Credentials.from_authorized_user_info(info=creds_dict, scopes=SCOPES)
-    service = build('gmail', 'v1', credentials=creds)
+    service = get_google_service('gmail', 'v1', credentials=creds)
+    if not service:
+        flash('Failed to connect to Google Mail.', 'danger')
+        return redirect(url_for('appointments.preview_receipt', appointment_id=appointment_id))
     # Prepare MIME message
     message = MIMEText(html_body, 'html')
     message['to'] = customer_email

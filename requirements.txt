@@ -17,6 +17,8 @@ APScheduler
 stripe
 psutil
 WTForms
+httplib2
+google-auth-httplib2
 
 # Optional, but often good to specify if you rely on specific versions:
 # Werkzeug
@@ -30,9 +32,7 @@ WTForms
 # pyasn1-modules (Google library dependency)
 # rsa (Google library dependency)
 # six (Google library dependency)
-# httplib2 (Google library dependency)
 # uritemplate (Google library dependency)
-# google-auth-httplib2 (Google library dependency)
 # oauthlib (Google library dependency)
 # requests-oauthlib (Google library dependency)
 # certifi (requests dependency)
