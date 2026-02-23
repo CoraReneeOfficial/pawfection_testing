@@ -1201,3 +1201,18 @@ textarea.form-input { min-height: 80px; }
     font-weight: bold;
     color: var(--primary-color);
 }
+
+/* --- Mobile Nav Brand Fix --- */
+@media (max-width: 768px) {
+    .nav-brand a {
+        font-size: 0.75rem;
+        line-height: 1.1;
+        gap: 0.25rem;
+    }
+    .nav-menu-text {
+        display: none;
+    }
+    .nav-menu-button {
+        padding: 0.5rem;
+    }
+}
