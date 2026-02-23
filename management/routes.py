@@ -44,6 +44,11 @@ from flask_wtf import FlaskForm
 from wtforms import FileField
 from wtforms.validators import DataRequired
 
+# Global cache for sync timestamps (in-memory, per worker)
+# Format: { store_id: datetime_of_last_sync }
+_SYNC_CACHE = {}
+SYNC_COOLDOWN_SECONDS = 300 # 5 minutes
+
 # Form for database import
 class DatabaseImportForm(FlaskForm):
     database_file = FileField('Database File (.db)', validators=[
@@ -1307,7 +1312,16 @@ def edit_store():
             flash('Failed to update store information.', 'danger')
     return render_template('edit_store.html', store=store, timezones=timezones)
 
-def sync_google_calendar_for_store(store, user):
+def sync_google_calendar_for_store(store, user, force=False):
+    # Check cooldown cache
+    if not force:
+        last_sync = _SYNC_CACHE.get(store.id)
+        if last_sync:
+            elapsed = (datetime.utcnow() - last_sync).total_seconds()
+            if elapsed < SYNC_COOLDOWN_SECONDS:
+                current_app.logger.info(f"[SYNC] Skipping Google Calendar sync for store {store.id} (cooldown active: {int(SYNC_COOLDOWN_SECONDS - elapsed)}s remaining)")
+                return 0
+
     if not store or not store.google_token_json or not store.google_calendar_id:
         current_app.logger.warning("[SYNC] Store missing Google token or calendar ID.")
         return 0
@@ -1518,6 +1532,9 @@ def sync_google_calendar_for_store(store, user):
                 db.session.commit()
                 created_appointments.append(appt)
                 current_app.logger.info(f"[SYNC] Created new appointment for Google event {event['id']} (store {store.id})")
+
+        # Update cache on successful sync
+        _SYNC_CACHE[store.id] = datetime.utcnow()
         return len(created_appointments)
     except Exception as e:
         current_app.logger.error(f"Failed to sync Google Calendar: {e}", exc_info=True)
@@ -1528,7 +1545,8 @@ def sync_google_calendar_for_store(store, user):
 def sync_google_calendar():
     store_id = session.get('store_id')
     store = Store.query.get_or_404(store_id)
-    num_synced = sync_google_calendar_for_store(store, g.user)
+    # Force sync when manually triggered
+    num_synced = sync_google_calendar_for_store(store, g.user, force=True)
     if num_synced > 0:
         flash(f'Synced {num_synced} new appointments from Google Calendar.', 'success')
         log_activity(f'Synced {num_synced} appts from Google Calendar')
