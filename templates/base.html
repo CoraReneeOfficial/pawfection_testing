@@ -122,13 +122,17 @@
                     {% for category, message in messages %}
                         {% set category_class = 'flash-' + category if category in ['danger', 'success', 'warning', 'info'] else 'flash-info' %}
                         <div class="flash-message {{ category_class }}" role="alert"
-                             x-data="{ show: true }"
+                             x-data="flashMessage({{ 'false' if category == 'danger' else 'true' }})"
                              x-show="show"
-                             x-init="setTimeout(() => show = false, 5000)"
+                             @mouseenter="pauseTimer()"
+                             @mouseleave="resumeTimer()"
                              x-transition:leave="transition ease-in duration-500"
                              x-transition:leave-start="opacity-100"
                              x-transition:leave-end="opacity-0">
                             <p>{{ message }}</p>
+                            <button type="button" class="flash-close" @click="show = false" aria-label="Dismiss message">
+                                &times;
+                            </button>
                         </div>
                     {% endfor %}
                 {% endif %}
@@ -226,6 +230,34 @@
 
     <script>
         document.addEventListener('alpine:init', () => {
+            Alpine.data('flashMessage', (shouldAutoDismiss) => ({
+                show: true,
+                timeout: null,
+                autoDismiss: shouldAutoDismiss,
+
+                init() {
+                    if (this.autoDismiss) {
+                        this.startTimer();
+                    }
+                },
+                startTimer() {
+                    this.timeout = setTimeout(() => {
+                        this.show = false;
+                    }, 5000);
+                },
+                pauseTimer() {
+                    if (this.timeout) {
+                        clearTimeout(this.timeout);
+                        this.timeout = null;
+                    }
+                },
+                resumeTimer() {
+                    if (this.autoDismiss && !this.timeout) {
+                        this.startTimer();
+                    }
+                }
+            }));
+
             Alpine.data('notificationManager', () => ({
                 navMenuOpen: false,
                 notificationOpen: false,
