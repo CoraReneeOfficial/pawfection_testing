@@ -22,6 +22,8 @@ import traceback
 from email.mime.text import MIMEText
 from notifications.email_utils import send_appointment_confirmation_email, send_appointment_edited_email, send_appointment_cancelled_email
 import pytz
+from fpdf import FPDF
+import io
 
 appointments_bp = Blueprint('appointments', __name__)
 
@@ -1477,10 +1479,56 @@ def email_receipt_by_id(receipt_id):
 @appointments_bp.route('/receipts/export_pdf/<int:receipt_id>', methods=['GET'])
 @subscription_required
 def export_receipt_pdf(receipt_id):
-    # Placeholder: In production, use a library like WeasyPrint or xhtml2pdf
-    # For now, just return a message
-    flash('PDF export coming soon!', 'info')
-    return redirect(url_for('appointments.receipts_management'))
+    r = Receipt.query.get_or_404(receipt_id)
+    # Ensure user has access to this store's receipt
+    if r.store_id != session.get('store_id'):
+        abort(403)
+
+    data = json.loads(r.receipt_json)
+
+    # Ensure all required fields for the template are present
+    if 'total' not in data and 'final_total' in data:
+        data['total'] = data['final_total']
+    elif 'total' not in data:
+        subtotal = float(data.get('subtotal', 0))
+        taxes = float(data.get('taxes', 0))
+        tip = float(data.get('tip', 0))
+        data['total'] = subtotal + taxes + tip
+
+    if 'tip' not in data:
+        data['tip'] = data.get('tip_amount', 0)
+
+    # Add store info if missing
+    if 'store_email' not in data:
+        store = Store.query.get(r.store_id)
+        data['store_email'] = store.email if store else ''
+        data['store_phone'] = store.phone if store else ''
+
+    # Render HTML template to string
+    try:
+        html = render_template('pdf_receipt.html', **data)
+
+        # Create PDF
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("helvetica", size=12)
+
+        # Write HTML content
+        pdf.write_html(html)
+
+        # Output PDF to bytes
+        pdf_bytes = pdf.output()
+
+        return send_file(
+            io.BytesIO(pdf_bytes),
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f"receipt_{receipt_id}.pdf"
+        )
+    except Exception as e:
+        current_app.logger.error(f"PDF generation failed: {e}", exc_info=True)
+        flash('Failed to generate PDF. Please try again later.', 'danger')
+        return redirect(url_for('appointments.receipts_management'))
 
 @appointments_bp.route('/receipts/view/<int:receipt_id>', methods=['GET'])
 @subscription_required

@@ -4,6 +4,39 @@ import os
 import tempfile
 import sys
 
+# Add venv/Lib/site-packages to sys.path to load dependencies
+sys.path.append(os.path.join(os.getcwd(), 'venv', 'Lib', 'site-packages'))
+# Add project root to path
+sys.path.append('.')
+
+# Mock binary dependencies to avoid ImportError in this environment
+sys.modules['bcrypt'] = MagicMock()
+# Configure bcrypt mock
+sys.modules['bcrypt'].hashpw.return_value = b'hashed_password'
+sys.modules['bcrypt'].gensalt.return_value = b'salt'
+sys.modules['bcrypt'].checkpw.return_value = True
+
+sys.modules['cryptography'] = MagicMock()
+sys.modules['cryptography.hazmat'] = MagicMock()
+sys.modules['cryptography.hazmat.backends'] = MagicMock()
+sys.modules['cryptography.hazmat.primitives'] = MagicMock()
+sys.modules['cryptography.hazmat.primitives.serialization'] = MagicMock()
+sys.modules['cryptography.hazmat.primitives.asymmetric'] = MagicMock()
+sys.modules['cryptography.hazmat.primitives.asymmetric.rsa'] = MagicMock()
+sys.modules['google.oauth2'] = MagicMock()
+sys.modules['google.oauth2.credentials'] = MagicMock()
+sys.modules['googleapiclient'] = MagicMock()
+sys.modules['googleapiclient.discovery'] = MagicMock()
+sys.modules['googleapiclient.errors'] = MagicMock()
+sys.modules['google_auth_oauthlib'] = MagicMock()
+sys.modules['google_auth_oauthlib.flow'] = MagicMock()
+sys.modules['google.auth'] = MagicMock()
+sys.modules['google.auth.transport'] = MagicMock()
+sys.modules['google.auth.transport.requests'] = MagicMock()
+sys.modules['authlib'] = MagicMock()
+sys.modules['authlib.integrations'] = MagicMock()
+sys.modules['authlib.integrations.flask_client'] = MagicMock()
+
 class TestCIHealth(unittest.TestCase):
     def setUp(self):
         # Patch the migration script to do nothing to avoid side effects on the file system
