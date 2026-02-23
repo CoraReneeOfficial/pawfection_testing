@@ -549,6 +549,10 @@ textarea.form-input { min-height: 80px; }
 .quick-link-card.yellow { background-color: #fefce8; border-color: #fde68a; } .quick-link-card.yellow:hover { background-color: #fef3c7; } .quick-link-card.yellow h3 { color: #a16207; } .quick-link-card.yellow p { color: #ca8a04; }
 .quick-link-card.gray { background-color: var(--secondary-light); border-color: #d1d5db; } .quick-link-card.gray:hover { background-color: #e5e7eb; } .quick-link-card.gray h3 { color: #374151; } .quick-link-card.gray p { color: var(--secondary-color); }
 .quick-link-card.red { background-color: var(--danger-light); border-color: var(--danger-border); } .quick-link-card.red:hover { background-color: #fee2e2; } .quick-link-card.red h3 { color: var(--danger-text); } .quick-link-card.red p { color: var(--danger-color); }
+.quick-link-card.pink { background-color: #fdf2f8; border-color: #fbcfe8; } .quick-link-card.pink:hover { background-color: #fce7f3; } .quick-link-card.pink h3 { color: #be185d; } .quick-link-card.pink p { color: #db2777; }
+.quick-link-card.purple { background-color: #faf5ff; border-color: #e9d5ff; } .quick-link-card.purple:hover { background-color: #f3e8ff; } .quick-link-card.purple h3 { color: #7e22ce; } .quick-link-card.purple p { color: #9333ea; }
+.quick-link-card.orange { background-color: #fff7ed; border-color: #fed7aa; } .quick-link-card.orange:hover { background-color: #ffedd5; } .quick-link-card.orange h3 { color: #c2410c; } .quick-link-card.orange p { color: #ea580c; }
+.quick-link-card.teal { background-color: #f0fdfa; border-color: #99f6e4; } .quick-link-card.teal:hover { background-color: #ccfbf1; } .quick-link-card.teal h3 { color: #0f766e; } .quick-link-card.teal p { color: #0d9488; }
 
 
 /* --- Tables --- */
