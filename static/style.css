@@ -507,12 +507,14 @@ a:hover {
 
 /* --- Flash Messages --- */
 .flash-messages { margin-top: 1rem; margin-bottom: 0; }
-.flash-message { padding: 0.8rem 1rem; border-radius: var(--border-radius); margin-bottom: 0.75rem; border: 1px solid transparent; font-weight: 500; font-size: 0.9rem; }
+.flash-message { padding: 0.8rem 1rem; border-radius: var(--border-radius); margin-bottom: 0.75rem; border: 1px solid transparent; font-weight: 500; font-size: 0.9rem; position: relative; padding-right: 2.5rem; }
 .flash-danger { background-color: var(--danger-light); border-color: var(--danger-border); color: var(--danger-text); }
 .flash-success { background-color: var(--success-light); border-color: var(--success-border); color: var(--success-text); }
 .flash-warning { background-color: var(--warning-light); border-color: var(--warning-border); color: var(--warning-text); }
 .flash-info { background-color: var(--info-light); border-color: var(--info-border); color: var(--info-text); }
 .flash-message p { margin: 0; }
+.flash-close { position: absolute; top: 50%; right: 0.5rem; transform: translateY(-50%); background: transparent; border: none; color: inherit; font-size: 1.5rem; line-height: 1; cursor: pointer; opacity: 0.6; padding: 0.25rem; display: flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: 50%; transition: opacity 0.2s, background-color 0.2s; }
+.flash-close:hover { opacity: 1; background-color: rgba(0,0,0,0.05); }
 
 /* --- Forms --- */
 .form-wrapper { display: flex; justify-content: center; align-items: flex-start; padding: 1rem; flex-grow: 1; }
