@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    {% block head %}
     <meta charset="utf-8">
     <title>Receipt from {{ store_name }}</title>
     <style>
@@ -16,8 +17,10 @@
         .totals-row.total { font-weight: bold; color: #5c4d7d; font-size: 1.13em; }
         .footer { text-align: center; color: #888; font-size: 0.97em; margin-top: 2rem; }
     </style>
+    {% endblock %}
 </head>
 <body>
+    {% block body %}
     <div class="receipt-container">
         <div class="header">
             <h1>{{ store_name }}</h1>
@@ -57,5 +60,6 @@
             {{ store_phone }}
         </div>
     </div>
+    {% endblock %}
 </body>
 </html>
