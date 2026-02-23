@@ -95,7 +95,7 @@
     <div class="local-appointments-section">
 
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
-            <h2 style="margin:0;">Scheduled Appointments (Managed in App)</h2>
+            <h2 style="margin:0;">Recent & Upcoming Appointments</h2>
             <a href="{{ url_for('appointments.all_appointments') }}" class="button button-secondary">View All Appointments</a>
         </div> {# Updated title to reflect filtering #}
         {# 'local_appointments' is passed from the /calendar route in app.py #}
@@ -154,7 +154,7 @@
             </ul>
         {% else %}
             <div class="no-appointments" style="padding: 1rem; margin-top:0;">
-                <p>No 'Scheduled' appointments found in this app.</p> {# Updated message #}
+                <p>No appointments found in the last 7 or next 30 days.</p> {# Updated message #}
             </div>
         {% endif %}
     </div>
