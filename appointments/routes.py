@@ -235,6 +235,7 @@ def add_appointment():
         if not dog_id_str: errors['dog'] = "Dog required."
         if not date_str: errors['date'] = "Date required."
         if not time_str: errors['time'] = "Time required."
+        if not groomer_id_str: errors['groomer'] = "Groomer required."
         
         utc_dt = None
         local_dt_for_log = None
@@ -392,6 +393,7 @@ def edit_appointment(appointment_id):
         
         errors = {}
         if status not in ['Scheduled', 'Completed', 'Cancelled', 'No Show']: errors['status'] = "Invalid status."
+        if not groomer_id_str: errors['groomer'] = "Groomer required."
         
         utc_dt = None
         local_dt_for_log = None 
