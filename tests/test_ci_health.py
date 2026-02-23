@@ -37,6 +37,16 @@ sys.modules['authlib'] = MagicMock()
 sys.modules['authlib.integrations'] = MagicMock()
 sys.modules['authlib.integrations.flask_client'] = MagicMock()
 
+# Mock other optional dependencies
+sys.modules['fpdf'] = MagicMock()
+sys.modules['pandas'] = MagicMock()
+sys.modules['xlsxwriter'] = MagicMock()
+sys.modules['psycopg2'] = MagicMock()
+
+# Ensure DATABASE_URL doesn't trigger postgres connection during create_app
+if 'DATABASE_URL' in os.environ:
+    del os.environ['DATABASE_URL']
+
 class TestCIHealth(unittest.TestCase):
     def setUp(self):
         # Patch the migration script to do nothing to avoid side effects on the file system
