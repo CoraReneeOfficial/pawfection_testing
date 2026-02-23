@@ -143,6 +143,7 @@ def initial_setup():
         return redirect(url_for('auth.login'))
     
     if request.method == 'POST':
+        csrf.protect()
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
@@ -264,6 +265,7 @@ def forgot_credentials(recovery_type, account_type):
                             account_type=account_type)
     
     # Process POST requests based on recovery type
+    csrf.protect()
     if recovery_type == 'username':
         # Handle username recovery
         email = request.form.get('email', '').strip().lower()
@@ -348,6 +350,7 @@ def verify_security_answer(account_type):
     """
     Verifies the security answer provided by the user.
     """
+    csrf.protect()
     username = request.form.get('username', '')
     security_answer = request.form.get('security_answer', '')
     
@@ -397,6 +400,7 @@ def reset_password(account_type):
     """
     Resets the user's password after validating the token.
     """
+    csrf.protect()
     username = request.form.get('username', '')
     token = request.form.get('token', '')
     new_password = request.form.get('new_password', '')
@@ -477,6 +481,7 @@ def set_security_question():
     if request.method == 'GET':
         return render_template('set_security_question.html')
     
+    csrf.protect()
     security_question = request.form.get('security_question', '').strip()
     security_answer = request.form.get('security_answer', '').strip()
     
