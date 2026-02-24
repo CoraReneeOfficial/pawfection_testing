@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g, jsonify, current_app, session, abort
-from models import Appointment, Dog, Owner, User, ActivityLog, Store, Service, Receipt
+from models import Appointment, Dog, Owner, User, ActivityLog, Store, Service, Receipt, Notification
 from appointments.details_needed_utils import appointment_needs_details
 from extensions import db
 from sqlalchemy import or_, desc, cast, String
@@ -450,6 +450,16 @@ def edit_appointment(appointment_id):
             if appt not in db.session:
                 db.session.add(appt)
             
+            # If details are no longer needed, resolve any related notifications
+            if not appt.details_needed:
+                Notification.query.filter_by(
+                    reference_id=appt.id,
+                    reference_type='appointment',
+                    type='appointment_needs_review',
+                    is_read=False
+                ).update({Notification.is_read: True}, synchronize_session=False)
+                current_app.logger.info(f"Resolved notifications for appointment {appt.id}")
+
             # Log the state before commit
             current_app.logger.info(f"Before commit - Appt ID: {appt.id}, Status: {appt.status}, "
                                   f"Dog: {appt.dog_id}, Groomer: {appt.groomer_id}, "
@@ -635,6 +645,13 @@ def delete_appointment(appointment_id):
                     google_calendar_deleted = True
                 except Exception as e:
                     current_app.logger.error(f"Failed to delete Google Calendar event: {e}", exc_info=True)
+
+            # Delete any associated notifications
+            Notification.query.filter_by(
+                reference_id=appt.id,
+                reference_type='appointment'
+            ).delete(synchronize_session=False)
+
             db.session.delete(appt)
             db.session.commit()
             log_activity("Deleted Local Appt", details=f"Appt ID: {appointment_id}, Dog: {dog_name}")
