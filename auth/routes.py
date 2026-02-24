@@ -13,6 +13,7 @@ import base64
 import json
 import secrets
 import time
+from urllib.parse import urlparse
 from flask_login import login_required
 
 auth_bp = Blueprint('auth', __name__)
@@ -108,9 +109,13 @@ def login():
             
             # Redirect to 'next' page if provided and safe, otherwise to dashboard
             next_page = request.args.get('next')
-            if next_page and not (next_page.startswith('/') or next_page.startswith(request.host_url)):
-                current_app.logger.warning(f"Invalid 'next' URL: {next_page}")
-                next_page = None
+            if next_page:
+                target_url = urlparse(next_page)
+                # Ensure it's a relative path (no netloc/scheme) to prevent Open Redirect
+                if target_url.netloc or target_url.scheme:
+                    current_app.logger.warning(f"Invalid 'next' URL (external redirect attempt): {next_page}")
+                    next_page = None
+
             return redirect(next_page or url_for('dashboard'))
         else:
             flash("Invalid username or password.", "danger")
