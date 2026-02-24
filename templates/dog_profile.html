@@ -113,6 +113,22 @@
     .status-Completed { background-color: var(--success-color); }
     .status-Cancelled { background-color: var(--secondary-color); }
     .status-No-Show { background-color: var(--danger-color); }
+
+    .empty-state-card {
+        text-align: center;
+        padding: 2rem;
+        border: 1px dashed var(--border-color);
+        border-radius: var(--border-radius);
+        background-color: var(--secondary-light);
+    }
+    .empty-state-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+    .empty-state-text {
+        color: var(--text-muted);
+        margin-bottom: 1rem;
+    }
 </style>
 {% endblock %}
 
@@ -188,7 +204,13 @@
         </div>
         {% endif %}
     {% else %}
-        <p class="no-service-history">No service history found for {{ dog.name }}.</p>
+        <div class="empty-state-card">
+            <div class="empty-state-icon">📅</div>
+            <p class="empty-state-text">No service history found for {{ dog.name }}.</p>
+            <a href="{{ url_for('appointments.add_appointment', dog_id=dog.id) }}" class="button button-success">
+                Book First Appointment
+            </a>
+        </div>
     {% endif %}
 
 

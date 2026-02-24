@@ -94,7 +94,7 @@
                     {% for dog in dogs %}
                         {# Check if this dog was selected in a previous failed submission #}
                         {# Ensure consistent type comparison (string to string, or int to int) #}
-                        <option value="{{ dog.id }}" {% if dog.id|string == appointment_data.get('dog_id') %}selected{% endif %}>
+                        <option value="{{ dog.id }}" {% if dog.id|string == (appointment_data.get('dog_id') or request.args.get('dog_id')) %}selected{% endif %}>
                             {{ dog.name }} (Owner: {{ dog.owner.name }})
                         </option>
                     {% endfor %}
