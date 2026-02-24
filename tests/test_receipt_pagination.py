@@ -5,6 +5,13 @@ import datetime
 import sys
 from unittest.mock import MagicMock
 
+# Mock dotenv BEFORE importing app to prevent loading .env
+sys.modules['dotenv'] = MagicMock()
+# Ensure DATABASE_URL is not set to production URL
+if 'DATABASE_URL' in os.environ:
+    del os.environ['DATABASE_URL']
+os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+
 # Mock bcrypt before importing app
 mock_bcrypt = MagicMock()
 mock_bcrypt.gensalt.return_value = b'$2b$12$salt'

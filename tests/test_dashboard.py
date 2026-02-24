@@ -1,5 +1,15 @@
 import unittest
 import os
+import sys
+from unittest.mock import MagicMock
+
+# Mock dotenv BEFORE importing app to prevent loading .env
+sys.modules['dotenv'] = MagicMock()
+# Ensure DATABASE_URL is not set to production URL
+if 'DATABASE_URL' in os.environ:
+    del os.environ['DATABASE_URL']
+os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+
 from app import create_app, db
 from models import User, Store
 
