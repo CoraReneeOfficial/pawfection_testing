@@ -10,6 +10,7 @@ from appointments.google_calendar_sync import get_google_service
 import base64
 from email.mime.text import MIMEText
 from utils import service_names_from_ids
+from notifications.carrier_utils import get_carrier_email
 
 def send_appointment_confirmation_email(store, owner, dog, appointment, groomer=None, services_text=None):
     """
@@ -141,26 +142,61 @@ def send_appointment_confirmation_email(store, owner, dog, appointment, groomer=
         subject = f"Appointment Confirmation for {dog.name} at {business_name}"
         logger.debug("Email subject: %s", subject)
         
-        message = MIMEText(html_body, 'html')
-        message['to'] = owner.email
-        
         # Determine sender email
         sender_email = token_data.get('sender_email', owner.email) if token_data.get('sender_email') else owner.email
-        message['from'] = sender_email
-        message['subject'] = subject
         
-        logger.debug("Prepared email message. From: %s, To: %s", sender_email, owner.email)
+        email_sent = False
         
-        # Encode and send the message
-        raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
-        send_message = {'raw': raw}
-        
-        logger.debug("Sending email through Gmail API...")
-        result = service.users().messages().send(userId='me', body=send_message).execute()
-        
-        logger.info("Successfully sent appointment confirmation email. Message ID: %s", result.get('id'))
-        logger.info("Email sent to: %s", owner.email)
-        return True
+        # 1. Send to Owner Email if enabled
+        if getattr(owner, 'email_notifications_enabled', True) and owner.email:
+            try:
+                message = MIMEText(html_body, 'html')
+                message['to'] = owner.email
+                message['from'] = sender_email
+                message['subject'] = subject
+
+                logger.debug("Prepared email message. From: %s, To: %s", sender_email, owner.email)
+
+                raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+                send_message = {'raw': raw}
+
+                logger.debug("Sending email through Gmail API...")
+                result = service.users().messages().send(userId='me', body=send_message).execute()
+
+                logger.info("Successfully sent appointment confirmation email. Message ID: %s", result.get('id'))
+                logger.info("Email sent to: %s", owner.email)
+                email_sent = True
+            except Exception as e:
+                logger.error(f"Failed to send email to {owner.email}: {e}")
+
+        # 2. Send to SMS Gateway if enabled
+        if getattr(owner, 'text_notifications_enabled', True):
+            carrier_email = get_carrier_email(owner.phone_number, getattr(owner, 'phone_carrier', None))
+            if carrier_email:
+                try:
+                    # Using the same HTML body for now, but stripped down might be better.
+                    # Assuming gateways handle HTML or we should send plain text.
+                    # Let's send a simplified version? For now, same body to satisfy "associates... handle".
+
+                    message = MIMEText(html_body, 'html')
+                    message['to'] = carrier_email
+                    message['from'] = sender_email
+                    message['subject'] = subject # Subject is often ignored or becomes part of text
+
+                    logger.debug("Prepared text message. From: %s, To: %s", sender_email, carrier_email)
+
+                    raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+                    send_message = {'raw': raw}
+
+                    service.users().messages().send(userId='me', body=send_message).execute()
+                    logger.info("Successfully sent appointment confirmation text to: %s", carrier_email)
+                    email_sent = True # Consider success if at least one went through?
+                except Exception as e:
+                    logger.error(f"Failed to send text to {carrier_email}: {e}")
+            else:
+                logger.debug("Skipping text notification: No valid carrier email derived.")
+
+        return email_sent
         
     except Exception as e:
         logger.error("Failed to send appointment confirmation email", exc_info=True)
@@ -240,15 +276,43 @@ def send_appointment_edited_email(store, owner, dog, appointment, groomer=None, 
             contact_email=getattr(store, 'email', None)
         )
         subject = f"Appointment Updated for {dog.name} at {business_name}"
-        message = MIMEText(html_body, 'html')
-        message['to'] = owner.email
-        message['from'] = token_data.get('sender_email', owner.email) if token_data.get('sender_email') else owner.email
-        message['subject'] = subject
-        raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
-        send_message = {'raw': raw}
-        service.users().messages().send(userId='me', body=send_message).execute()
-        current_app.logger.info(f"Sent appointment edited email to {owner.email}")
-        return True
+        sender_email = token_data.get('sender_email', owner.email) if token_data.get('sender_email') else owner.email
+
+        email_sent = False
+
+        # 1. Send to Owner Email if enabled
+        if getattr(owner, 'email_notifications_enabled', True) and owner.email:
+            try:
+                message = MIMEText(html_body, 'html')
+                message['to'] = owner.email
+                message['from'] = sender_email
+                message['subject'] = subject
+                raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+                send_message = {'raw': raw}
+                service.users().messages().send(userId='me', body=send_message).execute()
+                current_app.logger.info(f"Sent appointment edited email to {owner.email}")
+                email_sent = True
+            except Exception as e:
+                current_app.logger.error(f"Failed to send email to {owner.email}: {e}")
+
+        # 2. Send to SMS Gateway if enabled
+        if getattr(owner, 'text_notifications_enabled', True):
+            carrier_email = get_carrier_email(owner.phone_number, getattr(owner, 'phone_carrier', None))
+            if carrier_email:
+                try:
+                    message = MIMEText(html_body, 'html')
+                    message['to'] = carrier_email
+                    message['from'] = sender_email
+                    message['subject'] = subject
+                    raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+                    send_message = {'raw': raw}
+                    service.users().messages().send(userId='me', body=send_message).execute()
+                    current_app.logger.info(f"Sent appointment edited text to {carrier_email}")
+                    email_sent = True
+                except Exception as e:
+                    current_app.logger.error(f"Failed to send text to {carrier_email}: {e}")
+
+        return email_sent
     except Exception as e:
         current_app.logger.error(f"Failed to send appointment edited email: {e}", exc_info=True)
         return False
@@ -317,15 +381,43 @@ def send_appointment_cancelled_email(store, owner, dog, appointment, groomer=Non
             contact_email=getattr(store, 'email', None)
         )
         subject = f"Appointment Cancelled for {dog.name} at {business_name}"
-        message = MIMEText(html_body, 'html')
-        message['to'] = owner.email
-        message['from'] = token_data.get('sender_email', owner.email) if token_data.get('sender_email') else owner.email
-        message['subject'] = subject
-        raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
-        send_message = {'raw': raw}
-        service.users().messages().send(userId='me', body=send_message).execute()
-        current_app.logger.info(f"Sent appointment cancelled email to {owner.email}")
-        return True
+        sender_email = token_data.get('sender_email', owner.email) if token_data.get('sender_email') else owner.email
+
+        email_sent = False
+
+        # 1. Send to Owner Email if enabled
+        if getattr(owner, 'email_notifications_enabled', True) and owner.email:
+            try:
+                message = MIMEText(html_body, 'html')
+                message['to'] = owner.email
+                message['from'] = sender_email
+                message['subject'] = subject
+                raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+                send_message = {'raw': raw}
+                service.users().messages().send(userId='me', body=send_message).execute()
+                current_app.logger.info(f"Sent appointment cancelled email to {owner.email}")
+                email_sent = True
+            except Exception as e:
+                current_app.logger.error(f"Failed to send email to {owner.email}: {e}")
+
+        # 2. Send to SMS Gateway if enabled
+        if getattr(owner, 'text_notifications_enabled', True):
+            carrier_email = get_carrier_email(owner.phone_number, getattr(owner, 'phone_carrier', None))
+            if carrier_email:
+                try:
+                    message = MIMEText(html_body, 'html')
+                    message['to'] = carrier_email
+                    message['from'] = sender_email
+                    message['subject'] = subject
+                    raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+                    send_message = {'raw': raw}
+                    service.users().messages().send(userId='me', body=send_message).execute()
+                    current_app.logger.info(f"Sent appointment cancelled text to {carrier_email}")
+                    email_sent = True
+                except Exception as e:
+                    current_app.logger.error(f"Failed to send text to {carrier_email}: {e}")
+
+        return email_sent
     except Exception as e:
         current_app.logger.error(f"Failed to send appointment cancelled email: {e}", exc_info=True)
         return False

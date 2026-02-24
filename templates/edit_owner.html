@@ -23,6 +23,18 @@
                 <input type="tel" id="phone" name="phone" required class="form-input" value="{{ owner.phone_number or '' }}" placeholder="e.g., 919-555-1234">
                  <small class="text-muted">Primary contact number.</small>
             </div>
+
+            <div class="form-group">
+                <label for="phone_carrier">Phone Carrier</label>
+                <select id="phone_carrier" name="phone_carrier" class="form-input">
+                    <option value="">Select Carrier (Optional)</option>
+                    {% for carrier in carriers|sort %}
+                        <option value="{{ carrier }}" {% if owner.phone_carrier == carrier %}selected{% endif %}>{{ carrier }}</option>
+                    {% endfor %}
+                </select>
+                <small class="text-muted">Required for text notifications.</small>
+            </div>
+
             <div class="form-group">
                 <label for="email">Email Address</label>
                 {# Pre-fill with current email address #}
@@ -32,6 +44,16 @@
                 <label for="address">Address</label>
                 {# Pre-fill with current address. Textarea content goes between the tags. #}
                 <textarea id="address" name="address" rows="3" class="form-input" placeholder="Optional">{{ owner.address or '' }}</textarea>
+            </div>
+
+            <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem;">
+                <input type="checkbox" id="text_notifications_enabled" name="text_notifications_enabled" {% if owner.text_notifications_enabled != False %}checked{% endif %}>
+                <label for="text_notifications_enabled" style="margin-bottom: 0; font-weight: normal;">Enable Text Notifications</label>
+            </div>
+
+            <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" id="email_notifications_enabled" name="email_notifications_enabled" {% if owner.email_notifications_enabled != False %}checked{% endif %}>
+                <label for="email_notifications_enabled" style="margin-bottom: 0; font-weight: normal;">Enable Email Notifications</label>
             </div>
 
             <p style="font-size: 0.8rem; color: var(--text-muted);">* Required fields</p>

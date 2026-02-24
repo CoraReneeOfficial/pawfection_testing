@@ -157,6 +157,11 @@ class Owner(db.Model):
     created_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     store_id = db.Column(db.Integer, db.ForeignKey('store.id'), nullable=False)
 
+    # Text/Email Notification preferences
+    phone_carrier = db.Column(db.String(50), nullable=True)
+    text_notifications_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    email_notifications_enabled = db.Column(db.Boolean, default=True, nullable=False)
+
     dogs = db.relationship('Dog', backref='owner', lazy='joined', cascade="all, delete-orphan")
 
     # Composite unique constraints to ensure phone_number and email are unique PER STORE
