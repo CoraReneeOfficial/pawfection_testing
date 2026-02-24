@@ -1578,6 +1578,7 @@ def view_receipt(receipt_id):
         tip = float(data.get('tip', 0))
         data['total'] = subtotal + taxes + tip
     
+    data['receipt_db_id'] = r.id
     return render_template('preview_receipt_screen.html', **data)
 
 @appointments_bp.route('/receipts/print/<int:receipt_id>', methods=['GET'])
