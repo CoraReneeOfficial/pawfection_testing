@@ -1567,6 +1567,10 @@ def view_receipt(receipt_id):
     r = Receipt.query.get_or_404(receipt_id)
     data = json.loads(r.receipt_json)
     
+    # Ensure 'tip' is present for the template (it expects 'tip', but checkout saves 'tip_amount')
+    if 'tip' not in data:
+        data['tip'] = float(data.get('tip_amount', 0))
+
     # Ensure 'total' is available in the template context
     # If total doesn't exist in data but final_total does, use that
     if 'total' not in data and 'final_total' in data:
@@ -1587,6 +1591,10 @@ def print_receipt(receipt_id):
     r = Receipt.query.get_or_404(receipt_id)
     data = json.loads(r.receipt_json)
     
+    # Ensure 'tip' is present for the template (it expects 'tip', but checkout saves 'tip_amount')
+    if 'tip' not in data:
+        data['tip'] = float(data.get('tip_amount', 0))
+
     # Ensure 'total' is available in the template context
     # If total doesn't exist in data but final_total does, use that
     if 'total' not in data and 'final_total' in data:
