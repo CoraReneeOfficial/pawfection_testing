@@ -5,6 +5,7 @@ from sqlalchemy import or_
 from functools import wraps
 from utils import allowed_file # Keep allowed_file from utils
 from utils import log_activity   # IMPORT log_activity from utils.py
+from notifications.carrier_utils import CARRIERS
 
 owners_bp = Blueprint('owners', __name__)
 
@@ -56,6 +57,9 @@ def add_owner():
         phone = request.form.get('phone', '').strip()
         email = request.form.get('email', '').strip().lower()
         address = request.form.get('address', '').strip()
+        phone_carrier = request.form.get('phone_carrier')
+        text_notifications_enabled = 'text_notifications_enabled' in request.form
+        email_notifications_enabled = 'email_notifications_enabled' in request.form
         
         errors = {}
         if not name: errors['name'] = "Owner Name required."
@@ -77,7 +81,10 @@ def add_owner():
             name=name, 
             phone_number=phone, 
             email=email or None, 
-            address=address or None, 
+            address=address or None,
+            phone_carrier=phone_carrier or None,
+            text_notifications_enabled=text_notifications_enabled,
+            email_notifications_enabled=email_notifications_enabled,
             created_by_user_id=g.user.id, 
             store_id=g.user.store_id # Assign current user's store_id to the new owner
         )
@@ -94,7 +101,7 @@ def add_owner():
             return render_template('add_owner.html', owner=request.form.to_dict()), 500
     
     log_activity("Viewed Add Owner page", details=f"Store ID: {store_id}")
-    return render_template('add_owner.html', owner={})
+    return render_template('add_owner.html', owner={}, carriers=CARRIERS)
 
 @owners_bp.route('/owner/<int:owner_id>')
 def view_owner(owner_id):
@@ -131,6 +138,9 @@ def edit_owner(owner_id):
         phone = request.form.get('phone', '').strip()
         email = request.form.get('email', '').strip().lower()
         address = request.form.get('address', '').strip()
+        phone_carrier = request.form.get('phone_carrier')
+        text_notifications_enabled = 'text_notifications_enabled' in request.form
+        email_notifications_enabled = 'email_notifications_enabled' in request.form
         
         errors = {}
         if not name: errors['name'] = "Owner Name required."
@@ -153,6 +163,9 @@ def edit_owner(owner_id):
         owner_to_edit.phone_number = phone
         owner_to_edit.email = email or None
         owner_to_edit.address = address or None
+        owner_to_edit.phone_carrier = phone_carrier or None
+        owner_to_edit.text_notifications_enabled = text_notifications_enabled
+        owner_to_edit.email_notifications_enabled = email_notifications_enabled
         
         try:
             db.session.commit()
@@ -166,7 +179,7 @@ def edit_owner(owner_id):
             return render_template('edit_owner.html', owner=owner_to_edit), 500
     
     log_activity("Viewed Edit Owner page", details=f"Owner ID: {owner_id}, Store ID: {store_id}")
-    return render_template('edit_owner.html', owner=owner_to_edit)
+    return render_template('edit_owner.html', owner=owner_to_edit, carriers=CARRIERS)
 
 @owners_bp.route('/owner/<int:owner_id>/delete', methods=['POST'])
 def delete_owner(owner_id):
