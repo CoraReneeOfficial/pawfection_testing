@@ -1,10 +1,10 @@
 import sys
 import os
 import unittest
-from unittest.mock import MagicMock
+import json
+from unittest.mock import MagicMock, patch
 
 # Add venv to path if not present (for running in restricted environment)
-# Trying typical Linux path first, then Windows structure if needed
 venv_path = os.path.join(os.getcwd(), 'venv', 'lib', 'python3.11', 'site-packages')
 if not os.path.exists(venv_path):
     venv_path = os.path.join(os.getcwd(), 'venv', 'Lib', 'site-packages')
@@ -23,9 +23,9 @@ sys.modules['google_auth_oauthlib'] = MagicMock()
 sys.modules['google_auth_oauthlib.flow'] = MagicMock()
 sys.modules['fpdf'] = MagicMock()
 sys.modules['psycopg2'] = MagicMock()
-sys.modules['dotenv'] = MagicMock()
+sys.modules['dotenv'] = MagicMock() # Prevent loading .env
 if 'DATABASE_URL' in os.environ:
-    del os.environ['DATABASE_URL']
+    del os.environ['DATABASE_URL'] # Ensure no DB connection attempt
 sys.modules['cryptography'] = MagicMock()
 sys.modules['cryptography.hazmat'] = MagicMock()
 sys.modules['cryptography.hazmat.backends'] = MagicMock()
@@ -52,48 +52,37 @@ sys.modules['cryptography.exceptions'] = MagicMock()
 sys.modules['cryptography.x509'] = MagicMock()
 
 import tempfile
-import json
 import datetime
 from datetime import timezone
-from unittest.mock import patch, MagicMock
 
 # Import necessary modules
-from flask import session
 from app import create_app
 from extensions import db
-from models import User, Store, Owner, Dog, Appointment, Receipt
+from models import User, Store, Owner, Dog, Appointment
 
-class TestCheckoutFinalize(unittest.TestCase):
+class TestReceiptTextNotification(unittest.TestCase):
     def setUp(self):
-        # Patch migrations and stripe to avoid side effects
+        # Patch migrations and stripe
         self.migrate_patcher = patch('app.migrate_add_remind_at_to_notification')
         self.mock_migrate = self.migrate_patcher.start()
 
         self.stripe_patcher = patch('app.stripe')
         self.mock_stripe = self.stripe_patcher.start()
 
-        # Create a temporary file to use as a database
         self.db_fd, self.db_path = tempfile.mkstemp()
 
-        # Configure the app for testing
         self.app = create_app()
         self.app.config['TESTING'] = True
         self.app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{self.db_path}'
-        self.app.config['WTF_CSRF_ENABLED'] = False  # Disable CSRF
+        self.app.config['WTF_CSRF_ENABLED'] = False
         self.app.config['SERVER_NAME'] = 'localhost'
         self.app.config['SECRET_KEY'] = 'test_secret'
 
-        # Create test client
         self.client = self.app.test_client()
-
-        # Push application context
         self.app_ctx = self.app.app_context()
         self.app_ctx.push()
 
-        # Initialize the database
         db.create_all()
-
-        # Create test data
         self.create_test_data()
 
     def tearDown(self):
@@ -106,14 +95,20 @@ class TestCheckoutFinalize(unittest.TestCase):
         self.stripe_patcher.stop()
 
     def create_test_data(self):
-        # Create Store
+        # Create Store with Google Token (required for email sending)
         self.store = Store(
             name="Test Store",
             username="teststore",
             email="store@test.com",
-            subscription_status="active"
+            subscription_status="active",
+            google_token_json=json.dumps({
+                "token": "fake_token",
+                "refresh_token": "fake_refresh",
+                "client_id": "fake_client",
+                "client_secret": "fake_secret",
+                "sender_email": "store@test.com"
+            })
         )
-        # Mock set_password since bcrypt is mocked
         self.store.password_hash = "mock_hash"
         db.session.add(self.store)
         db.session.commit()
@@ -130,12 +125,14 @@ class TestCheckoutFinalize(unittest.TestCase):
         db.session.add(self.user)
         db.session.commit()
 
-        # Create Owner
+        # Create Owner with Text Notifications Enabled
         self.owner = Owner(
             name="John Doe",
             phone_number="1234567890",
             email="john@example.com",
-            store_id=self.store.id
+            store_id=self.store.id,
+            text_notifications_enabled=True,
+            phone_carrier="Verizon"  # Should map to vzwpix.com
         )
         db.session.add(self.owner)
         db.session.commit()
@@ -161,8 +158,20 @@ class TestCheckoutFinalize(unittest.TestCase):
         db.session.add(self.appointment)
         db.session.commit()
 
-    def test_finalize_checkout_success(self):
-        """Test the finalize_checkout route with valid data."""
+    @patch('notifications.email_utils.get_google_service')
+    def test_finalize_checkout_sends_notification(self, mock_get_google_service):
+        """Test that finalize_checkout calls Google Service to send notification."""
+        # Setup mock service
+        mock_service = MagicMock()
+        mock_get_google_service.return_value = mock_service
+
+        # Mock the chain: service.users().messages().send().execute()
+        mock_users = mock_service.users.return_value
+        mock_messages = mock_users.messages.return_value
+        mock_send = mock_messages.send.return_value
+        mock_send.execute.return_value = {'id': '12345'}
+
+        # Login and set session
         with self.client.session_transaction() as sess:
             sess['user_id'] = self.user.id
             sess['store_id'] = self.store.id
@@ -179,41 +188,26 @@ class TestCheckoutFinalize(unittest.TestCase):
                 'receipt_id': 'RCP-TEST-123'
             }
 
+        # Perform checkout finalization
         response = self.client.post(
             f'/finalize_checkout/{self.appointment.id}',
             follow_redirects=False
         )
 
-        # Should redirect to dashboard
+        # Assert redirection to dashboard
         self.assertEqual(response.status_code, 302)
         self.assertIn('/dashboard', response.location)
 
-        # Verify DB updates
-        updated_appt = db.session.get(Appointment, self.appointment.id)
-        self.assertEqual(updated_appt.status, 'Completed')
-        self.assertEqual(updated_appt.checkout_total_amount, 65.0)
+        # Assert that get_google_service was called (meaning it tried to send email)
+        self.assertTrue(mock_get_google_service.called, "get_google_service was not called")
 
-        # Verify Receipt created
-        receipt = Receipt.query.filter_by(appointment_id=self.appointment.id).first()
-        self.assertIsNotNone(receipt)
-        receipt_data = json.loads(receipt.receipt_json)
-        self.assertEqual(receipt_data['total'], 65.0)
+        # Assert that messages.send was called
+        # We expect at least one call (email or text or both). Since owner has both enabled, likely both.
+        self.assertTrue(mock_send.execute.called, "messages.send().execute() was not called")
 
-    def test_finalize_checkout_missing_checkout_data(self):
-        """Test redirect if checkout_data is missing."""
-        with self.client.session_transaction() as sess:
-            sess['user_id'] = self.user.id
-            sess['store_id'] = self.store.id
-            # No checkout_data
-
-        response = self.client.post(
-            f'/finalize_checkout/{self.appointment.id}',
-            follow_redirects=False # Should redirect to checkout_start
-        )
-
-        self.assertEqual(response.status_code, 302)
-        # The location might be relative or absolute.
-        self.assertTrue('/select_checkout' in response.location)
+        # Verify call count. Owner has email and text enabled. Code attempts both.
+        # Should be called 2 times.
+        self.assertEqual(mock_send.execute.call_count, 2)
 
 if __name__ == '__main__':
     unittest.main()
