@@ -47,7 +47,8 @@ def update_appointment_flags(store_id=None):
             needs_details = appointment_needs_details(
                 dog=dog,
                 groomer=groomer,
-                services_text=appt.requested_services_text or ""
+                services_text=appt.requested_services_text or "",
+                status=appt.status
             )
             
             # Only update if the flag would change

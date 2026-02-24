@@ -102,7 +102,7 @@ def calendar_view():
     
     for i, appt in enumerate(local_appointments_display, 1):
         # Ensure details_needed is always up to date for displayed items
-        appt.details_needed = appointment_needs_details(appt.dog, appt.groomer, appt.requested_services_text)
+        appt.details_needed = appointment_needs_details(appt.dog, appt.groomer, appt.requested_services_text, status=appt.status)
         # Convert appointment time to store timezone for display
         if appt.appointment_datetime.tzinfo is None:
             appt.local_time = appt.appointment_datetime.replace(tzinfo=timezone.utc).astimezone(store_timezone)
@@ -262,7 +262,7 @@ def add_appointment():
             return render_template('add_appointment.html', dogs=dogs, users=groomers_for_dropdown, services=services, appointment_data=request.form.to_dict()), 400
         
         # Determine if details are needed
-        details_needed = appointment_needs_details(selected_dog, selected_groomer, services_text)
+        details_needed = appointment_needs_details(selected_dog, selected_groomer, services_text, status='Scheduled')
         new_appt = Appointment(
             dog_id=selected_dog.id, 
             appointment_datetime=utc_dt, 
@@ -442,7 +442,7 @@ def edit_appointment(appointment_id):
         # Use the updated dog and groomer objects for details_needed
         current_dog = selected_dog if selected_dog else db.session.get(Dog, appt.dog_id)
         current_groomer = selected_groomer if selected_groomer else db.session.get(User, appt.groomer_id) if appt.groomer_id else None
-        appt.details_needed = appointment_needs_details(current_dog, current_groomer, services_text)
+        appt.details_needed = appointment_needs_details(current_dog, current_groomer, services_text, status=appt.status)
         current_app.logger.info(f"Updated details_needed to {appt.details_needed}")
         
         try:
@@ -1721,12 +1721,17 @@ def debug_list_appointments():
 def appointments_needs_review():
     """
     Lists all appointments that have details_needed=True for the current store.
+    Excludes Completed, Cancelled, and No Show appointments.
     """
     if not hasattr(g, 'user') or not g.user:
         flash("You must be logged in to view this page.", "danger")
         return redirect(url_for('auth.login'))
     store_id = g.user.store_id
-    needs_review_appts = Appointment.query.filter_by(store_id=store_id, details_needed=True).order_by(Appointment.appointment_datetime.desc()).all()
+    needs_review_appts = Appointment.query.filter(
+        Appointment.store_id == store_id,
+        Appointment.details_needed == True,
+        ~Appointment.status.in_(['Completed', 'Cancelled', 'No Show'])
+    ).order_by(Appointment.appointment_datetime.desc()).all()
     return render_template('appointments_needs_review.html', appointments=needs_review_appts)
 
 @appointments_bp.route('/appointments/appointments_needing_details')
