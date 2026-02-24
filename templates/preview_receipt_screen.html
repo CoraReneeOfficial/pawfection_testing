@@ -9,6 +9,12 @@
   .receipt-success .fa-receipt { color: var(--primary-color, #5c4d7d); font-size: 3.5em; margin-bottom: 0.5rem; }
   .receipt-options { display: flex; gap: 1.2rem; justify-content: center; margin: 2rem 0 1.5rem 0; }
   .receipt-btn { min-width: 140px; font-size: 1.05em; }
+  @media print {
+      body * { visibility: hidden; }
+      #printable-receipt, #printable-receipt * { visibility: visible; }
+      #printable-receipt { position: absolute; left: 0; top: 0; width: 100%; }
+      .receipt-options, header, footer, .navbar, .sidebar, .receipt-success { display: none !important; }
+  }
 </style>
 {% endblock %}
 
@@ -27,7 +33,7 @@
       <input type="hidden" name="customer_email" value="{{ customer_email }}">
       <button type="submit" class="button button-primary receipt-btn"><i class="fas fa-envelope"></i> Email Receipt</button>
     </form>
-    <button type="button" class="button button-secondary receipt-btn" id="print-receipt-btn" onclick="window.print()"><i class="fas fa-print"></i> Print Receipt</button>
+    <a href="{{ url_for('appointments.print_receipt', receipt_id=receipt_db_id) }}" class="button button-secondary receipt-btn" target="_blank" id="print-receipt-btn"><i class="fas fa-print"></i> Print Receipt</a>
     <form method="POST" action="{{ url_for('appointments.finalize_checkout', appointment_id=appointment_id) }}" style="display:inline;">
       <button type="submit" class="button button-success receipt-btn"><i class="fas fa-check"></i> Complete Checkout</button>
     </form>
