@@ -3,7 +3,7 @@ from models import Appointment, Dog, Owner, User, ActivityLog, Store, Service, R
 from appointments.details_needed_utils import appointment_needs_details
 from extensions import db
 from sqlalchemy import or_, desc, cast, String
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, contains_eager
 from functools import wraps
 import datetime
 from datetime import timezone
@@ -1389,7 +1389,7 @@ def receipts_management():
     store_id = session.get('store_id')
 
     # Base query joining Receipt -> Appointment -> Dog -> Owner
-    query = db.session.query(Receipt).join(Appointment).join(Dog).join(Owner).filter(Receipt.store_id == store_id)
+    query = db.session.query(Receipt).join(Appointment).join(Dog).join(Owner).filter(Receipt.store_id == store_id).options(contains_eager(Receipt.appointment))
 
     # Apply search filter (q)
     if q:
