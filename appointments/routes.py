@@ -20,7 +20,7 @@ import os
 import base64
 import traceback
 from email.mime.text import MIMEText
-from notifications.email_utils import send_appointment_confirmation_email, send_appointment_edited_email, send_appointment_cancelled_email
+from notifications.email_utils import send_appointment_confirmation_email, send_appointment_edited_email, send_appointment_cancelled_email, send_receipt_notification
 import pytz
 from fpdf import FPDF
 import io
@@ -1314,6 +1314,15 @@ def finalize_checkout(appointment_id):
         current_app.logger.info(f"finalize_checkout: Committing transaction for appointment {appointment_id}")
         db.session.commit()
         current_app.logger.info(f"finalize_checkout: Transaction committed successfully. Receipt ID: {new_receipt.id}")
+
+        # Send receipt notification (Text/Email)
+        try:
+            store_obj = Store.query.get(store_id)
+            if store_obj and appointment.dog and appointment.dog.owner:
+                current_app.logger.info(f"finalize_checkout: Sending receipt notification to {appointment.dog.owner.name}")
+                send_receipt_notification(store_obj, appointment.dog.owner, checkout_data)
+        except Exception as e:
+            current_app.logger.error(f"finalize_checkout: Failed to send receipt notification: {e}")
 
         # Clear session data
         session.pop('checkout_data', None)

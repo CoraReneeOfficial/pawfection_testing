@@ -421,3 +421,108 @@ def send_appointment_cancelled_email(store, owner, dog, appointment, groomer=Non
     except Exception as e:
         current_app.logger.error(f"Failed to send appointment cancelled email: {e}", exc_info=True)
         return False
+
+def send_receipt_notification(store, owner, receipt_data):
+    """
+    Sends a receipt notification to the owner using the store's Gmail API credentials.
+    Specifically targets text messages (via email-to-text gateways) if enabled,
+    and can also send email receipts if enabled.
+    """
+    logger = logging.getLogger('app.email')
+
+    logger.info(f"Preparing to send receipt notification to owner: {getattr(owner, 'name', 'Unknown')}")
+
+    # Check if store has Google token
+    if not store or not hasattr(store, 'google_token_json') or not store.google_token_json:
+        logger.warning(f"No Google token found for store {getattr(store, 'id', 'Unknown')}. Cannot send receipt.")
+        return False
+
+    try:
+        token_data = json.loads(store.google_token_json)
+        SCOPES = [
+            "https://www.googleapis.com/auth/gmail.send",
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/userinfo.profile"
+        ]
+
+        credentials = Credentials(
+            token=token_data.get('token') or token_data.get('access_token'),
+            refresh_token=token_data.get('refresh_token'),
+            token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
+            client_id=token_data.get('client_id') or os.environ.get('GOOGLE_CLIENT_ID'),
+            client_secret=token_data.get('client_secret') or os.environ.get('GOOGLE_CLIENT_SECRET'),
+            scopes=SCOPES
+        )
+
+        service = get_google_service('gmail', 'v1', credentials=credentials)
+        if not service:
+            logger.error("Failed to build Gmail service")
+            return False
+
+        # Prepare template context
+        # Ensure required fields are present
+        context = receipt_data.copy()
+
+        # Ensure store info is in context
+        if 'store_name' not in context:
+            context['store_name'] = getattr(store, 'name', '')
+        if 'store_email' not in context:
+            context['store_email'] = getattr(store, 'email', '')
+        if 'store_phone' not in context:
+            context['store_phone'] = getattr(store, 'phone', '')
+
+        # Ensure 'tip' matches 'tip_amount' if needed
+        if 'tip' not in context and 'tip_amount' in context:
+            context['tip'] = context['tip_amount']
+
+        # Ensure 'date' matches 'receipt_date' if needed
+        if 'date' not in context and 'receipt_date' in context:
+            context['date'] = context['receipt_date']
+
+        # Render template
+        html_body = render_template('email/receipt_email.html', **context)
+
+        subject = f"Receipt from {context.get('store_name', 'Pawfection')}"
+        sender_email = token_data.get('sender_email', getattr(store, 'email', 'me'))
+
+        email_sent = False
+
+        # 1. Send to Owner Email if enabled
+        if getattr(owner, 'email_notifications_enabled', True) and getattr(owner, 'email', None):
+            try:
+                message = MIMEText(html_body, 'html')
+                message['to'] = owner.email
+                message['from'] = sender_email
+                message['subject'] = subject
+                raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+                send_message = {'raw': raw}
+                service.users().messages().send(userId='me', body=send_message).execute()
+                logger.info(f"Sent receipt email to {owner.email}")
+                email_sent = True
+            except Exception as e:
+                logger.error(f"Failed to send receipt email to {owner.email}: {e}")
+
+        # 2. Send to SMS Gateway if enabled
+        if getattr(owner, 'text_notifications_enabled', True):
+            carrier_email = get_carrier_email(getattr(owner, 'phone_number', ''), getattr(owner, 'phone_carrier', None))
+            if carrier_email:
+                try:
+                    message = MIMEText(html_body, 'html')
+                    message['to'] = carrier_email
+                    message['from'] = sender_email
+                    message['subject'] = subject
+                    raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+                    send_message = {'raw': raw}
+                    service.users().messages().send(userId='me', body=send_message).execute()
+                    logger.info(f"Sent receipt text to {carrier_email}")
+                    email_sent = True
+                except Exception as e:
+                    logger.error(f"Failed to send receipt text to {carrier_email}: {e}")
+            else:
+                logger.debug("Skipping text notification: No valid carrier email derived.")
+
+        return email_sent
+
+    except Exception as e:
+        logger.error(f"Failed to send receipt notification: {e}", exc_info=True)
+        return False
