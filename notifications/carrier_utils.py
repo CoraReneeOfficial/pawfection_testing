@@ -1,20 +1,29 @@
-
 import re
 
 CARRIERS = {
-    'Verizon': 'vtext.com',
-    'AT&T': 'txt.att.net',
-    'T-Mobile': 'tmomail.net',
-    'Sprint': 'messaging.sprintpcs.com',
-    'Boost Mobile': 'sms.myboostmobile.com',
+    'Alltel': 'mms.alltelwireless.com',
+    'AT&T': 'mms.att.net',
+    'Boost Mobile': 'myboostmobile.com',
+    'C-Spire': 'cspire1.com',
+    'Consumer Cellular': 'mailmymobile.net',
     'Cricket': 'mms.cricketwireless.net',
     'Google Fi': 'msg.fi.google.com',
     'MetroPCS': 'mymetropcs.com',
     'Mint Mobile': 'mailmymobile.net',
-    'Spectrum Mobile': 'vtext.com',
-    'US Cellular': 'email.uscc.net',
-    'Virgin Mobile': 'vmobl.com',
-    'Xfinity Mobile': 'vtext.com',
+    'Page Plus': 'vzwpix.com',
+    'Republic Wireless': 'text.republicwireless.com',
+    'SafeLink': 'mmst5.tracfone.com',
+    'Simple Mobile': 'smtext.com',
+    'Spectrum Mobile': 'vzwpix.com',
+    'Sprint': 'pm.sprint.com',
+    'Straight Talk': 'mypixmessages.com',
+    'T-Mobile': 'tmomail.net',
+    'Ting': 'message.ting.com',
+    'Tracfone': 'mmst5.tracfone.com',
+    'US Cellular': 'mms.uscc.net',
+    'Verizon': 'vzwpix.com',
+    'Virgin Mobile': 'vmpix.com',
+    'Xfinity Mobile': 'mypixmessages.com',
 }
 
 def get_carrier_email(phone, carrier_name):
