@@ -57,9 +57,11 @@
                         <div class="actions-wrapper">
                             <a href="{{ url_for('management.edit_appointment_request', req_id=r.id) }}" class="button" style="padding: 0.3em 0.9em; font-size: 0.95em; background: var(--primary-light); color: var(--primary-color); border: 1px solid var(--primary-border);">Edit</a>
                             <form action="{{ url_for('management.approve_appointment_request', req_id=r.id) }}" method="POST" style="display: inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                 <button type="submit" class="button button-primary" style="padding: 0.3em 0.9em; font-size: 0.95em;">Approve</button>
                             </form>
                             <form action="{{ url_for('management.reject_appointment_request', req_id=r.id) }}" method="POST" style="display: inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                 <button type="submit" class="button" style="padding: 0.3em 0.9em; font-size: 0.95em; background: var(--danger-light); color: var(--danger-color); border: 1px solid var(--danger-border);">Reject</button>
                             </form>
                         </div>

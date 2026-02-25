@@ -17,7 +17,7 @@ from flask import (
     session, g, current_app, send_file, after_this_request
 )
 from sqlalchemy import text
-from extensions import db
+from extensions import db, csrf
 from sqlalchemy.exc import IntegrityError
 from decimal import Decimal, InvalidOperation
 from functools import wraps
@@ -228,6 +228,7 @@ def pending_appointments():
 @admin_required
 def approve_appointment_request(req_id):
     """Approve an appointment request, converting it into Owner, Dog, and Appointment records."""
+    csrf.protect()
     req = AppointmentRequest.query.get_or_404(req_id)
     if req.status != 'pending':
         flash('Request already processed.', 'warning')
@@ -353,6 +354,7 @@ def edit_appointment_request(req_id):
         flash('Only pending requests can be edited.', 'warning')
         return redirect(url_for('management.pending_appointments'))
     if request.method == 'POST':
+        csrf.protect()
         req.customer_name = request.form.get('customer_name','').strip()
         req.phone = request.form.get('phone','').strip()
         req.email = request.form.get('email','').strip()
@@ -403,6 +405,7 @@ def edit_appointment_request(req_id):
 @management_bp.route('/pending_appointments/<int:req_id>/reject', methods=['POST'])
 @admin_required
 def reject_appointment_request(req_id):
+    csrf.protect()
     req = AppointmentRequest.query.get_or_404(req_id)
     if req.status != 'pending':
         flash('Request already processed.', 'warning')
@@ -472,6 +475,7 @@ def add_user():
     """
     store_id = session.get('store_id')  # Get store_id from session
     if request.method == 'POST':
+        csrf.protect()
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
@@ -542,6 +546,7 @@ def edit_user(user_id):
     user_to_edit = User.query.filter_by(id=user_id, store_id=store_id).first_or_404()
     
     if request.method == 'POST':
+        csrf.protect()
         original_username = user_to_edit.username
         new_username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
@@ -626,6 +631,7 @@ def delete_user(user_id):
     Ensures that only users from the current store can be deleted.
     Prevents deleting own account or the last admin in the store.
     """
+    csrf.protect()
     store_id = session.get('store_id')  # Get store_id from session
     
     # Fetch user to delete, ensuring they belong to the current store
@@ -692,6 +698,7 @@ def manage_services():
 @management_bp.route('/manage/toggle_taxes', methods=['POST'])
 @admin_required
 def toggle_taxes():
+    csrf.protect()
     store_id = session.get('store_id')
     store = Store.query.get(store_id)
     if not store:
@@ -712,6 +719,7 @@ def add_service():
     """
     store_id = session.get('store_id')  # Get store_id from session
     if request.method == 'POST':
+        csrf.protect()
         name = request.form.get('name', '').strip()
         description = request.form.get('description', '').strip()
         price_str = request.form.get('base_price', '').strip()
@@ -767,6 +775,7 @@ def edit_service(service_id):
     item_to_edit = Service.query.filter_by(id=service_id, store_id=store_id).first_or_404()
     
     if request.method == 'POST':
+        csrf.protect()
         original_name = item_to_edit.name
         name = request.form.get('name', '').strip()
         description = request.form.get('description', '').strip()
@@ -821,6 +830,7 @@ def delete_service(service_id):
     Handles deleting a service or fee.
     Ensures that only items from the current store can be deleted.
     """
+    csrf.protect()
     store_id = session.get('store_id')  # Get store_id from session
     
     # Fetch item to delete, ensuring it belongs to the current store
@@ -970,6 +980,7 @@ def manage_notifications():
     NOTIFICATION_PREFERENCES = load_notification_preferences()
 
     if request.method == 'POST':
+        csrf.protect()
         NOTIFICATION_PREFERENCES['send_confirmation_email'] = 'send_confirmation_email' in request.form
         NOTIFICATION_PREFERENCES['send_reminder_email'] = 'send_reminder_email' in request.form
         reminder_days_str = request.form.getlist('reminder_days_before')
@@ -1190,6 +1201,7 @@ def edit_store():
     from werkzeug.utils import secure_filename
     
     if request.method == 'POST':
+        csrf.protect()
         errors = []
         # Username uniqueness check
         new_username = request.form.get('username', store.username)
