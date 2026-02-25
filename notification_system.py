@@ -1,7 +1,7 @@
 from flask import (
     Blueprint, flash, g, redirect, render_template, request, url_for, jsonify
 )
-from models import Notification, Appointment, AppointmentRequest, ActivityLog, db
+from models import Notification, Appointment, AppointmentRequest, ActivityLog, Dog, db
 from werkzeug.exceptions import abort
 from flask_login import login_required
 from datetime import datetime, timezone
@@ -130,41 +130,40 @@ def check_for_notifications(store_id):
             )
     
     # Check for appointments that need review (have details_needed flag)
-    # Optimized: Eager load dog to prevent N+1 queries when accessing dog.name
-    appointments_needing_review = Appointment.query.options(
-        joinedload(Appointment.dog)
-    ).filter_by(
-        store_id=store_id,
-        details_needed=True
-    ).all()
+    # Optimized: Use subquery to find only appointments that DON'T have a notification yet.
+    # This avoids fetching all appointments and notifications on every check.
     
-    # Optimized: Batch check for existing notifications to prevent N+1 queries
-    if appointments_needing_review:
-        existing_notifications = Notification.query.filter_by(
-            store_id=store_id,
-            type='appointment_needs_review',
-            is_read=False
-        ).all()
-        
-        existing_ref_ids = {n.reference_id for n in existing_notifications if n.reference_id}
+    # Subquery for existing unread notifications of this type
+    existing_ref_ids_query = db.session.query(Notification.reference_id).filter(
+        Notification.store_id == store_id,
+        Notification.type == 'appointment_needs_review',
+        Notification.is_read == False,
+        Notification.reference_id != None
+    )
 
+    # Query appointments needing review that DO NOT have an existing unread notification
+    # Join Dog to get the name efficiently
+    new_appointments = db.session.query(Appointment.id, Dog.name).join(Dog).filter(
+        Appointment.store_id == store_id,
+        Appointment.details_needed == True,
+        ~Appointment.id.in_(existing_ref_ids_query)
+    ).all()
+
+    if new_appointments:
         notifications_to_add = []
+        for appt_id, dog_name in new_appointments:
+            notification = Notification(
+                store_id=store_id,
+                type='appointment_needs_review',
+                content=f'Appointment for {dog_name} needs review.',
+                reference_id=appt_id,
+                reference_type='appointment',
+                is_read=False
+            )
+            db.session.add(notification)
+            notifications_to_add.append(notification)
 
-        for appointment in appointments_needing_review:
-            if appointment.id not in existing_ref_ids:
-                notification = Notification(
-                    store_id=store_id,
-                    type='appointment_needs_review',
-                    content=f'Appointment for {appointment.dog.name} needs review.',
-                    reference_id=appointment.id,
-                    reference_type='appointment',
-                    is_read=False
-                )
-                db.session.add(notification)
-                notifications_to_add.append(notification)
-
-        if notifications_to_add:
-            db.session.commit()
+        db.session.commit()
 
 @bp.route('/check_new', methods=['GET'])
 @login_required
