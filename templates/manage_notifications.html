@@ -204,7 +204,7 @@
     <p>Configure automated email notifications sent to your clients to keep them informed.</p>
 
     <form method="POST" action="{{ url_for('management.manage_notifications') }}">
-        
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <!-- Appointment Confirmation Card -->
         <div class="settings-card">
             <div class="settings-card-header">

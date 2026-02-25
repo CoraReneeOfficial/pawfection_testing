@@ -10,6 +10,7 @@
 </p>
 {% endif %}
 <form method="POST" class="content-card" style="max-width:640px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
     <div class="form-group">
         <label>Existing Owner (optional)</label>
         <select class="form-input" name="owner_id" id="owner_select">

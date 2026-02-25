@@ -61,7 +61,7 @@
 
         {# Form submits to add_service or edit_service route based on mode #}
         <form method="POST" action="{{ url_for('management.add_service') if mode == 'add' else url_for('management.edit_service', service_id=item_data.id) }}" novalidate>
-            
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="form-group">
                 <label for="name">{{ item_type_display }} Name *</label>
                 {# Pre-fill name if editing or if there was a validation error on add #}

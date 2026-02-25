@@ -28,6 +28,7 @@
         <h2 class="form-title">{{ 'Add New User' if mode == 'add' else 'Edit User: ' + user_data.username }}</h2>
 
         <form method="POST" action="{{ url_for('management.add_user') if mode == 'add' else url_for('management.edit_user', user_id=user_data.id) }}" enctype="multipart/form-data" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="form-group">
                 <label for="username">Username *</label>
                 <input type="text" id="username" name="username" required class="form-input" value="{{ user_data.username or '' }}" autofocus>
