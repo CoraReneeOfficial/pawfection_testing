@@ -44,5 +44,5 @@ google-auth-httplib2
 pandas
 xlsxwriter
 fpdf2
-google-generativeai
+google-genai
 markdown

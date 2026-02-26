@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, render_template, current_app, session, g
 from ai_assistant.feature_flag import is_ai_enabled
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import os
 import markdown
 from functools import wraps
@@ -34,8 +35,7 @@ def chat():
         return jsonify({"error": "AI configuration error: Missing API Key."}), 500
 
     try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        client = genai.Client(api_key=api_key)
 
         # Construct System Prompt with Context
         store_id = session.get('store_id')
@@ -76,12 +76,21 @@ def chat():
         5. Use Markdown for formatting (bold, lists, links).
         """
 
-        chat = model.start_chat(history=[
-            {"role": "user", "parts": [system_prompt]},
-            {"role": "model", "parts": ["Understood. I am Pawfection AI, ready to assist with grooming business tasks using smart links and helpful guidance."]}
-        ])
+        chat = client.chats.create(
+            model='gemini-1.5-flash',
+            history=[
+                types.Content(
+                    role="user",
+                    parts=[types.Part(text=system_prompt)]
+                ),
+                types.Content(
+                    role="model",
+                    parts=[types.Part(text="Understood. I am Pawfection AI, ready to assist with grooming business tasks using smart links and helpful guidance.")]
+                )
+            ]
+        )
 
-        response = chat.send_message(user_message)
+        response = chat.send_message(message=user_message)
 
         # Convert Markdown to HTML for safe rendering on frontend
         html_response = markdown.markdown(response.text)
