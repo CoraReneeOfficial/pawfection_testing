@@ -164,6 +164,21 @@
                     </button>
                 </div>
 
+                <!-- Selected Services Summary -->
+                <div x-show="services.some(s => s.selected)" style="margin-bottom: 0.5rem; display: flex; flex-wrap: wrap; gap: 0.5rem;" x-cloak>
+                    <template x-for="service in services.filter(s => s.selected)" :key="'summary-' + service.id">
+                        <div class="service-chip"
+                             style="font-size: 0.85rem; padding: 0.25rem 0.6rem; background-color: var(--primary-lighter); color: var(--primary-color); border-color: var(--primary-color);"
+                             @click="service.selected = false"
+                             role="button"
+                             tabindex="0"
+                             :aria-label="'Remove ' + service.name">
+                            <span x-text="service.name"></span>
+                            <span class="chip-icon">&times;</span>
+                        </div>
+                    </template>
+                </div>
+
                 <!-- Search Input -->
                 <div style="position: relative; margin-bottom: 0.5rem;">
                      <input type="text"
