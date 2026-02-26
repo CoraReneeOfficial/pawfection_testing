@@ -12,6 +12,7 @@
         {# Form submits data back to the '/owner/<owner_id>/edit' route using POST #}
         {# The owner.id is passed from the Flask route to ensure we're editing the correct owner #}
         <form method="POST" action="{{ url_for('owners.edit_owner', owner_id=owner.id) }}" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
                 <label for="name">Owner Name *</label>
                 {# Pre-fill the input with the owner's current name. The 'or ''' handles cases where owner.name might be None (though unlikely here) #}

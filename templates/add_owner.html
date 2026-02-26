@@ -9,6 +9,7 @@
         <p class="form-description">Enter the details for the new client.</p>
 
         <form method="POST" action="{{ url_for('owners.add_owner') }}" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
                 <label for="name">Owner Name *</label>
                 <input type="text" id="name" name="name" required class="form-input" value="{{ owner.name or '' }}" autofocus>
