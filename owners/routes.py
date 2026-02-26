@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g, current_app, session
 from models import Owner, Dog, Appointment, ActivityLog, AppointmentRequest, Receipt
-from extensions import db
+from extensions import db, csrf
 from sqlalchemy import or_
 from functools import wraps
 from utils import allowed_file # Keep allowed_file from utils
@@ -53,6 +53,7 @@ def add_owner():
     store_id = session.get('store_id') # Get store_id from session
 
     if request.method == 'POST':
+        csrf.protect()
         name = request.form.get('name', '').strip()
         phone = request.form.get('phone', '').strip()
         email = request.form.get('email', '').strip().lower()
@@ -132,6 +133,7 @@ def edit_owner(owner_id):
     owner_to_edit = Owner.query.filter_by(id=owner_id, store_id=store_id).first_or_404()
 
     if request.method == 'POST':
+        csrf.protect()
         original_phone = owner_to_edit.phone_number
         original_email = owner_to_edit.email
         name = request.form.get('name', '').strip()
@@ -187,6 +189,7 @@ def delete_owner(owner_id):
     Securely deletes an owner and all their dogs and appointments, only if the owner belongs to the current store.
     Handles cleanup of associated records that don't cascade automatically.
     """
+    csrf.protect()
     store_id = session.get('store_id')
     owner = Owner.query.filter_by(id=owner_id, store_id=store_id).first()
     if not owner:
