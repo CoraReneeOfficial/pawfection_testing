@@ -77,7 +77,7 @@ def chat():
         """
 
         chat = client.chats.create(
-            model='gemini-1.5-flash',
+            model='gemini-flash-latest',
             history=[
                 types.Content(
                     role="user",
