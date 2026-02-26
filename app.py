@@ -18,6 +18,7 @@ from dogs import dogs_bp
 from appointments import appointments_bp
 from management import management_bp
 from public import public_bp
+from ai_assistant import ai_assistant_bp, is_ai_enabled
 from functools import wraps
 from werkzeug.middleware.proxy_fix import ProxyFix
 import logging
@@ -252,6 +253,11 @@ def create_app():
     app.register_blueprint(management_bp)
     app.register_blueprint(public_bp)
 
+    # Conditionally register AI Assistant Blueprint
+    if is_ai_enabled():
+        app.register_blueprint(ai_assistant_bp)
+        app.logger.info("AI Assistant Blueprint Registered")
+
     # Register Google Calendar webhook blueprint
     from appointments.google_calendar_webhook import webhook_bp as google_calendar_webhook_bp
     app.register_blueprint(google_calendar_webhook_bp)
@@ -289,7 +295,11 @@ def create_app():
         for notification in notifications:
             notification.link = get_notification_link(notification)
         
-        return {'notifications': notifications, 'unread_notifications_count': unread_count}
+        return {
+            'notifications': notifications,
+            'unread_notifications_count': unread_count,
+            'ENABLE_AI_ASSISTANT': is_ai_enabled()
+        }
 
     # This function runs before every request to load the logged-in user.
     @app.before_request

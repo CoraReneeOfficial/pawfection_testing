@@ -24,6 +24,8 @@ CARRIERS = {
     'Verizon': 'vzwpix.com',
     'Virgin Mobile': 'vmpix.com',
     'Xfinity Mobile': 'mypixmessages.com',
+    'Visible': 'vzwpix.com',  # Visible runs on Verizon
+    'Spectrum Mobile': 'vzwpix.com', # Spectrum runs on Verizon
 }
 
 def get_carrier_email(phone, carrier_name):

@@ -342,7 +342,23 @@ def add_appointment():
         return redirect(url_for('appointments.calendar_view'))
     
     log_activity("Viewed Add Appointment page")
-    return render_template('add_appointment.html', dogs=dogs, users=groomers_for_dropdown, services=services, appointment_data={})
+
+    # Pre-fill form data from URL parameters (e.g., from AI Assistant smart links)
+    initial_data = {}
+    if request.method == 'GET':
+        if request.args.get('dog_id'):
+            initial_data['dog_id'] = request.args.get('dog_id')
+        if request.args.get('date'):
+            initial_data['appointment_date'] = request.args.get('date')
+        if request.args.get('time'):
+            initial_data['appointment_time'] = request.args.get('time')
+        if request.args.get('notes'):
+            initial_data['notes'] = request.args.get('notes')
+        if request.args.get('services'):
+            # Expecting comma-separated IDs or text, but template handles splitting for selection
+            initial_data['services_text'] = request.args.get('services')
+
+    return render_template('add_appointment.html', dogs=dogs, users=groomers_for_dropdown, services=services, appointment_data=initial_data)
 
 @appointments_bp.route('/appointment/<int:appointment_id>/edit', methods=['GET', 'POST'])
 @subscription_required

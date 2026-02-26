@@ -374,5 +374,9 @@
         });
     </script>
     {% block scripts %}{% endblock %}
+
+    {% if ENABLE_AI_ASSISTANT %}
+        {% include 'ai_assistant/chat_widget.html' %}
+    {% endif %}
 </body>
 </html>
