@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from models import Owner, Dog, Appointment, ActivityLog, AppointmentRequest, Receipt
 from extensions import db
 from sqlalchemy import or_
+from sqlalchemy.orm import selectinload
 from functools import wraps
 from utils import allowed_file # Keep allowed_file from utils
 from utils import log_activity   # IMPORT log_activity from utils.py
@@ -21,13 +22,16 @@ def directory():
     per_page = 10
     
     # Base query for owners, filtered by store_id
-    owners_query = Owner.query.options(db.joinedload(Owner.dogs)).filter_by(store_id=store_id)
+    owners_query = Owner.query.filter_by(store_id=store_id)
 
     if search_query:
         log_activity("Searched Directory", details=f"Query: '{search_query}', Store ID: {store_id}")
         search_term = f"%{search_query}%"
-        # Join with Dog for dog name search, ensuring Dog also belongs to the same store
-        owners_query = owners_query.join(Dog, Owner.id == Dog.owner_id, isouter=True).filter(  # Join Owner to Dog via foreign key
+        # Join with Dog for filtering
+        # Use selectinload to fetch ALL dogs for the matching owners in a separate query.
+        # This prevents the "partial collection" issue where only matching dogs are loaded,
+        # and avoids the "duplicate rows" pagination issue caused by joined loading.
+        owners_query = owners_query.join(Dog, Owner.id == Dog.owner_id, isouter=True).options(selectinload(Owner.dogs)).filter(
             or_(
                 Owner.name.ilike(search_term), 
                 Owner.phone_number.ilike(search_term),
@@ -37,6 +41,8 @@ def directory():
             )
         ).distinct()
     else:
+        # Use standard joinedload when not searching for efficiency (1 query)
+        owners_query = owners_query.options(db.joinedload(Owner.dogs))
         log_activity("Viewed Directory page", details=f"Store ID: {store_id}")
     
     owners_pagination = owners_query.order_by(Owner.name.asc()).paginate(page=page, per_page=per_page, error_out=False)
