@@ -98,7 +98,28 @@
         flex-shrink: 0;
     }
 
-    .toggle-switch input { display: none; }
+    /* Accessible hiding class */
+    .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border-width: 0;
+    }
+
+    /* Remove display:none so inputs are focusable */
+    .toggle-switch input {
+        /* Handled by .sr-only class applied in HTML */
+    }
+
+    /* Add visible focus state for keyboard navigation */
+    .toggle-switch input:focus + .toggle-slider {
+        box-shadow: 0 0 0 3px rgba(167, 96, 255, 0.4); /* Primary color focus ring */
+    }
 
     .toggle-slider {
         position: absolute;
@@ -165,7 +186,16 @@
         font-weight: 500;
     }
     
-    .reminder-days-group input[type="checkbox"] { display: none; }
+    .reminder-days-group input[type="checkbox"] {
+        /* Handled by .sr-only class applied in HTML */
+    }
+
+    /* Add visible focus state for keyboard navigation on reminder days */
+    .reminder-days-group input[type="checkbox"]:focus + label {
+        box-shadow: 0 0 0 3px rgba(167, 96, 255, 0.4);
+        position: relative;
+        z-index: 1;
+    }
 
     .reminder-days-group input[type="checkbox"]:checked + label {
         background-color: var(--primary-color);
@@ -213,11 +243,12 @@
             <div class="settings-card-body">
                 <div class="setting-item">
                     <div class="setting-item-label">
-                       <strong>Send Confirmation Emails</strong>
+                       <strong id="label-confirm-email">Send Confirmation Emails</strong>
                        <small>Automatically email clients when an appointment is booked.</small>
                     </div>
                     <label class="toggle-switch">
                         <input type="checkbox" id="send_confirmation_email" name="send_confirmation_email" value="true" 
+                               class="sr-only" aria-labelledby="label-confirm-email"
                                {% if current_settings.get('send_confirmation_email') %}checked{% endif %}>
                         <span class="toggle-slider"></span>
                     </label>
@@ -233,11 +264,12 @@
             <div class="settings-card-body">
                 <div class="setting-item">
                     <div class="setting-item-label">
-                        <strong>Enable Reminder Emails</strong>
+                        <strong id="label-reminder-email">Enable Reminder Emails</strong>
                         <small>Send automated reminders before scheduled appointments.</small>
                     </div>
                     <label class="toggle-switch">
                         <input type="checkbox" id="send_reminder_email" name="send_reminder_email" value="true"
+                               class="sr-only" aria-labelledby="label-reminder-email"
                                {% if current_settings.get('send_reminder_email') %}checked{% endif %}>
                         <span class="toggle-slider"></span>
                     </label>
@@ -248,7 +280,7 @@
                         <label>Send reminder on these days:</label>
                         <div class="reminder-days-group">
                             {% for day in [1, 2, 3, 7] %}
-                            <input type="checkbox" id="reminder_{{day}}_day" name="reminder_days_before" value="{{day}}" {% if day in current_settings.get('reminder_days_before', []) %}checked{% endif %}>
+                            <input type="checkbox" class="sr-only" id="reminder_{{day}}_day" name="reminder_days_before" value="{{day}}" {% if day in current_settings.get('reminder_days_before', []) %}checked{% endif %}>
                             <label for="reminder_{{day}}_day">{{day}} day{% if day > 1 %}s{% endif %} before</label>
                             {% endfor %}
                         </div>
