@@ -7,6 +7,7 @@ from functools import wraps
 from utils import allowed_file # Keep allowed_file from utils
 from utils import log_activity   # IMPORT log_activity from utils.py
 from notifications.carrier_utils import CARRIERS
+from input_sanitization import sanitize_text_input
 
 owners_bp = Blueprint('owners', __name__)
 
@@ -60,10 +61,10 @@ def add_owner():
 
     if request.method == 'POST':
         csrf.protect()
-        name = request.form.get('name', '').strip()
-        phone = request.form.get('phone', '').strip()
-        email = request.form.get('email', '').strip().lower()
-        address = request.form.get('address', '').strip()
+        name = sanitize_text_input(request.form.get('name', '').strip())
+        phone = sanitize_text_input(request.form.get('phone', '').strip())
+        email = sanitize_text_input(request.form.get('email', '').strip().lower())
+        address = sanitize_text_input(request.form.get('address', '').strip())
         phone_carrier = request.form.get('phone_carrier')
         text_notifications_enabled = 'text_notifications_enabled' in request.form
         email_notifications_enabled = 'email_notifications_enabled' in request.form
@@ -142,10 +143,10 @@ def edit_owner(owner_id):
         csrf.protect()
         original_phone = owner_to_edit.phone_number
         original_email = owner_to_edit.email
-        name = request.form.get('name', '').strip()
-        phone = request.form.get('phone', '').strip()
-        email = request.form.get('email', '').strip().lower()
-        address = request.form.get('address', '').strip()
+        name = sanitize_text_input(request.form.get('name', '').strip())
+        phone = sanitize_text_input(request.form.get('phone', '').strip())
+        email = sanitize_text_input(request.form.get('email', '').strip().lower())
+        address = sanitize_text_input(request.form.get('address', '').strip())
         phone_carrier = request.form.get('phone_carrier')
         text_notifications_enabled = 'text_notifications_enabled' in request.form
         email_notifications_enabled = 'email_notifications_enabled' in request.form

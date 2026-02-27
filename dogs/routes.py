@@ -10,6 +10,7 @@ from utils import log_activity   # IMPORT log_activity from utils.py
 from utils import subscription_required  # Import subscription_required decorator
 import pytz
 from dateutil import tz
+from input_sanitization import sanitize_text_input
 
 dogs_bp = Blueprint('dogs', __name__)
 
@@ -75,23 +76,24 @@ def add_dog(owner_id):
     owner = Owner.query.filter_by(id=owner_id, store_id=store_id).first_or_404()
 
     if request.method == 'POST':
-        dog_name = request.form.get('dog_name', '').strip()
+        dog_name = sanitize_text_input(request.form.get('dog_name', '').strip())
         if not dog_name:
             flash("Dog Name required.", "danger")
             return render_template('add_dog.html', owner=owner, dog=request.form.to_dict()), 400
         
         new_dog = Dog(
             name=dog_name,
-            breed=(request.form.get('breed', '').strip() or None),
-            birthday=(request.form.get('birthday', '').strip() or None),
-            temperament=(request.form.get('temperament', '').strip() or None),
-            hair_style_notes=(request.form.get('hair_style_notes', '').strip() or None),
-            aggression_issues=(request.form.get('aggression_issues', '').strip() or None),
-            anxiety_issues=(request.form.get('anxiety_issues', '').strip() or None),
-            other_notes=(request.form.get('other_notes', '').strip() or None),
+            breed=sanitize_text_input(request.form.get('breed', '').strip() or None),
+            birthday=sanitize_text_input(request.form.get('birthday', '').strip() or None),
+            temperament=sanitize_text_input(request.form.get('temperament', '').strip() or None),
+            hair_style_notes=sanitize_text_input(request.form.get('hair_style_notes', '').strip() or None),
+            aggression_issues=sanitize_text_input(request.form.get('aggression_issues', '').strip() or None),
+            anxiety_issues=sanitize_text_input(request.form.get('anxiety_issues', '').strip() or None),
+            other_notes=sanitize_text_input(request.form.get('other_notes', '').strip() or None),
             owner_id=owner.id,
             created_by_user_id=g.user.id,
-            store_id=owner.store_id # Dog inherits store_id from its owner
+            store_id=owner.store_id, # Dog inherits store_id from its owner
+            vaccines=sanitize_text_input(request.form.get('vaccines', '').strip() or None)
         )
         try:
             db.session.add(new_dog)
@@ -155,20 +157,20 @@ def edit_dog(dog_id):
     dog = Dog.query.options(db.joinedload(Dog.owner)).filter_by(id=dog_id, store_id=store_id).first_or_404()
 
     if request.method == 'POST':
-        dog_name = request.form.get('dog_name', '').strip()
+        dog_name = sanitize_text_input(request.form.get('dog_name', '').strip())
         if not dog_name:
             flash("Dog Name required.", "danger")
             return render_template('edit_dog.html', dog=dog), 400
         
         dog.name = dog_name
-        dog.breed = request.form.get('breed', '').strip() or None
-        dog.birthday = request.form.get('birthday', '').strip() or None
-        dog.temperament = request.form.get('temperament', '').strip() or None
-        dog.hair_style_notes = request.form.get('hair_style_notes', '').strip() or None
-        dog.aggression_issues = request.form.get('aggression_issues', '').strip() or None
-        dog.anxiety_issues = request.form.get('anxiety_issues', '').strip() or None
-        dog.other_notes = request.form.get('other_notes', '').strip() or None
-        dog.vaccines = request.form.get('vaccines', '').strip() or None
+        dog.breed = sanitize_text_input(request.form.get('breed', '').strip() or None)
+        dog.birthday = sanitize_text_input(request.form.get('birthday', '').strip() or None)
+        dog.temperament = sanitize_text_input(request.form.get('temperament', '').strip() or None)
+        dog.hair_style_notes = sanitize_text_input(request.form.get('hair_style_notes', '').strip() or None)
+        dog.aggression_issues = sanitize_text_input(request.form.get('aggression_issues', '').strip() or None)
+        dog.anxiety_issues = sanitize_text_input(request.form.get('anxiety_issues', '').strip() or None)
+        dog.other_notes = sanitize_text_input(request.form.get('other_notes', '').strip() or None)
+        dog.vaccines = sanitize_text_input(request.form.get('vaccines', '').strip() or None)
         
         try:
             uploaded_filename = _handle_dog_picture_upload(dog, request.files)
