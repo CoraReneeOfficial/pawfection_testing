@@ -112,7 +112,7 @@ def login():
             if next_page:
                 target_url = urlparse(next_page)
                 # Ensure it's a relative path (no netloc/scheme) to prevent Open Redirect
-                if target_url.netloc or target_url.scheme:
+                if target_url.netloc or target_url.scheme or next_page.startswith('//') or next_page.startswith('\\'):
                     current_app.logger.warning(f"Invalid 'next' URL (external redirect attempt): {next_page}")
                     next_page = None
 
