@@ -4,8 +4,11 @@ from google import genai
 from google.genai import types
 import os
 import markdown
+import datetime
+from datetime import timezone
 from functools import wraps
-from models import Service, Dog, Owner
+from models import Service, Dog, Owner, Appointment
+from extensions import db
 
 ai_assistant_bp = Blueprint('ai_assistant', __name__)
 
@@ -50,6 +53,78 @@ def chat():
             except Exception as e:
                 current_app.logger.warning(f"AI Context Error (Services): {e}")
 
+        def get_dogs(name: str = "") -> list[str]:
+            """
+            Fetches a list of dogs in the store. Optionally filters by name.
+
+            Args:
+                name: Optional dog name to filter by.
+
+            Returns:
+                A list of strings containing dog details (name, breed, dog_id).
+            """
+            query = Dog.query.filter_by(store_id=store_id)
+            if name:
+                query = query.filter(Dog.name.ilike(f"%{name}%"))
+            dogs = query.limit(10).all()
+            if not dogs:
+                return ["No dogs found."]
+            return [f"Dog ID: {d.id}, Name: {d.name}, Breed: {d.breed}, Owner ID: {d.owner_id}" for d in dogs]
+
+        def get_owners(name: str = "") -> list[str]:
+            """
+            Fetches a list of owners in the store. Optionally filters by name.
+
+            Args:
+                name: Optional owner name to filter by.
+
+            Returns:
+                A list of strings containing owner details (name, phone, owner_id).
+            """
+            query = Owner.query.filter_by(store_id=store_id)
+            if name:
+                query = query.filter(Owner.name.ilike(f"%{name}%"))
+            owners = query.limit(10).all()
+            if not owners:
+                return ["No owners found."]
+            return [f"Owner ID: {o.id}, Name: {o.name}, Phone: {o.phone_number}" for o in owners]
+
+        def add_appointment(dog_id: int, date: str, time: str, notes: str = "") -> str:
+            """
+            Creates a new appointment for a dog.
+
+            Args:
+                dog_id: The ID of the dog.
+                date: The date of the appointment in YYYY-MM-DD format.
+                time: The time of the appointment in HH:MM format (24-hour).
+                notes: Optional notes for the appointment.
+
+            Returns:
+                A string indicating success or failure.
+            """
+            try:
+                dog = Dog.query.filter_by(id=dog_id, store_id=store_id).first()
+                if not dog:
+                    return f"Error: Dog with ID {dog_id} not found."
+
+                # Combine date and time
+                dt_str = f"{date} {time}"
+                appt_datetime = datetime.datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
+
+                appt = Appointment(
+                    dog_id=dog.id,
+                    appointment_datetime=appt_datetime,
+                    notes=notes,
+                    store_id=store_id,
+                    created_by_user_id=g.user.id
+                )
+                db.session.add(appt)
+                db.session.commit()
+                return f"Successfully booked appointment for {dog.name} on {appt_datetime.strftime('%Y-%m-%d at %I:%M %p')}."
+            except Exception as e:
+                db.session.rollback()
+                return f"Error creating appointment: {str(e)}"
+
         system_prompt = f"""
         You are 'Pawfection AI', a helpful assistant for a dog grooming business app.
         Your goal is to help staff manage appointments, owners, and dogs.
@@ -64,33 +139,30 @@ def chat():
 
         CONTEXT:
         Current User Role: {g.user.role if hasattr(g, 'user') else 'Unknown'}
+        Current User ID: {g.user.id if hasattr(g, 'user') else 'Unknown'}
         {context_data}
 
         INSTRUCTIONS:
         1. Be concise, friendly, and professional.
-        2. If the user asks to perform an action (like "Book a bath for Rex tomorrow"), generate a SMART LINK in Markdown format.
+        2. You now have tools to look up dogs, look up owners, and create appointments directly. Use them!
+        3. If you create an appointment, confirm the details with the user using the tool output.
+        4. If you need to perform an action but don't have a tool for it (like adding a new owner or dog), generate a SMART LINK in Markdown format to guide the user to the correct page.
            - Format: `[Action Name](URL)`
            - Example: `[Book Appointment for Rex](/add_appointment?notes=Bath&date=2023-10-10)`
-        3. Do NOT try to modify the database directly. You are a read-only assistant that guides users.
-        4. If you don't know the answer, suggest checking the Dashboard or Calendar.
         5. Use Markdown for formatting (bold, lists, links).
         """
 
         chat = client.chats.create(
             model='gemini-flash-latest',
-            history=[
-                types.Content(
-                    role="user",
-                    parts=[types.Part(text=system_prompt)]
-                ),
-                types.Content(
-                    role="model",
-                    parts=[types.Part(text="Understood. I am Pawfection AI, ready to assist with grooming business tasks using smart links and helpful guidance.")]
-                )
-            ]
+            config=types.GenerateContentConfig(
+                system_instruction=system_prompt,
+                tools=[get_dogs, get_owners, add_appointment],
+                temperature=0.7,
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=False)
+            )
         )
 
-        response = chat.send_message(message=user_message)
+        response = chat.send_message(user_message)
 
         # Convert Markdown to HTML for safe rendering on frontend
         html_response = markdown.markdown(response.text)
