@@ -1509,6 +1509,8 @@ def email_receipt_by_id(receipt_id):
     Sends a historical receipt to the specified email using Google API, using receipt data from DB.
     """
     r = Receipt.query.get_or_404(receipt_id)
+    if r.store_id != session.get('store_id'):
+        abort(403)
     data = json.loads(r.receipt_json)
     email = request.form.get('email')
     if not email:
@@ -1608,6 +1610,8 @@ def export_receipt_pdf(receipt_id):
 @subscription_required
 def view_receipt(receipt_id):
     r = Receipt.query.get_or_404(receipt_id)
+    if r.store_id != session.get('store_id'):
+        abort(403)
     data = json.loads(r.receipt_json)
     
     # Ensure 'tip' is present for the template (it expects 'tip', but checkout saves 'tip_amount')
@@ -1632,6 +1636,8 @@ def view_receipt(receipt_id):
 @subscription_required
 def print_receipt(receipt_id):
     r = Receipt.query.get_or_404(receipt_id)
+    if r.store_id != session.get('store_id'):
+        abort(403)
     data = json.loads(r.receipt_json)
     
     # Ensure 'tip' is present for the template (it expects 'tip', but checkout saves 'tip_amount')
@@ -1656,6 +1662,8 @@ def print_receipt(receipt_id):
 @subscription_required
 def download_receipt(receipt_id):
     r = Receipt.query.get_or_404(receipt_id)
+    if r.store_id != session.get('store_id'):
+        abort(403)
     data = json.loads(r.receipt_json)
     # Download as JSON for now; can be extended to PDF
     response = make_response(json.dumps(data, indent=2))
@@ -1676,7 +1684,7 @@ def email_receipt(appointment_id):
         db.joinedload(Appointment.groomer),
         db.joinedload(Appointment.store)
     ).get(appointment_id)
-    if not appt:
+    if not appt or appt.store_id != session.get('store_id'):
         flash('Appointment not found.', 'danger')
         return redirect(url_for('dashboard'))
     store = appt.store
