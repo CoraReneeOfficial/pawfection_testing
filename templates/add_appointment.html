@@ -143,7 +143,7 @@
                     {
                         id: '{{ service.id }}',
                         name: {{ service.name|tojson }},
-                        selected: {{ 'true' if appointment_data.get('services_text') and (service.id|string in appointment_data.get('services_text').split(',')) else 'false' }}
+                        selected: {{ 'true' if appointment_data.get('services') and (service.id|string in appointment_data.get('services')) else ('true' if appointment_data.get('services_text') and (service.id|string in appointment_data.get('services_text').split(',')) else 'false') }}
                     },
                     {% endfor %}
                 ];
