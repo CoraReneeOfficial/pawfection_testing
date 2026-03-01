@@ -44,6 +44,11 @@
             <div class="totals-row">
                 <span>Subtotal:</span><span>${{ '%.2f'|format(subtotal) }}</span>
             </div>
+            {% if deposit_deduction and deposit_deduction > 0 %}
+            <div class="totals-row" style="color: #6366f1;">
+                <span>Deposit Applied:</span><span>-${{ '%.2f'|format(deposit_deduction) }}</span>
+            </div>
+            {% endif %}
             <div class="totals-row">
                 <span>Taxes:</span><span>${{ '%.2f'|format(taxes) }}</span>
             </div>
