@@ -367,8 +367,8 @@
             <input type="hidden" name="appointment_id" :value="selectedAppointmentId">
             <input type="hidden" name="line_items" :value="JSON.stringify(
                 discountAmount > 0
-                ? [...cart, {name: discountName || 'Discount', price: -discountAmount, type: 'discount'}]
-                : cart
+                ? [...getFlattenedCart(), {name: discountName || 'Discount', price: -discountAmount, type: 'discount'}]
+                : getFlattenedCart()
             )">
             <input type="hidden" name="subtotal" :value="subtotal.toFixed(2)">
             <input type="hidden" name="taxes" :value="taxes.toFixed(2)">
@@ -388,7 +388,12 @@
                                 <div class="pos-cart-item-name" x-text="item.name"></div>
                                 <div class="pos-cart-item-type" x-text="item.type"></div>
                             </div>
-                            <div class="pos-cart-item-price" x-text="'$' + (parseFloat(item.price)).toFixed(2)"></div>
+                            <div class="pos-cart-item-quantity" style="display: flex; align-items: center; gap: 0.5rem; margin: 0 1rem;">
+                                <button type="button" @click="decrementQuantity(index)" class="button button-secondary" style="padding: 0.2rem 0.5rem; border-radius: 4px;">-</button>
+                                <span style="font-weight: 600; min-width: 1rem; text-align: center;" x-text="item.quantity || 1"></span>
+                                <button type="button" @click="incrementQuantity(index)" class="button button-secondary" style="padding: 0.2rem 0.5rem; border-radius: 4px;">+</button>
+                            </div>
+                            <div class="pos-cart-item-price" x-text="'$' + ((parseFloat(item.price)) * (item.quantity || 1)).toFixed(2)"></div>
                             <button type="button" class="pos-cart-item-remove" @click="removeFromCart(index)" title="Remove">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
@@ -577,12 +582,18 @@ function posCheckout() {
                     data.requested_service_ids.forEach(sid => {
                         const option = serviceSelect.querySelector(`option[value="${sid}"]`);
                         if (option) {
-                            this.cart.push({
-                                id: sid,
-                                name: option.dataset.name,
-                                price: parseFloat(option.dataset.price),
-                                type: 'service'
-                            });
+                            const existing = this.cart.find(i => i.id == sid && i.type === 'service');
+                            if (existing) {
+                                existing.quantity = (existing.quantity || 1) + 1;
+                            } else {
+                                this.cart.push({
+                                    id: sid,
+                                    name: option.dataset.name,
+                                    price: parseFloat(option.dataset.price),
+                                    type: 'service',
+                                    quantity: 1
+                                });
+                            }
                         }
                     });
                 }
@@ -599,12 +610,18 @@ function posCheckout() {
             const select = document.querySelector('select[x-model="selectedServiceToAdd"]');
             const option = select.options[select.selectedIndex];
 
-            this.cart.push({
-                id: this.selectedServiceToAdd,
-                name: option.dataset.name,
-                price: parseFloat(option.dataset.price),
-                type: 'service'
-            });
+            const existingIndex = this.cart.findIndex(i => i.id == this.selectedServiceToAdd && i.type === 'service');
+            if (existingIndex >= 0) {
+                this.cart[existingIndex].quantity = (this.cart[existingIndex].quantity || 1) + 1;
+            } else {
+                this.cart.push({
+                    id: this.selectedServiceToAdd,
+                    name: option.dataset.name,
+                    price: parseFloat(option.dataset.price),
+                    type: 'service',
+                    quantity: 1
+                });
+            }
 
             this.selectedServiceToAdd = '';
             this.calculateTotals();
@@ -615,12 +632,18 @@ function posCheckout() {
             const select = document.querySelector('select[x-model="selectedFeeToAdd"]');
             const option = select.options[select.selectedIndex];
 
-            this.cart.push({
-                id: this.selectedFeeToAdd,
-                name: option.dataset.name,
-                price: parseFloat(option.dataset.price),
-                type: 'fee'
-            });
+            const existingIndex = this.cart.findIndex(i => i.id == this.selectedFeeToAdd && i.type === 'fee');
+            if (existingIndex >= 0) {
+                this.cart[existingIndex].quantity = (this.cart[existingIndex].quantity || 1) + 1;
+            } else {
+                this.cart.push({
+                    id: this.selectedFeeToAdd,
+                    name: option.dataset.name,
+                    price: parseFloat(option.dataset.price),
+                    type: 'fee',
+                    quantity: 1
+                });
+            }
 
             this.selectedFeeToAdd = '';
             this.calculateTotals();
@@ -631,11 +654,20 @@ function posCheckout() {
                 alert("Please enter a valid name and price.");
                 return;
             }
-            this.cart.push({
-                name: this.customItemName,
-                price: parseFloat(this.customItemPrice),
-                type: 'custom'
-            });
+
+            const p = parseFloat(this.customItemPrice);
+            const existingIndex = this.cart.findIndex(i => i.name === this.customItemName && i.type === 'custom' && i.price === p);
+            if (existingIndex >= 0) {
+                this.cart[existingIndex].quantity = (this.cart[existingIndex].quantity || 1) + 1;
+            } else {
+                this.cart.push({
+                    name: this.customItemName,
+                    price: p,
+                    type: 'custom',
+                    quantity: 1
+                });
+            }
+
             this.showCustomModal = false;
             this.customItemName = '';
             this.customItemPrice = 0;
@@ -675,21 +707,50 @@ function posCheckout() {
             this.calculateTotals();
         },
 
+        incrementQuantity(index) {
+            this.cart[index].quantity = (this.cart[index].quantity || 1) + 1;
+            this.calculateTotals();
+        },
+
+        decrementQuantity(index) {
+            if (this.cart[index].quantity > 1) {
+                this.cart[index].quantity -= 1;
+            } else {
+                // If it hits 0, could remove it or just keep at 1. We keep at 1 to let trash remove it.
+                // Or remove it? The instruction says a plus and minus to have multiples.
+                // Removing it via minus is nice UX, let's remove it if it goes below 1
+                this.removeFromCart(index);
+                return;
+            }
+            this.calculateTotals();
+        },
+
+        getFlattenedCart() {
+            let flat = [];
+            for (let item of this.cart) {
+                let qty = item.quantity || 1;
+                for (let i = 0; i < qty; i++) {
+                    let itemCopy = { ...item };
+                    delete itemCopy.quantity;
+                    flat.push(itemCopy);
+                }
+            }
+            return flat;
+        },
+
         removeFromCart(index) {
             this.cart.splice(index, 1);
-
-            // Re-evaluate discount if it's a percentage
-            if (this.discountAmount > 0 && this.discountType === 'percent') {
-                let pureSubtotal = this.cart.reduce((sum, item) => sum + item.price, 0);
-                this.discountAmount = parseFloat((pureSubtotal * (this.discountInputValue / 100)).toFixed(2));
-            }
-
             this.calculateTotals();
         },
 
         calculateTotals() {
             // Raw subtotal of cart items
-            this.subtotal = this.cart.reduce((sum, item) => sum + item.price, 0);
+            this.subtotal = this.cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+
+            // Re-evaluate discount if it's a percentage
+            if (this.discountAmount > 0 && this.discountType === 'percent') {
+                this.discountAmount = parseFloat((this.subtotal * (this.discountInputValue / 100)).toFixed(2));
+            }
 
             // Apply discount
             let discountedSubtotal = Math.max(0, this.subtotal - this.discountAmount);
