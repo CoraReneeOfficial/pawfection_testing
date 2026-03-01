@@ -46,3 +46,4 @@ xlsxwriter
 fpdf2
 google-genai
 markdown
+ollama
