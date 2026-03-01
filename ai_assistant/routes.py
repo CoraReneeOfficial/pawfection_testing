@@ -33,6 +33,8 @@ def chat():
     if not user_message:
         return jsonify({"error": "No message provided."}), 400
 
+    current_app.logger.info(f"[AI Chat Request] Received message: '{user_message}'")
+
     api_key = os.environ.get('GEMINI_API_KEY')
     if not api_key:
         return jsonify({"error": "AI configuration error: Missing API Key."}), 500
@@ -63,13 +65,17 @@ def chat():
             Returns:
                 A list of strings containing dog details (name, breed, dog_id).
             """
+            current_app.logger.info(f"[AI Tool Call] get_dogs called with name='{name}'")
             query = Dog.query.filter_by(store_id=store_id)
             if name:
                 query = query.filter(Dog.name.ilike(f"%{name}%"))
             dogs = query.limit(10).all()
             if not dogs:
+                current_app.logger.info(f"[AI Tool Call] get_dogs returning 'No dogs found.'")
                 return ["No dogs found."]
-            return [f"Dog ID: {d.id}, Name: {d.name}, Breed: {d.breed}, Owner ID: {d.owner_id}" for d in dogs]
+            result = [f"Dog ID: {d.id}, Name: {d.name}, Breed: {d.breed}, Owner ID: {d.owner_id}" for d in dogs]
+            current_app.logger.info(f"[AI Tool Call] get_dogs returning {len(dogs)} dogs.")
+            return result
 
         def get_owners(name: str = "") -> list[str]:
             """
@@ -81,13 +87,17 @@ def chat():
             Returns:
                 A list of strings containing owner details (name, phone, owner_id).
             """
+            current_app.logger.info(f"[AI Tool Call] get_owners called with name='{name}'")
             query = Owner.query.filter_by(store_id=store_id)
             if name:
                 query = query.filter(Owner.name.ilike(f"%{name}%"))
             owners = query.limit(10).all()
             if not owners:
+                current_app.logger.info(f"[AI Tool Call] get_owners returning 'No owners found.'")
                 return ["No owners found."]
-            return [f"Owner ID: {o.id}, Name: {o.name}, Phone: {o.phone_number}" for o in owners]
+            result = [f"Owner ID: {o.id}, Name: {o.name}, Phone: {o.phone_number}" for o in owners]
+            current_app.logger.info(f"[AI Tool Call] get_owners returning {len(owners)} owners.")
+            return result
 
         def add_appointment(dog_id: int, date: str, time: str, notes: str = "") -> str:
             """
@@ -102,10 +112,13 @@ def chat():
             Returns:
                 A string indicating success or failure.
             """
+            current_app.logger.info(f"[AI Tool Call] add_appointment called with dog_id={dog_id}, date='{date}', time='{time}', notes='{notes}'")
             try:
                 dog = Dog.query.filter_by(id=dog_id, store_id=store_id).first()
                 if not dog:
-                    return f"Error: Dog with ID {dog_id} not found."
+                    msg = f"Error: Dog with ID {dog_id} not found."
+                    current_app.logger.info(f"[AI Tool Call] add_appointment failed: {msg}")
+                    return msg
 
                 # Combine date and time
                 dt_str = f"{date} {time}"
@@ -120,10 +133,14 @@ def chat():
                 )
                 db.session.add(appt)
                 db.session.commit()
-                return f"Successfully booked appointment for {dog.name} on {appt_datetime.strftime('%Y-%m-%d at %I:%M %p')}."
+                msg = f"Successfully booked appointment for {dog.name} on {appt_datetime.strftime('%Y-%m-%d at %I:%M %p')}."
+                current_app.logger.info(f"[AI Tool Call] add_appointment succeeded: {msg}")
+                return msg
             except Exception as e:
                 db.session.rollback()
-                return f"Error creating appointment: {str(e)}"
+                msg = f"Error creating appointment: {str(e)}"
+                current_app.logger.error(f"[AI Tool Call] add_appointment exception: {msg}")
+                return msg
 
         system_prompt = f"""
         You are 'Pawfection AI', a helpful assistant for a dog grooming business app.
@@ -158,14 +175,23 @@ def chat():
                 system_instruction=system_prompt,
                 tools=[get_dogs, get_owners, add_appointment],
                 temperature=0.7,
-                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=False)
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=False),
+                tool_config=types.ToolConfig(
+                    function_calling_config=types.FunctionCallingConfig(mode='AUTO')
+                )
             )
         )
 
         response = chat.send_message(user_message)
 
+        current_app.logger.info(f"[AI Chat Response] Result text: '{response.text}'")
+        if getattr(response, 'function_calls', None):
+            current_app.logger.info(f"[AI Chat Response] Function calls: {response.function_calls}")
+        if getattr(response, 'candidates', None) and response.candidates:
+            current_app.logger.info(f"[AI Chat Response] Finish reason: {response.candidates[0].finish_reason}")
+
         # Convert Markdown to HTML for safe rendering on frontend
-        html_response = markdown.markdown(response.text)
+        html_response = markdown.markdown(response.text if response.text else "")
 
         return jsonify({"response": html_response})
 
