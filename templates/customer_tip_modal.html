@@ -5,17 +5,83 @@
 {% block head %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <style>
-  .modal-centered { display: flex; align-items: center; justify-content: center; min-height: 80vh; }
-  .tip-modal { background: #fff; border-radius: var(--border-radius); padding: 2.5rem 2rem 2rem 2rem; box-shadow: var(--box-shadow); max-width: 370px; margin: auto; text-align: center; }
-  .tip-btn-grid { display: flex; flex-wrap: wrap; gap: 0.7rem; justify-content: center; margin-bottom: 1.2rem; }
-  .tip-btn { flex: 1 1 90px; font-size: 1.1em; }
-  .final-total { font-size: 1.4em; font-weight: bold; color: var(--primary-color); margin: 1.2rem 0 1.2rem 0; }
-  .custom-tip-row { margin-top: 0.7rem; }
+  /* Make the background blurry and hide the rest of the store UI */
+  body {
+    background-color: #f1f5f9;
+  }
+  .navbar, .sidebar {
+    filter: blur(8px);
+    pointer-events: none;
+  }
+
+  .modal-centered {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(10px);
+    z-index: 9999;
+  }
+
+  .tip-modal {
+    background: #fff;
+    border-radius: 1rem;
+    padding: 3rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    max-width: 500px;
+    width: 90%;
+    margin: auto;
+    text-align: center;
+  }
+
+  .tip-modal h2 {
+    font-size: 2rem;
+    color: var(--primary-color);
+    margin-bottom: 2rem;
+  }
+
+  .tip-btn-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .tip-btn {
+    font-size: 1.25rem;
+    padding: 1.25rem;
+    font-weight: 600;
+  }
+
+  .final-total {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 2rem 0;
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 0.5rem;
+  }
+
+  .custom-tip-row { margin-top: 1rem; display: flex; gap: 0.5rem; }
+  .custom-tip-row input { font-size: 1.2rem; padding: 1rem; }
+
+  #confirm-total-btn {
+    font-size: 1.5rem;
+    padding: 1.5rem;
+    margin-top: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container modal-centered">
+<div class="modal-centered">
   <div class="tip-modal">
     <h2>Add a Tip?</h2>
         <!-- Services Section -->
