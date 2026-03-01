@@ -307,13 +307,11 @@ def create_app():
         """
         Loads the logged-in user into Flask's global 'g' object before each request.
         Also ensures session['store_id'] is managed correctly for superadmin and non-superadmin users.
-        Logs the session contents for debugging.
         """
         # --- START OF DEBUG PRINTS ---
         print("\n" + "="*20, "DEBUG: ENTERING @app.before_request (load_logged_in_user)", "="*20)
         # --- END OF DEBUG PRINTS ---
         
-        app.logger.debug(f"[SESSION DEBUG] Session at start of request: {dict(session)}")
         user_id = session.get('user_id')
         if user_id is None:
             g.user = None
