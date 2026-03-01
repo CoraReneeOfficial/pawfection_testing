@@ -476,8 +476,6 @@ def create_app():
         new_clients_week = 0
         # Revenue Today
         revenue_today = 0.0
-        # Appointments needing details
-        appointments_details_needed = []
         # Upcoming appointments
         upcoming_appointments = []
 
@@ -523,21 +521,6 @@ def create_app():
                 Owner.created_at < week_end
             ).count()
 
-            # Appointments needing details
-            appointments_details_needed = (
-                Appointment.query.options(
-                    joinedload(Appointment.dog).joinedload(Dog.owner),
-                    joinedload(Appointment.groomer)
-                )
-                .filter(
-                    Appointment.status == 'Scheduled',
-                    Appointment.store_id == store_id,
-                    Appointment.details_needed == True
-                )
-                .order_by(Appointment.appointment_datetime.asc())
-                .all()
-            )
-
             # Upcoming appointments (next 5)
             upcoming_appointments = (
                 Appointment.query.options(
@@ -559,7 +542,6 @@ def create_app():
             pending_checkouts=pending_checkouts,
             new_clients_week=new_clients_week,
             revenue_today=revenue_today,
-            appointments_details_needed=appointments_details_needed,
             upcoming_appointments=upcoming_appointments,
             STORE_TIMEZONE=STORE_TIMEZONE,
             tz=tz
