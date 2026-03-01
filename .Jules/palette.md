@@ -5,3 +5,7 @@
 ## 2025-02-21 - Clickable Dashboard Stat Cards
 **Learning:** Turning summary statistic cards into clickable links (using anchor tags wrapping the card content) significantly improves navigation efficiency. It allows users to "drill down" into the data they are viewing immediately. However, it requires careful CSS overrides to reset default anchor styles (text-decoration, color) to maintain the card's visual identity.
 **Action:** When displaying summary metrics that correspond to a list view or actionable page, always make the metric card clickable. Ensure links are semantically correct (using `<a>` tags) rather than relying on JavaScript `onclick` events for better accessibility and SEO.
+
+## 2025-03-01 - Aria Label for Chat Widget
+**Learning:** Icon-only buttons without textual context are completely invisible to screen reader users, providing a poor experience for accessibility. Always add `aria-label` attributes to icon-only buttons (like the AI chat send button).
+**Action:** Before declaring an icon-only button complete, ensure it has an explicitly declared, descriptive `aria-label`.

@@ -814,23 +814,190 @@ import json
 @appointments_bp.route('/select_checkout')
 @subscription_required
 def checkout_start():
-    """Step 1: Show invoice builder for a selected appointment."""
+    """Redirect to the new unified POS checkout."""
+    return redirect(url_for('appointments.pos_checkout'))
+
+@appointments_bp.route('/checkout/api/appointment/<int:appointment_id>')
+@subscription_required
+def api_get_appointment_details(appointment_id):
+    """API endpoint to fetch appointment details for the POS checkout."""
+    if 'store_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    store_id = session['store_id']
+    appointment = Appointment.query.options(
+        joinedload(Appointment.dog).joinedload(Dog.owner)
+    ).filter_by(id=appointment_id, store_id=store_id).first()
+
+    if not appointment:
+        return jsonify({"error": "Appointment not found"}), 404
+
+    # Get pre-requested services
+    requested_service_ids = []
+    if appointment.requested_services_text:
+        try:
+            # Check if it's a comma separated list of IDs
+            if ',' in appointment.requested_services_text or appointment.requested_services_text.isdigit():
+                requested_service_ids = [int(sid) for sid in appointment.requested_services_text.split(',') if sid.strip().isdigit()]
+        except:
+            pass
+
+    return jsonify({
+        "id": appointment.id,
+        "customer_name": appointment.dog.owner.name if appointment.dog and appointment.dog.owner else 'Customer',
+        "pet_name": appointment.dog.name if appointment.dog else 'Pet',
+        "date": appointment.appointment_datetime.strftime('%Y-%m-%d %H:%M'),
+        "requested_service_ids": requested_service_ids,
+        "deposit_amount": appointment.deposit_amount or 0.0,
+    })
+
+@appointments_bp.route('/checkout', methods=['GET', 'POST'])
+@subscription_required
+def pos_checkout():
+    """Unified POS checkout experience."""
     if 'store_id' not in session:
         return redirect(url_for('auth.login'))
         
     store_id = session['store_id']
     
-    # Get all scheduled appointments for this store that can be checked out
+    if request.method == 'POST':
+        # Process checkout payload securely
+        appointment_id = request.form.get('appointment_id')
+
+        appointment = Appointment.query.filter_by(id=appointment_id, store_id=store_id).first()
+        if not appointment:
+            flash("Invalid appointment for checkout", "error")
+            return redirect(url_for('appointments.pos_checkout'))
+
+        # Get line items
+        line_items_json = request.form.get('line_items', '[]')
+        try:
+            client_line_items = json.loads(line_items_json)
+        except json.JSONDecodeError:
+            client_line_items = []
+
+        # Server-side validation and recalculation
+        validated_line_items = []
+        calculated_subtotal = 0.0
+
+        # Track discount amount specifically
+        discount_amount = 0.0
+
+        for item in client_line_items:
+            item_type = item.get('type')
+
+            if item_type in ('service', 'fee'):
+                # Fetch actual price from DB
+                item_id = item.get('id')
+                db_service = Service.query.filter_by(id=item_id, store_id=store_id, item_type=item_type).first()
+                if db_service:
+                    price = float(db_service.base_price)
+                    validated_line_items.append({
+                        'id': db_service.id,
+                        'name': db_service.name,
+                        'price': price,
+                        'type': item_type
+                    })
+                    calculated_subtotal += price
+
+            elif item_type == 'custom':
+                # Accept provided price but ensure it's valid
+                try:
+                    price = max(0.0, float(item.get('price', 0)))
+                except (ValueError, TypeError):
+                    price = 0.0
+
+                name = item.get('name', 'Custom Item')[:100] # Sanitize length
+                if name.strip() and price >= 0:
+                    validated_line_items.append({
+                        'name': name,
+                        'price': price,
+                        'type': 'custom'
+                    })
+                    calculated_subtotal += price
+
+            elif item_type == 'discount':
+                # Accept negative discount amount
+                try:
+                    price = float(item.get('price', 0))
+                    # Ensure it's negative or zero
+                    if price > 0:
+                        price = -price
+                except (ValueError, TypeError):
+                    price = 0.0
+
+                name = item.get('name', 'Discount')[:100]
+                if price <= 0:
+                    validated_line_items.append({
+                        'name': name,
+                        'price': price,
+                        'type': 'discount'
+                    })
+                    discount_amount += abs(price)
+                    # Don't add discount to subtotal calculation directly.
+                    # Instead apply it afterwards to the raw subtotal for tax calc.
+
+        # Apply discount to raw subtotal
+        discounted_subtotal = max(0.0, calculated_subtotal - discount_amount)
+
+        # Get store tax settings
+        store = Store.query.get(store_id)
+        tax_enabled = store.tax_enabled if store else False
+        tax_rate = 0.07 # Default tax rate
+
+        calculated_taxes = 0.0
+        if tax_enabled:
+            calculated_taxes = round(discounted_subtotal * tax_rate, 2)
+
+        # Get true deposit amount from database
+        deposit_deduction = appointment.deposit_amount if appointment.deposit_amount else 0.0
+
+        # Final Total Calculation
+        total_before_deposit = discounted_subtotal + calculated_taxes
+        calculated_total = max(0.0, total_before_deposit - deposit_deduction)
+
+        # Store checkout data in session
+        session['checkout_data'] = {
+            'appointment_id': appointment.id,
+            'customer_name': appointment.dog.owner.name if appointment.dog and appointment.dog.owner else 'Customer',
+            'pet_name': appointment.dog.name if appointment.dog else 'Pet',
+            'line_items': validated_line_items,
+            'subtotal': calculated_subtotal, # Raw subtotal before discount
+            'discount': discount_amount,
+            'taxes': calculated_taxes,
+            'deposit_deduction': deposit_deduction,
+            'total': calculated_total,
+            'tip_amount': 0.0, # Will be set on the tip screen
+            'payment_method': 'pending'
+        }
+
+        return redirect(url_for('appointments.tip_screen', appointment_id=appointment.id))
+
+    # GET request - load POS UI
+    # Get all scheduled appointments
     appointments = Appointment.query.options(
         joinedload(Appointment.dog).joinedload(Dog.owner),
         joinedload(Appointment.groomer)
     ).filter_by(
         store_id=store_id,
         status='Scheduled'
-    ).all()
+    ).order_by(Appointment.appointment_datetime).all()
     
-    return render_template('select_checkout_appointment.html', appointments=appointments)
+    # Get services and fees
+    services = Service.query.filter_by(store_id=store_id, item_type='service').all()
+    fees = Service.query.filter_by(store_id=store_id, item_type='fee').all()
 
+    # Get store tax settings
+    store = Store.query.get(store_id)
+    tax_enabled = store.tax_enabled if store else False
+    tax_rate = 0.07 # Could be dynamic later
+
+    return render_template('pos_checkout.html',
+                           appointments=appointments,
+                           services=services,
+                           fees=fees,
+                           tax_enabled=tax_enabled,
+                           tax_rate=tax_rate)
 
 @appointments_bp.route('/invoice_checkout/<int:appointment_id>', methods=['GET', 'POST'])
 @subscription_required
@@ -1045,6 +1212,12 @@ def deposit_payment():
                 flash('Invalid appointment selected', 'error')
                 return redirect(url_for('appointments.deposit_payment'))
                 
+            # Add deposit to the appointment record
+            if not appointment.deposit_amount:
+                appointment.deposit_amount = 0.0
+            appointment.deposit_amount += deposit_amount
+            db.session.commit()
+
             # Prepare session data for the receipt page
             # We'll bypass the normal checkout flow and go straight to receipt
             session['checkout_data'] = {
@@ -1537,6 +1710,7 @@ def email_receipt_by_id(receipt_id):
             line_items=data.get('line_items', []),
             subtotal=data.get('subtotal', 0),
             taxes=data.get('taxes', 0),
+            deposit_deduction=data.get('deposit_deduction', 0),
             tip=data.get('tip', data.get('tip_amount', 0)),
             total=data.get('final_total', data.get('total', 0))
         )
@@ -1708,6 +1882,7 @@ def email_receipt(appointment_id):
         line_items=invoice.get('line_items', []),
         subtotal=invoice.get('subtotal', 0),
         taxes=invoice.get('taxes', 0),
+        deposit_deduction=invoice.get('deposit_deduction', 0),
         tip=tip.get('tip_amount', 0),
         total=tip.get('final_total', invoice.get('total', 0))
     )

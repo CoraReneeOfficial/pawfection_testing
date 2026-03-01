@@ -106,54 +106,6 @@
         font-weight: 500;
     }
 
-    /* NEW CSS for Alerts Section */
-    .alerts-section {
-        margin-top: 2rem;
-        padding-top: 1.5rem;
-        border-top: 1px solid var(--border-color);
-    }
-
-    .alerts-section h2 {
-        margin-bottom: 1rem;
-    }
-
-    /* NEW CSS for individual Alert Items */
-    .alert-item {
-        background-color: #ffe0b2; /* Light orange background for general alerts */
-        border: 1px solid #ffcc80;
-        border-left: 4px solid #fb8c00; /* Orange left border for visual emphasis */
-        border-radius: var(--border-radius);
-        margin-bottom: 0.75rem;
-        padding: 0.75rem 1rem;
-        font-size: 0.9rem;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        flex-wrap: nowrap;
-        color: #333; /* Darker text for readability */
-    }
-
-    .alert-item.critical {
-        background-color: #ffcdd2; /* Light red background for critical alerts */
-        border: 1px solid #ef9a9a;
-        border-left: 4px solid #ef5350; /* Red left border */
-    }
-
-    .alert-item .alert-icon {
-        flex-shrink: 0;
-        width: 1.5rem; /* Standard icon size */
-        height: 1.5rem;
-        color: #fb8c00; /* Orange icon color */
-    }
-
-    .alert-item.critical .alert-icon {
-        color: #ef5350; /* Red icon color for critical alerts */
-    }
-
-    .alert-item .alert-text {
-        flex-grow: 1;
-    }
-
     /* Existing CSS for Appointments Summary */
     .appointments-summary {
         margin-top: 2rem;
@@ -314,40 +266,6 @@
         <a href="{{ url_for('owners.add_owner') }}" class="quick-link-card orange"><h3>👤 Add New Client</h3><p>Register a new client and their pet.</p></a>
         <a href="{{ url_for('appointments.receipts_management') }}" class="quick-link-card teal"><h3>🧾 Receipts</h3><p>View, search, and manage receipts.</p></a>
     </div>
-
-    {# New Section: Urgent Tasks/Alerts to draw attention to critical items #}
-    <div class="alerts-section" style="display:none;"> <!-- alerts section hidden per user request -->
-        <h2>Tasks & Alerts</h2>
-        <ul class="appointment-summary-list">
-            {% if appointments_details_needed %} {# Assumes your backend passes a list of appointments needing details #}
-                {% for appt in appointments_details_needed %}
-                <li class="alert-item critical">
-                    {# Exclamation mark icon for critical alerts #}
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="alert-icon">
-                      <path fill-rule="evenodd" d="M8.484 2.583C9.028 1.47 10.972 1.47 11.516 2.583L17.472 13.06c.544 1.113-.322 2.44-1.66 2.44H4.188c-1.337 0-2.204-1.327-1.66-2.44L8.484 2.583zM10 5.25a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0V6a.75.75 0 01.75-.75zm0 9a.75.75 0 100-1.5.75.75 0 000 1.5z" clip-rule="evenodd" />
-                    </svg>
-                    <div class="alert-text">
-                        Appointment for <strong>{{ appt.dog.name }}</strong> ({{ appt.dog.owner.name }}) on
-                        <span class="date-time">{{ appt.appointment_datetime.strftime('%a, %b %d @ %I:%M %p') }}</span> requires additional details.
-                    </div>
-                    <span class="status-badge" style="background-color: #dc3545;">Action Needed</span>
-                </li>
-                {% endfor %}
-            {% else %}
-                <li class="alert-item">
-                    {# Checkmark icon for no urgent tasks #}
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="alert-icon">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <div class="alert-text">
-                        No urgent tasks or alerts at this time.
-                    </div>
-                </li>
-            {% endif %}
-        </ul>
-        <!-- Link to dedicated tasks page removed per user request -->
-    </div>
-
 
     {# Existing Appointments Summary section, remains largely the same #}
     <div class="appointments-summary">

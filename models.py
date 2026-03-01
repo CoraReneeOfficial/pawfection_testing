@@ -241,6 +241,7 @@ class Appointment(db.Model):
     reminder_2_sent_at = db.Column(db.DateTime, nullable=True)
     store_id = db.Column(db.Integer, db.ForeignKey('store.id'), nullable=False) # Appointment belongs to a store
     details_needed = db.Column(db.Boolean, default=False, nullable=False)  # Flag for missing vital info
+    deposit_amount = db.Column(db.Float, default=0.0, nullable=True)  # Store appointment deposit paid before checkout
 
     # Index to optimize dashboard query filtering by store, status, and date range
     __table_args__ = (
