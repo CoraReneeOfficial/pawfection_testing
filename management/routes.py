@@ -231,6 +231,8 @@ def approve_appointment_request(req_id):
     """Approve an appointment request, converting it into Owner, Dog, and Appointment records."""
     csrf.protect()
     req = AppointmentRequest.query.get_or_404(req_id)
+    if req.store_id != session.get('store_id'):
+        abort(403)
     if req.status != 'pending':
         flash('Request already processed.', 'warning')
         return redirect(url_for('management.pending_appointments'))
@@ -351,6 +353,8 @@ def approve_appointment_request(req_id):
 @admin_required
 def edit_appointment_request(req_id):
     req = AppointmentRequest.query.get_or_404(req_id)
+    if req.store_id != session.get('store_id'):
+        abort(403)
     if req.status != 'pending':
         flash('Only pending requests can be edited.', 'warning')
         return redirect(url_for('management.pending_appointments'))
@@ -408,6 +412,8 @@ def edit_appointment_request(req_id):
 def reject_appointment_request(req_id):
     csrf.protect()
     req = AppointmentRequest.query.get_or_404(req_id)
+    if req.store_id != session.get('store_id'):
+        abort(403)
     if req.status != 'pending':
         flash('Request already processed.', 'warning')
     else:
