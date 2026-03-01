@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify, render_template, current_app, ses
 from ai_assistant.feature_flag import is_ai_enabled
 from google import genai
 from google.genai import types
+import ollama
 import os
 import markdown
 import datetime
@@ -543,46 +544,108 @@ def chat():
         7. Use Markdown for formatting (bold, lists, links).
         """
 
-        # Convert frontend history to genai.types.Content format
-        formatted_history = []
+
+        tools = [get_dogs, get_owners, add_appointment, get_groomers, get_services, add_owner, edit_owner, delete_owner, add_dog, edit_dog, delete_dog, edit_appointment, delete_appointment]
+
+        formatted_history = [{"role": "system", "content": system_prompt}]
         for msg in history:
             role = msg.get('role', 'user')
             if role not in ['user', 'model']:
                 continue
+            role = 'assistant' if role == 'model' else 'user'
             text = msg.get('text', '')
-            # Clean HTML from model responses in history if we are feeding it back,
-            # or just send it raw. The model can usually handle HTML.
             import re
-            clean_text = re.sub('<[^<]+>', '', text) if role == 'model' else text
+            clean_text = re.sub('<[^<]+>', '', text) if role == 'assistant' else text
+            formatted_history.append({"role": role, "content": clean_text})
 
-            # Simple construction according to memory limits and common API shapes.
-            # Usually we need: types.Content(role=role, parts=[types.Part.from_text(text)])
-            formatted_history.append({"role": role, "parts": [{"text": clean_text}]})
+        formatted_history.append({"role": "user", "content": user_message})
 
-        chat = client.chats.create(
-            model='gemini-flash-latest',
-            config=types.GenerateContentConfig(
-                system_instruction=system_prompt,
-                tools=[get_dogs, get_owners, add_appointment, get_groomers, get_services, add_owner, edit_owner, delete_owner, add_dog, edit_dog, delete_dog, edit_appointment, delete_appointment],
-                temperature=0.7,
-                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=False),
-                tool_config=types.ToolConfig(
-                    function_calling_config=types.FunctionCallingConfig(mode='AUTO')
+        # Define a tool mapping dictionary
+        available_tools = {tool.__name__: tool for tool in tools}
+
+        response_text = ""
+        try:
+            # 1. Primary AI: Ollama (llama3.3)
+            current_app.logger.info("[AI Chat Request] Attempting Ollama (llama3.3) at http://localhost:11434")
+
+            ollama_client = ollama.Client(host='http://localhost:11434')
+            response = ollama_client.chat(
+                model='llama3.3',
+                messages=formatted_history,
+                tools=tools
+            )
+
+            # Process tool calls in a loop
+            while response.message.tool_calls:
+                formatted_history.append(response.message)
+                for tool_call in response.message.tool_calls:
+                    function_name = tool_call.function.name
+                    arguments = tool_call.function.arguments
+
+                    current_app.logger.info(f"[Ollama Tool Call] {function_name} with args: {arguments}")
+
+                    if function_name in available_tools:
+                        try:
+                            function_to_call = available_tools[function_name]
+                            function_response = function_to_call(**arguments)
+                        except Exception as e:
+                            function_response = f"Error executing tool {function_name}: {e}"
+                    else:
+                        function_response = f"Tool {function_name} not found."
+
+                    current_app.logger.info(f"[Ollama Tool Response] {function_response}")
+
+                    formatted_history.append({
+                        'role': 'tool',
+                        'content': str(function_response),
+                    })
+
+                # Send the tool responses back to Ollama to get the final answer
+                response = ollama_client.chat(
+                    model='llama3.3',
+                    messages=formatted_history,
+                    tools=tools
                 )
-            ),
-            history=formatted_history
-        )
 
-        response = chat.send_message(user_message)
+            response_text = response.message.content
+            current_app.logger.info(f"[Ollama Response] Result text: '{response_text}'")
 
-        current_app.logger.info(f"[AI Chat Response] Result text: '{response.text}'")
-        if getattr(response, 'function_calls', None):
-            current_app.logger.info(f"[AI Chat Response] Function calls: {response.function_calls}")
-        if getattr(response, 'candidates', None) and response.candidates:
-            current_app.logger.info(f"[AI Chat Response] Finish reason: {response.candidates[0].finish_reason}")
+        except Exception as ollama_error:
+            current_app.logger.warning(f"[AI Chat Fallback] Ollama failed: {ollama_error}. Falling back to Gemini.")
+
+            # 2. Fallback AI: Gemini
+            genai_history = []
+            for msg in history:
+                role = msg.get('role', 'user')
+                if role not in ['user', 'model']:
+                    continue
+                text = msg.get('text', '')
+                import re
+                clean_text = re.sub('<[^<]+>', '', text) if role == 'model' else text
+                genai_history.append({"role": role, "parts": [{"text": clean_text}]})
+
+            chat = client.chats.create(
+                model='gemini-flash-latest',
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    tools=tools,
+                    temperature=0.7,
+                    automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=False),
+                    tool_config=types.ToolConfig(
+                        function_calling_config=types.FunctionCallingConfig(mode='AUTO')
+                    )
+                ),
+                history=genai_history
+            )
+
+            gemini_response = chat.send_message(user_message)
+            response_text = gemini_response.text
+            current_app.logger.info(f"[Gemini Response] Result text: '{response_text}'")
+            if getattr(gemini_response, 'function_calls', None):
+                current_app.logger.info(f"[Gemini Response] Function calls: {gemini_response.function_calls}")
 
         # Convert Markdown to HTML for safe rendering on frontend
-        html_response = markdown.markdown(response.text if response.text else "")
+        html_response = markdown.markdown(response_text if response_text else "")
 
         return jsonify({"response": html_response})
 
