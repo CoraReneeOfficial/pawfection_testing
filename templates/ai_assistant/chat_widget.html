@@ -10,6 +10,12 @@
         <div class="ai-chat-header">
             <h3>Pawfection AI</h3>
             <div class="ai-chat-controls">
+                <button @click="clearChat()" class="new-chat-btn" title="New Chat">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z"/>
+                    </svg>
+                    New Chat
+                </button>
                 <button @click="open = false; minimizing = true" class="minimize-btn" title="Minimize">_</button>
             </div>
         </div>
@@ -96,6 +102,30 @@
         font-size: 1rem;
         color: #111827;
         font-weight: 600;
+    }
+
+    .ai-chat-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .new-chat-btn {
+        background: none;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        padding: 0.2rem 0.5rem;
+        font-size: 0.75rem;
+        color: #4b5563;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        transition: background 0.2s;
+    }
+
+    .new-chat-btn:hover {
+        background: #f3f4f6;
     }
 
     .minimize-btn {
@@ -211,13 +241,65 @@
 </style>
 
 <script>
+    let chatHistory = [];
+
+    // Load history on mount
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedHistory = sessionStorage.getItem('pawfection_ai_history');
+        if (savedHistory) {
+            try {
+                const history = JSON.parse(savedHistory);
+                if (history && history.length > 0) {
+                    // Clear default welcome message
+                    document.getElementById('ai-messages').innerHTML = '';
+                    chatHistory = history;
+                    history.forEach(msg => {
+                        addMessageToUI(msg.text, msg.role === 'user' ? 'user' : 'ai', msg.role === 'model'); // Model responses can be HTML
+                    });
+                }
+            } catch (e) {
+                console.error("Failed to parse chat history");
+            }
+        }
+    });
+
+    function saveHistory() {
+        sessionStorage.setItem('pawfection_ai_history', JSON.stringify(chatHistory));
+    }
+
+    function clearChat() {
+        chatHistory = [];
+        sessionStorage.removeItem('pawfection_ai_history');
+        const messagesDiv = document.getElementById('ai-messages');
+        messagesDiv.innerHTML = `
+            <div class="message ai-message">
+                Hello! I'm your Pawfection assistant. How can I help you today?
+                <br><br>
+                Try asking:
+                <ul>
+                    <li>"Book a bath for Rex tomorrow"</li>
+                    <li>"Add a new owner named Sarah"</li>
+                    <li>"Show me today's schedule"</li>
+                </ul>
+            </div>
+        `;
+    }
+
     function sendMessage() {
         const input = document.getElementById('ai-user-input');
         const message = input.value.trim();
         if (!message) return;
 
+        // If history was empty, clear the default welcome message before adding user msg
+        if (chatHistory.length === 0) {
+            document.getElementById('ai-messages').innerHTML = '';
+        }
+
         // Add user message
-        addMessage(message, 'user');
+        addMessageToUI(message, 'user');
+        chatHistory.push({ role: 'user', text: message });
+        saveHistory();
+
         input.value = '';
 
         // Show loading
@@ -230,25 +312,27 @@
                 'Content-Type': 'application/json',
                 'X-CSRFToken': '{{ csrf_token() }}'
             },
-            body: JSON.stringify({ message: message })
+            body: JSON.stringify({ message: message, history: chatHistory.slice(0, -1) }) // Send history excluding current msg
         })
         .then(response => response.json())
         .then(data => {
             removeLoading(loadingId);
             if (data.error) {
-                addMessage('Error: ' + data.error, 'ai');
+                addMessageToUI('Error: ' + data.error, 'ai');
             } else {
-                addMessage(data.response, 'ai', true);
+                addMessageToUI(data.response, 'ai', true);
+                chatHistory.push({ role: 'model', text: data.response }); // Note: storing HTML response in history for now, text is fine since we display it as HTML anyway
+                saveHistory();
             }
         })
         .catch(error => {
             removeLoading(loadingId);
-            addMessage('Sorry, something went wrong. Please check your connection.', 'ai');
+            addMessageToUI('Sorry, something went wrong. Please check your connection.', 'ai');
             console.error('Error:', error);
         });
     }
 
-    function addMessage(text, sender, isHtml = false) {
+    function addMessageToUI(text, sender, isHtml = false) {
         const messagesDiv = document.getElementById('ai-messages');
         const msgDiv = document.createElement('div');
         msgDiv.className = `message ${sender}-message`;

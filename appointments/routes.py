@@ -352,11 +352,29 @@ def add_appointment():
             initial_data['appointment_date'] = request.args.get('date')
         if request.args.get('time'):
             initial_data['appointment_time'] = request.args.get('time')
+        if request.args.get('groomer_id'):
+            initial_data['groomer_id'] = request.args.get('groomer_id')
         if request.args.get('notes'):
             initial_data['notes'] = request.args.get('notes')
         if request.args.get('services'):
-            # Expecting comma-separated IDs or text, but template handles splitting for selection
-            initial_data['services_text'] = request.args.get('services')
+            # Services parameter typically comes as comma-separated IDs or names from AI
+            services_param = request.args.get('services', '')
+            # If they are IDs, we map them directly for Alpine
+            # Try to resolve them if they are names
+            service_ids = []
+            for s in services_param.split(','):
+                s = s.strip()
+                if s.isdigit():
+                    service_ids.append(s)
+                else:
+                    # Lookup by name
+                    svc = Service.query.filter(Service.name.ilike(s), Service.store_id == store_id).first()
+                    if svc:
+                        service_ids.append(str(svc.id))
+
+            initial_data['services'] = service_ids
+            # Keep original text if needed for fallback
+            initial_data['services_text'] = services_param
 
     return render_template('add_appointment.html', dogs=dogs, users=groomers_for_dropdown, services=services, appointment_data=initial_data)
 
