@@ -565,12 +565,14 @@ def chat():
 
         response_text = ""
         try:
-            # 1. Primary AI: Ollama (llama3.3)
-            current_app.logger.info("[AI Chat Request] Attempting Ollama (llama3.3) at http://localhost:11434")
+            # 1. Primary AI: Ollama
+            ollama_url = os.environ.get('OLLAMA_URL', 'http://localhost:11434')
+            ollama_model = os.environ.get('OLLAMA_MODEL', 'Gemma3:12b')
+            current_app.logger.info(f"[AI Chat Request] Attempting Ollama ({ollama_model}) at {ollama_url}")
 
-            ollama_client = ollama.Client(host='http://localhost:11434')
+            ollama_client = ollama.Client(host=ollama_url)
             response = ollama_client.chat(
-                model='llama3.3',
+                model=ollama_model,
                 messages=formatted_history,
                 tools=tools
             )
@@ -602,7 +604,7 @@ def chat():
 
                 # Send the tool responses back to Ollama to get the final answer
                 response = ollama_client.chat(
-                    model='llama3.3',
+                    model=ollama_model,
                     messages=formatted_history,
                     tools=tools
                 )
