@@ -697,7 +697,8 @@ def create_app():
         expired_subscriptions = Store.query.filter_by(subscription_status='expired').count()
         
         from models import ActivityLog
-        activity_logs = ActivityLog.query.order_by(ActivityLog.timestamp.desc()).limit(10).all()
+        from sqlalchemy.orm import joinedload
+        activity_logs = ActivityLog.query.options(joinedload(ActivityLog.user), joinedload(ActivityLog.store)).order_by(ActivityLog.timestamp.desc()).limit(10).all()
         
         return render_template('superadmin_dashboard.html', 
                               stores=stores, 
