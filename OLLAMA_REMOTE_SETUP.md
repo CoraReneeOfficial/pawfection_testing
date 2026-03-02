@@ -2,7 +2,7 @@
 
 If you have deployed this application to a cloud provider like Railway but wish to run the Ollama AI model locally on your own hardware (e.g., your laptop) to save costs and utilize local memory/GPU resources, you need to expose your local Ollama server to the internet.
 
-By default, the cloud application tries to reach Ollama at `http://localhost:11434`, which inside a cloud container refers to the container itself, not your computer.
+By default, the cloud application is configured to reach Ollama at `https://erlene-nonadaptational-elden.ngrok-free.dev`. If you need to use a different URL or run it locally, you need to expose your local Ollama server to the internet.
 
 This guide provides instructions on how to securely expose your local Ollama instance so your cloud app can communicate with it using tools like **ngrok** or **Cloudflare Tunnels**.
 

@@ -37,9 +37,9 @@ ollama run Gemma3:12b
 
 ## Step 3: Verify Ollama is Running
 
-Ollama runs a local API server on port `11434` by default. You can verify it's running by opening your web browser and navigating to:
+Ollama runs a local API server on port `11434` by default. You can verify it's running by opening your web browser and navigating to your configured ngrok URL, for example:
 
-[http://localhost:11434](http://localhost:11434)
+[https://erlene-nonadaptational-elden.ngrok-free.dev](https://erlene-nonadaptational-elden.ngrok-free.dev)
 
 You should see a message saying "Ollama is running".
 
@@ -47,13 +47,13 @@ You should see a message saying "Ollama is running".
 
 The application is now configured to attempt connection to Ollama first.
 
-- **Primary AI**: The application will automatically try to connect to the configured URL (defaulting to `http://localhost:11434`) and use the configured model (defaulting to `Gemma3:12b`).
+- **Primary AI**: The application will automatically try to connect to the configured URL (defaulting to `https://erlene-nonadaptational-elden.ngrok-free.dev`) and use the configured model (defaulting to `Gemma3:12b`).
 - **Fallback**: If Ollama is turned off, offline, or unavailable, the application will automatically fall back to using Google Gemini (via the `GEMINI_API_KEY` defined in your `.env` file).
 
 **Configuring Custom Ollama Host or Model**
 If you wish to use a different Ollama host URL or a different model, you can set the following environment variables in your `.env` file:
 ```env
-OLLAMA_URL=http://localhost:11434
+OLLAMA_URL=https://erlene-nonadaptational-elden.ngrok-free.dev
 OLLAMA_MODEL=Gemma3:12b
 ```
 Ensure your `GEMINI_API_KEY` is still configured so the fallback works if needed!
