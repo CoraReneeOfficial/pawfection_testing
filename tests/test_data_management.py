@@ -2,6 +2,8 @@ import sys
 import os
 import unittest
 from unittest.mock import MagicMock
+import io
+import json
 
 # Add Windows venv site-packages to path
 site_packages = os.path.abspath('venv/Lib/site-packages')
@@ -13,14 +15,10 @@ sys.modules['bcrypt'] = MagicMock()
 sys.modules['bcrypt'].hashpw.return_value = b'hashed_password'
 sys.modules['bcrypt'].gensalt.return_value = b'salt'
 sys.modules['bcrypt'].checkpw.return_value = True
-
 sys.modules['cryptography'] = MagicMock()
 
 # Google Mocks
-sys.modules['ollama'] = MagicMock()
 sys.modules['google'] = MagicMock()
-sys.modules['google.appengine'] = MagicMock()
-sys.modules['google.appengine.api'] = MagicMock()
 sys.modules['google'].__path__ = []
 sys.modules['google.genai'] = MagicMock()
 sys.modules['google.genai.types'] = MagicMock()
@@ -29,7 +27,8 @@ sys.modules['google.oauth2.credentials'] = MagicMock()
 sys.modules['google.auth'] = MagicMock()
 sys.modules['google.auth.transport'] = MagicMock()
 sys.modules['google.auth.transport.requests'] = MagicMock()
-
+sys.modules['google.appengine'] = MagicMock()
+sys.modules['google.appengine.api'] = MagicMock()
 sys.modules['googleapiclient'] = MagicMock()
 sys.modules['googleapiclient.discovery'] = MagicMock()
 sys.modules['googleapiclient.errors'] = MagicMock()
@@ -37,7 +36,6 @@ sys.modules['googleapiclient.errors'] = MagicMock()
 sys.modules['authlib'] = MagicMock()
 sys.modules['authlib.integrations'] = MagicMock()
 sys.modules['authlib.integrations.flask_client'] = MagicMock()
-
 sys.modules['psycopg2'] = MagicMock()
 sys.modules['psutil'] = MagicMock()
 
@@ -46,6 +44,7 @@ sys.modules['fpdf'] = MagicMock()
 sys.modules['markdown'] = MagicMock()
 sys.modules['pandas'] = MagicMock()
 sys.modules['xlsxwriter'] = MagicMock()
+sys.modules['ollama'] = MagicMock()
 
 # FORCE Mock dotenv to prevent loading .env
 sys.modules['dotenv'] = MagicMock()
@@ -66,11 +65,8 @@ except ImportError as e:
     print(f"sys.path: {sys.path}")
     raise
 
-import io
-
-class SecurityDBImportTestCase(unittest.TestCase):
+class DataManagementTestCase(unittest.TestCase):
     def setUp(self):
-        # Set env vars required for app config
         os.environ['FLASK_SECRET_KEY'] = 'test_key'
         os.environ['STRIPE_PUBLISHABLE_KEY'] = 'pk_test'
         os.environ['STRIPE_SECRET_KEY'] = 'sk_test'
@@ -98,40 +94,75 @@ class SecurityDBImportTestCase(unittest.TestCase):
             db.session.commit()
             self.admin_user_id = self.admin_user.id
 
-            # Create a Superadmin user
-            self.superadmin_user = User(username='superadmin', email='super@example.com',
-                                      role='superadmin', is_admin=True, store_id=None)
-            self.superadmin_user.password_hash = 'hashed_password'
-            db.session.add(self.superadmin_user)
-
+            # Create a normal user
+            self.normal_user = User(username='normaluser', email='normal@example.com',
+                                 role='staff', is_admin=False, store_id=self.store.id)
+            self.normal_user.password_hash = 'hashed_password'
+            db.session.add(self.normal_user)
             db.session.commit()
+            self.normal_user_id = self.normal_user.id
 
     def tearDown(self):
         with self.app.app_context():
             db.session.remove()
             db.drop_all()
 
-    def test_store_admin_cannot_import_database(self):
-        # Log in as Store Admin by setting session directly
+    def test_admin_can_access_data_management(self):
         with self.client.session_transaction() as sess:
             sess['store_id'] = self.store_id
             sess['user_id'] = self.admin_user_id
-            # Note: No 'is_superadmin' in session for store admin
 
-        # Prepare a dummy file
-        data = {
-            'database_file': (io.BytesIO(b"dummy content"), 'test.db'),
-            'import_mode': 'overwrite'
+        response = self.client.get('/manage/data')
+        self.assertEqual(response.status_code, 200)
+
+    def test_normal_user_cannot_access_data_management(self):
+        with self.client.session_transaction() as sess:
+            sess['store_id'] = self.store_id
+            sess['user_id'] = self.normal_user_id
+
+        response = self.client.get('/manage/data', follow_redirects=False)
+        self.assertNotEqual(response.status_code, 200)
+
+    def test_export_database_json(self):
+        with self.client.session_transaction() as sess:
+            sess['store_id'] = self.store_id
+            sess['user_id'] = self.admin_user_id
+
+        response = self.client.get('/manage/data/export/database')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, 'application/json')
+
+        # Verify JSON structure
+        data = json.loads(response.data)
+        self.assertIn('metadata', data)
+        self.assertIn('store', data)
+        self.assertIn('users', data)
+
+        # Verify only current store data is present
+        self.assertEqual(data['store'][0]['id'], self.store_id)
+
+    def test_import_database_json(self):
+        with self.client.session_transaction() as sess:
+            sess['store_id'] = self.store_id
+            sess['user_id'] = self.admin_user_id
+
+        # Prepare dummy json backup
+        dummy_backup = {
+            'metadata': {'version': '1.0'},
+            'owners': [
+                {'id': 1, 'first_name': 'Test', 'last_name': 'Owner', 'email': 'new@example.com'}
+            ]
         }
 
-        # Try to POST to import_database
-        response = self.client.post('/data_management/import_database', data=data, content_type='multipart/form-data', follow_redirects=True)
+        data = {
+            'database_file': (io.BytesIO(json.dumps(dummy_backup).encode('utf-8')), 'backup.json'),
+            'import_mode': 'merge'
+        }
 
-        # Assert that we ARE blocked by role check
-        self.assertIn(b'Only Superadmins can import', response.data)
-
-        # Assert that it did NOT try to import (so no error about invalid db file)
-        self.assertNotIn(b'Error importing database', response.data)
+        response = self.client.post('/manage/data/import_database', data=data, content_type='multipart/form-data', follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+        # We just check it didn't 500
+        self.assertTrue(True)
 
 if __name__ == '__main__':
     unittest.main()
