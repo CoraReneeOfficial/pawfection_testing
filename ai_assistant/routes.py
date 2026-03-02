@@ -1,3 +1,4 @@
+from typing import Union
 from flask import Blueprint, request, jsonify, render_template, current_app, session, g
 from ai_assistant.feature_flag import is_ai_enabled
 from google import genai
@@ -104,16 +105,16 @@ def chat():
             current_app.logger.info(f"[AI Tool Call] get_owners returning {len(owners)} owners.")
             return result
 
-        def add_appointment(dog_id: int, date: str, time: str, groomer_id: int, services: list[str], notes: str = "") -> str:
+        def add_appointment(dog_id: Union[int, str], date: str, time: str, groomer_id: Union[int, str], services: list[str], notes: str = "") -> str:
             """
             Creates a new appointment for a dog, fully configured with groomer and services.
             Sends notifications and syncs with Google Calendar.
 
             Args:
-                dog_id: The ID of the dog.
+                dog_id: The ID of the dog, or the dog's exact name. If using a name, it must be exact.
                 date: The date of the appointment in YYYY-MM-DD format.
                 time: The time of the appointment in HH:MM format (24-hour).
-                groomer_id: The ID of the selected groomer.
+                groomer_id: The ID of the selected groomer, or the groomer's exact name.
                 services: A list of service names or service IDs to attach to the appointment.
                 notes: Optional notes for the appointment.
 
@@ -122,13 +123,33 @@ def chat():
             """
             current_app.logger.info(f"[AI Tool Call] add_appointment called with dog_id={dog_id}, groomer_id={groomer_id}, date='{date}', time='{time}', services='{services}', notes='{notes}'")
             try:
-                dog = Dog.query.options(db.joinedload(Dog.owner)).filter_by(id=dog_id, store_id=store_id).first()
-                if not dog:
-                    return f"Error: Dog with ID {dog_id} not found."
+                # Handle dog_id as int or string name
+                dog = None
+                if isinstance(dog_id, int) or (isinstance(dog_id, str) and dog_id.isdigit()):
+                    dog = Dog.query.options(db.joinedload(Dog.owner)).filter_by(id=int(dog_id), store_id=store_id).first()
+                else:
+                    dogs = Dog.query.options(db.joinedload(Dog.owner)).filter(Dog.name.ilike(f"%{dog_id}%"), Dog.store_id == store_id).all()
+                    if len(dogs) == 1:
+                        dog = dogs[0]
+                    elif len(dogs) > 1:
+                        return f"Error: Multiple dogs found matching '{dog_id}'. Please use get_dogs to find the specific ID and try again."
 
-                groomer = User.query.filter_by(id=groomer_id, store_id=store_id, is_groomer=True).first()
+                if not dog:
+                    return f"Error: Dog '{dog_id}' not found. Please verify the ID or name."
+
+                # Handle groomer_id as int or string name
+                groomer = None
+                if isinstance(groomer_id, int) or (isinstance(groomer_id, str) and groomer_id.isdigit()):
+                    groomer = User.query.filter_by(id=int(groomer_id), store_id=store_id, is_groomer=True).first()
+                else:
+                    groomers = User.query.filter(User.username.ilike(f"%{groomer_id}%"), User.store_id == store_id, User.is_groomer == True).all()
+                    if len(groomers) == 1:
+                        groomer = groomers[0]
+                    elif len(groomers) > 1:
+                         return f"Error: Multiple groomers found matching '{groomer_id}'. Please use get_groomers to find the specific ID and try again."
+
                 if not groomer:
-                    return f"Error: Groomer with ID {groomer_id} not found or is not a valid groomer."
+                    return f"Error: Groomer '{groomer_id}' not found. Please verify the ID or name."
 
                 try:
                     naive_dt = datetime.datetime.strptime(f"{date} {time}", "%Y-%m-%d %H:%M")
@@ -258,20 +279,29 @@ def chat():
                 db.session.rollback()
                 return f"Error adding owner: {str(e)}"
 
-        def delete_owner(owner_id: int) -> str:
+        def delete_owner(owner_id: Union[int, str]) -> str:
             """
             Deletes an existing owner from the store. This will also delete all associated dogs and appointments.
 
             Args:
-                owner_id: The ID of the owner to delete.
+                owner_id: The ID of the owner to delete, or exact owner name.
 
             Returns:
                 A string indicating success or failure.
             """
             try:
-                owner = Owner.query.filter_by(id=owner_id, store_id=store_id).first()
+                owner = None
+                if isinstance(owner_id, int) or (isinstance(owner_id, str) and owner_id.isdigit()):
+                    owner = Owner.query.filter_by(id=int(owner_id), store_id=store_id).first()
+                else:
+                    owners = Owner.query.filter(Owner.name.ilike(f"%{owner_id}%"), Owner.store_id == store_id).all()
+                    if len(owners) == 1:
+                        owner = owners[0]
+                    elif len(owners) > 1:
+                        return f"Error: Multiple owners found matching '{owner_id}'. Please use get_owners to find the specific ID."
+
                 if not owner:
-                    return f"Error: Owner with ID {owner_id} not found."
+                    return f"Error: Owner '{owner_id}' not found."
 
                 db.session.delete(owner)
                 db.session.commit()
@@ -280,12 +310,12 @@ def chat():
                 db.session.rollback()
                 return f"Error deleting owner: {str(e)}"
 
-        def edit_owner(owner_id: int, name: str = "", phone: str = "", email: str = "") -> str:
+        def edit_owner(owner_id: Union[int, str], name: str = "", phone: str = "", email: str = "") -> str:
             """
             Edits an existing owner in the store. Provide only the fields you want to change.
 
             Args:
-                owner_id: The ID of the owner to edit.
+                owner_id: The ID of the owner to edit, or exact owner name.
                 name: The new full name of the owner.
                 phone: The new phone number.
                 email: The new email address.
@@ -294,9 +324,18 @@ def chat():
                 A string indicating success or failure.
             """
             try:
-                owner = Owner.query.filter_by(id=owner_id, store_id=store_id).first()
+                owner = None
+                if isinstance(owner_id, int) or (isinstance(owner_id, str) and owner_id.isdigit()):
+                    owner = Owner.query.filter_by(id=int(owner_id), store_id=store_id).first()
+                else:
+                    owners = Owner.query.filter(Owner.name.ilike(f"%{owner_id}%"), Owner.store_id == store_id).all()
+                    if len(owners) == 1:
+                        owner = owners[0]
+                    elif len(owners) > 1:
+                        return f"Error: Multiple owners found matching '{owner_id}'. Please use get_owners to find the specific ID."
+
                 if not owner:
-                    return f"Error: Owner with ID {owner_id} not found."
+                    return f"Error: Owner '{owner_id}' not found."
                 if name:
                     owner.name = name
                 if phone:
@@ -309,12 +348,12 @@ def chat():
                 db.session.rollback()
                 return f"Error editing owner: {str(e)}"
 
-        def add_dog(owner_id: int, name: str, breed: str = "") -> str:
+        def add_dog(owner_id: Union[int, str], name: str, breed: str = "") -> str:
             """
             Adds a new dog to an existing owner's profile.
 
             Args:
-                owner_id: The ID of the dog's owner.
+                owner_id: The ID of the dog's owner, or the owner's exact name.
                 name: The name of the dog.
                 breed: Optional breed of the dog.
 
@@ -322,9 +361,18 @@ def chat():
                 A string indicating success or failure.
             """
             try:
-                owner = Owner.query.filter_by(id=owner_id, store_id=store_id).first()
+                owner = None
+                if isinstance(owner_id, int) or (isinstance(owner_id, str) and owner_id.isdigit()):
+                    owner = Owner.query.filter_by(id=int(owner_id), store_id=store_id).first()
+                else:
+                    owners = Owner.query.filter(Owner.name.ilike(f"%{owner_id}%"), Owner.store_id == store_id).all()
+                    if len(owners) == 1:
+                        owner = owners[0]
+                    elif len(owners) > 1:
+                        return f"Error: Multiple owners found matching '{owner_id}'. Please use get_owners to find the specific ID."
+
                 if not owner:
-                    return f"Error: Owner with ID {owner_id} not found."
+                    return f"Error: Owner '{owner_id}' not found."
 
                 dog = Dog(name=name, breed=breed, owner_id=owner.id, store_id=store_id)
                 db.session.add(dog)
@@ -334,12 +382,12 @@ def chat():
                 db.session.rollback()
                 return f"Error adding dog: {str(e)}"
 
-        def edit_dog(dog_id: int, name: str = "", breed: str = "") -> str:
+        def edit_dog(dog_id: Union[int, str], name: str = "", breed: str = "") -> str:
             """
             Edits an existing dog in the store. Provide only the fields you want to change.
 
             Args:
-                dog_id: The ID of the dog to edit.
+                dog_id: The ID of the dog to edit, or exact dog name.
                 name: The new name of the dog.
                 breed: The new breed of the dog.
 
@@ -347,9 +395,18 @@ def chat():
                 A string indicating success or failure.
             """
             try:
-                dog = Dog.query.filter_by(id=dog_id, store_id=store_id).first()
+                dog = None
+                if isinstance(dog_id, int) or (isinstance(dog_id, str) and dog_id.isdigit()):
+                    dog = Dog.query.filter_by(id=int(dog_id), store_id=store_id).first()
+                else:
+                    dogs = Dog.query.filter(Dog.name.ilike(f"%{dog_id}%"), Dog.store_id == store_id).all()
+                    if len(dogs) == 1:
+                        dog = dogs[0]
+                    elif len(dogs) > 1:
+                        return f"Error: Multiple dogs found matching '{dog_id}'. Please use get_dogs to find the specific ID."
+
                 if not dog:
-                    return f"Error: Dog with ID {dog_id} not found."
+                    return f"Error: Dog '{dog_id}' not found."
 
                 if name:
                     dog.name = name
@@ -361,20 +418,29 @@ def chat():
                 db.session.rollback()
                 return f"Error editing dog: {str(e)}"
 
-        def delete_dog(dog_id: int) -> str:
+        def delete_dog(dog_id: Union[int, str]) -> str:
             """
             Deletes an existing dog from the store. This will also delete all associated appointments.
 
             Args:
-                dog_id: The ID of the dog to delete.
+                dog_id: The ID of the dog to delete, or exact dog name.
 
             Returns:
                 A string indicating success or failure.
             """
             try:
-                dog = Dog.query.filter_by(id=dog_id, store_id=store_id).first()
+                dog = None
+                if isinstance(dog_id, int) or (isinstance(dog_id, str) and dog_id.isdigit()):
+                    dog = Dog.query.filter_by(id=int(dog_id), store_id=store_id).first()
+                else:
+                    dogs = Dog.query.filter(Dog.name.ilike(f"%{dog_id}%"), Dog.store_id == store_id).all()
+                    if len(dogs) == 1:
+                        dog = dogs[0]
+                    elif len(dogs) > 1:
+                        return f"Error: Multiple dogs found matching '{dog_id}'. Please use get_dogs to find the specific ID."
+
                 if not dog:
-                    return f"Error: Dog with ID {dog_id} not found."
+                    return f"Error: Dog '{dog_id}' not found."
 
                 db.session.delete(dog)
                 db.session.commit()
@@ -383,7 +449,7 @@ def chat():
                 db.session.rollback()
                 return f"Error deleting dog: {str(e)}"
 
-        def edit_appointment(appointment_id: int, date: str = "", time: str = "", groomer_id: int = None, services: list[str] = None, notes: str = "") -> str:
+        def edit_appointment(appointment_id: Union[int, str], date: str = "", time: str = "", groomer_id: Union[int, str] = None, services: list[str] = None, notes: str = "") -> str:
             """
             Edits an existing appointment. Sends notifications and syncs with Google Calendar. Provide only the fields you want to change.
 
@@ -391,7 +457,7 @@ def chat():
                 appointment_id: The ID of the appointment to edit.
                 date: The new date of the appointment in YYYY-MM-DD format.
                 time: The new time of the appointment in HH:MM format (24-hour).
-                groomer_id: The ID of the new groomer.
+                groomer_id: The ID of the new groomer, or the exact groomer name.
                 services: A list of new service names or service IDs to attach to the appointment.
                 notes: The new notes for the appointment.
 
@@ -399,9 +465,13 @@ def chat():
                 A string indicating success or failure.
             """
             try:
-                appt = Appointment.query.options(
-                    db.joinedload(Appointment.dog).joinedload(Dog.owner)
-                ).filter_by(id=appointment_id, store_id=store_id).first()
+                appt = None
+                if isinstance(appointment_id, int) or (isinstance(appointment_id, str) and appointment_id.isdigit()):
+                    appt = Appointment.query.options(
+                        db.joinedload(Appointment.dog).joinedload(Dog.owner)
+                    ).filter_by(id=int(appointment_id), store_id=store_id).first()
+                else:
+                    return f"Error: Appointment ID must be an integer. Please provide a valid appointment ID."
 
                 if not appt:
                     return f"Error: Appointment {appointment_id} not found."
@@ -424,9 +494,18 @@ def chat():
                     return "Error: Both date and time must be provided to update the appointment datetime."
 
                 if groomer_id is not None:
-                    groomer = User.query.filter_by(id=groomer_id, store_id=store_id, is_groomer=True).first()
+                    groomer = None
+                    if isinstance(groomer_id, int) or (isinstance(groomer_id, str) and groomer_id.isdigit()):
+                        groomer = User.query.filter_by(id=int(groomer_id), store_id=store_id, is_groomer=True).first()
+                    else:
+                        groomers = User.query.filter(User.username.ilike(f"%{groomer_id}%"), User.store_id == store_id, User.is_groomer == True).all()
+                        if len(groomers) == 1:
+                            groomer = groomers[0]
+                        elif len(groomers) > 1:
+                            return f"Error: Multiple groomers found matching '{groomer_id}'. Please use get_groomers to find the specific ID and try again."
+
                     if not groomer:
-                        return f"Error: Groomer with ID {groomer_id} not found or is not a valid groomer."
+                        return f"Error: Groomer '{groomer_id}' not found. Please verify the ID or name."
                     appt.groomer_id = groomer.id
 
                 services_text = appt.requested_services_text
@@ -465,24 +544,27 @@ def chat():
                 db.session.rollback()
                 return f"Error editing appointment: {str(e)}"
 
-        def delete_appointment(appointment_id: int, send_notification: bool = True) -> str:
+        def delete_appointment(appointment_id: Union[int, str], send_notification: bool = True) -> str:
             """
             Cancels/deletes an existing appointment.
 
             Args:
                 appointment_id: The ID of the appointment to delete.
-                send_notification: Whether to send a cancellation email/text to the owner.
 
             Returns:
                 A string indicating success or failure.
             """
             try:
-                appt = Appointment.query.options(
-                    db.joinedload(Appointment.dog).joinedload(Dog.owner)
-                ).filter_by(id=appointment_id, store_id=store_id).first()
+                appt = None
+                if isinstance(appointment_id, int) or (isinstance(appointment_id, str) and appointment_id.isdigit()):
+                    appt = Appointment.query.options(
+                        db.joinedload(Appointment.dog).joinedload(Dog.owner)
+                    ).filter_by(id=int(appointment_id), store_id=store_id).first()
+                else:
+                    return f"Error: Appointment ID must be an integer. Please provide a valid appointment ID."
 
                 if not appt:
-                    return f"Error: Appointment {appointment_id} not found."
+                    return f"Error: Appointment '{appointment_id}' not found."
 
                 store_obj = Store.query.get(store_id)
                 store_tz_str = getattr(store_obj, 'timezone', None) or 'America/New_York'
@@ -534,14 +616,15 @@ def chat():
 
         INSTRUCTIONS:
         1. Be concise, friendly, and professional.
-        2. You now have tools to look up groomers, services, dogs, owners, and to create/edit/delete appointments, owners, and dogs directly!
+        2. You have tools available. DO NOT output raw JSON strings for tool calls in your messages to the user. Use the actual tool calling framework.
         3. ALWAYS OFFER A CHOICE FOR BOOKING: When a user wants to book an appointment, ask if they want you to "book it automatically in the background" or "provide a link to the booking page with the details filled out".
-           - If they choose automatic: You MUST gather all required details (dog, date, time, groomer, and services) before calling the `add_appointment` tool. Use your lookup tools to find the correct IDs for groomer and dog, and the correct names/IDs for services.
+           - If they choose automatic: You MUST gather all required details (dog, date, time, groomer, and services) before calling the `add_appointment` tool.
            - If they choose the link: Generate a SMART LINK to `/add_appointment` with the parameters pre-filled (e.g., `[Book for Rex](/add_appointment?dog_id=1&date=2023-10-10&time=14:00&groomer_id=2&services=Bath,Nails)`).
-        4. When calling a tool, wait for its output and confirm the result with the user.
-        5. If you need to perform an action without a tool, generate a SMART LINK.
-        6. When editing profiles (owner or dog), prompt the user what part of the profile they'd like to edit.
-        7. Use Markdown for formatting (bold, lists, links).
+        4. When calling a tool, wait for its output and confirm the result with the user. DO NOT use made-up tool names. Only use: get_dogs, get_owners, add_appointment, get_groomers, get_services, add_owner, edit_owner, delete_owner, add_dog, edit_dog, delete_dog, edit_appointment, delete_appointment.
+        5. The ID parameters for dogs, owners, and groomers can accept exact names if you do not know the ID. If an exact name match cannot be uniquely found, the tool will return an error, and you should use the get_dogs, get_owners, or get_groomers tools to look up the specific ID before trying again.
+        6. If you need to perform an action without a tool, generate a SMART LINK.
+        7. When editing profiles (owner or dog), prompt the user what part of the profile they'd like to edit.
+        8. Use Markdown for formatting (bold, lists, links).
         """
 
 
