@@ -544,6 +544,115 @@ def chat():
                 db.session.rollback()
                 return f"Error editing appointment: {str(e)}"
 
+        def get_store_info() -> str:
+            """
+            Fetches the current store's business information (name, hours, description, etc).
+            """
+            store_obj = Store.query.get(store_id)
+            if not store_obj:
+                return "Error: Store not found."
+
+            info = []
+            info.append(f"Store Name: {store_obj.name}")
+            info.append(f"Address: {store_obj.address}")
+            info.append(f"Phone: {store_obj.phone}")
+            info.append(f"Email: {store_obj.email}")
+            info.append(f"Description: {store_obj.description}")
+            info.append(f"Business Hours: {store_obj.business_hours}")
+            info.append(f"Website: {store_obj.website_url}")
+            return "\n".join(info)
+
+        def update_store_info(name: str = None, description: str = None, business_hours: str = None, address: str = None, phone: str = None, email: str = None, website_url: str = None) -> str:
+            """
+            Updates the current store's business information. Requires admin privileges.
+            """
+            if not g.user.is_admin and g.user.role != 'superadmin':
+                return "Error: Only admins can update store information."
+
+            try:
+                store_obj = Store.query.get(store_id)
+                if not store_obj:
+                    return "Error: Store not found."
+
+                if name is not None: store_obj.name = name
+                if description is not None: store_obj.description = description
+                if business_hours is not None: store_obj.business_hours = business_hours
+                if address is not None: store_obj.address = address
+                if phone is not None: store_obj.phone = phone
+                if email is not None: store_obj.email = email
+                if website_url is not None: store_obj.website_url = website_url
+
+                db.session.commit()
+                return "Successfully updated store information."
+            except Exception as e:
+                db.session.rollback()
+                return f"Error updating store info: {str(e)}"
+
+        def get_revenue(period: str = "today") -> str:
+            """
+            Fetches revenue for a given period ('today', 'week', 'month', 'year'). Requires admin privileges.
+            """
+            if not g.user.is_admin and g.user.role != 'superadmin':
+                return "Error: Only admins can view revenue information."
+
+            import datetime
+            import pytz
+            from sqlalchemy import func
+
+            store_obj = Store.query.get(store_id)
+            store_tz_str = getattr(store_obj, 'timezone', None) or 'UTC'
+            try:
+                store_tz = pytz.timezone(store_tz_str)
+            except:
+                store_tz = pytz.UTC
+
+            now_utc = datetime.datetime.now(datetime.timezone.utc)
+            now_local = now_utc.astimezone(store_tz)
+
+            start_date = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_date = start_date + datetime.timedelta(days=1)
+
+            if period == "week":
+                start_date = start_date - datetime.timedelta(days=start_date.weekday())
+            elif period == "month":
+                start_date = start_date.replace(day=1)
+            elif period == "year":
+                start_date = start_date.replace(month=1, day=1)
+
+            start_utc = start_date.astimezone(datetime.timezone.utc)
+            end_utc = end_date.astimezone(datetime.timezone.utc)
+
+            revenue = db.session.query(func.sum(Appointment.checkout_total_amount)).filter(
+                Appointment.store_id == store_id,
+                Appointment.status == 'Completed',
+                Appointment.appointment_datetime >= start_utc,
+                Appointment.appointment_datetime < end_utc
+            ).scalar() or 0.0
+
+            return f"Revenue for {period}: ${revenue:.2f}"
+
+        def add_service(name: str, base_price: float, description: str = "") -> str:
+            """
+            Adds a new service to the store. Requires admin privileges.
+            """
+            if not g.user.is_admin and g.user.role != 'superadmin':
+                return "Error: Only admins can add services."
+
+            try:
+                service = Service(
+                    name=name,
+                    base_price=base_price,
+                    description=description,
+                    store_id=store_id,
+                    created_by_user_id=g.user.id
+                )
+                db.session.add(service)
+                db.session.commit()
+                return f"Successfully added service '{name}' with base price ${base_price:.2f}."
+            except Exception as e:
+                db.session.rollback()
+                return f"Error adding service: {str(e)}"
+
         def delete_appointment(appointment_id: Union[int, str], send_notification: bool = True) -> str:
             """
             Cancels/deletes an existing appointment.
@@ -598,16 +707,8 @@ def chat():
                 return f"Error deleting appointment: {str(e)}"
 
         system_prompt = f"""
-        You are 'Pawfection AI', a helpful assistant for a dog grooming business app.
-        Your goal is to help staff manage appointments, owners, and dogs.
-
-        The app has the following main features and routes:
-        - Dashboard: /dashboard
-        - Calendar: /calendar
-        - Add Appointment: /add_appointment (Params: dog_id, date, time, groomer_id, services, notes)
-        - Add Owner: /add_owner
-        - Add Dog: /add_dog
-        - Directory: /directory (List of owners/dogs)
+        You are 'Pawfection AI', a powerhouse assistant for a dog grooming business app.
+        Your goal is to automate everything, including managing appointments, owners, dogs, revenue, settings, and business information.
 
         CONTEXT:
         Current User Role: {g.user.role if hasattr(g, 'user') else 'Unknown'}
@@ -617,18 +718,16 @@ def chat():
         INSTRUCTIONS:
         1. Be concise, friendly, and professional.
         2. You have tools available. DO NOT output raw JSON strings for tool calls in your messages to the user. Use the actual tool calling framework.
-        3. ALWAYS OFFER A CHOICE FOR BOOKING: When a user wants to book an appointment, ask if they want you to "book it automatically in the background" or "provide a link to the booking page with the details filled out".
-           - If they choose automatic: You MUST gather all required details (dog, date, time, groomer, and services) before calling the `add_appointment` tool.
-           - If they choose the link: Generate a SMART LINK to `/add_appointment` with the parameters pre-filled (e.g., `[Book for Rex](/add_appointment?dog_id=1&date=2023-10-10&time=14:00&groomer_id=2&services=Bath,Nails)`).
-        4. When calling a tool, wait for its output and confirm the result with the user. DO NOT use made-up tool names. Only use: get_dogs, get_owners, add_appointment, get_groomers, get_services, add_owner, edit_owner, delete_owner, add_dog, edit_dog, delete_dog, edit_appointment, delete_appointment.
+        3. DO NOT OFFER CHOICES OR WALKTHROUGHS. When a user wants to perform an action (like booking an appointment, adding an owner, or adding a dog), you MUST gather all required details and call the relevant tool immediately to perform the action in the background. DO NOT offer a "smart link" or ask them to fill out a form themselves. You handle everything fully.
+        4. When calling a tool, wait for its output and confirm the result with the user. DO NOT use made-up tool names.
         5. The ID parameters for dogs, owners, and groomers can accept exact names if you do not know the ID. If an exact name match cannot be uniquely found, the tool will return an error, and you should use the get_dogs, get_owners, or get_groomers tools to look up the specific ID before trying again.
-        6. If you need to perform an action without a tool, generate a SMART LINK.
-        7. When editing profiles (owner or dog), prompt the user what part of the profile they'd like to edit.
+        6. You can manage the business: use `get_revenue` to check earnings, `get_store_info` to see settings, and `update_store_info` / `add_service` to change them (these require admin privileges).
+        7. Only use the tools provided to you. If a task cannot be fully completed by a tool, inform the user.
         8. Use Markdown for formatting (bold, lists, links).
         """
 
 
-        tools = [get_dogs, get_owners, add_appointment, get_groomers, get_services, add_owner, edit_owner, delete_owner, add_dog, edit_dog, delete_dog, edit_appointment, delete_appointment]
+        tools = [get_dogs, get_owners, add_appointment, get_groomers, get_services, add_owner, edit_owner, delete_owner, add_dog, edit_dog, delete_dog, edit_appointment, delete_appointment, get_store_info, update_store_info, get_revenue, add_service]
 
         formatted_history = [{"role": "system", "content": system_prompt}]
         for msg in history:
