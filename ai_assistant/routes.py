@@ -211,7 +211,12 @@ def chat():
                     current_app.logger.error(f"[AI Tool Call] Background task error (Sync/Email) for AI appointment: {e}", exc_info=True)
                     # Don't fail the tool call if background tasks fail
 
-                msg = f"Successfully booked appointment for {dog.name} with {groomer.username} on {appt_datetime.astimezone(store_tz).strftime('%Y-%m-%d at %I:%M %p')}. Services added: {services_text or 'None'}."
+                # URL link
+                # Appointments go to either calendar or checkout but checkout is specific.
+                # Better to link to the daily calendar view for that date
+                calendar_link = f"/calendar?date={date}"
+
+                msg = f"Successfully booked appointment for {dog.name} with {groomer.username} on {appt_datetime.astimezone(store_tz).strftime('%Y-%m-%d at %I:%M %p')}. Services added: {services_text or 'None'}. [View Calendar]({calendar_link})"
                 current_app.logger.info(f"[AI Tool Call] add_appointment succeeded: {msg}")
                 return msg
 
@@ -274,7 +279,8 @@ def chat():
                 owner = Owner(name=name, phone_number=phone, email=email, store_id=store_id)
                 db.session.add(owner)
                 db.session.commit()
-                return f"Successfully added owner '{name}' with ID {owner.id}."
+                link = f"/owners/{owner.id}"
+                return f"Successfully added owner '{name}' with ID {owner.id}. [View Owner Profile]({link})"
             except Exception as e:
                 db.session.rollback()
                 return f"Error adding owner: {str(e)}"
@@ -377,7 +383,8 @@ def chat():
                 dog = Dog(name=name, breed=breed, owner_id=owner.id, store_id=store_id)
                 db.session.add(dog)
                 db.session.commit()
-                return f"Successfully added dog '{name}' to owner '{owner.name}'. Dog ID: {dog.id}."
+                link = f"/dogs/{dog.id}"
+                return f"Successfully added dog '{name}' to owner '{owner.name}'. Dog ID: {dog.id}. [View Dog Profile]({link})"
             except Exception as e:
                 db.session.rollback()
                 return f"Error adding dog: {str(e)}"
