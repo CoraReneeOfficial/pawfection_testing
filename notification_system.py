@@ -108,21 +108,22 @@ def create_notification(store_id, notification_type, content, reference_id=None,
 # Check for items that need attention and create notifications
 def check_for_notifications(store_id):
     """Check for items that need attention and create notifications if needed."""
-    # Check for pending appointment requests
-    pending_requests = AppointmentRequest.query.filter_by(
+    # Check if we already have a notification for pending requests
+    # Early return/skip logic: if we already have an unread notification, skip counting
+    existing_request_notif = Notification.query.filter_by(
         store_id=store_id,
-        status='pending'
-    ).count()
+        type='appointment_request',
+        is_read=False
+    ).first()
     
-    if pending_requests > 0:
-        # Check if we already have a notification for this
-        existing = Notification.query.filter_by(
+    if not existing_request_notif:
+        # Only perform the count query if we need to create a notification
+        pending_requests = AppointmentRequest.query.filter_by(
             store_id=store_id,
-            type='appointment_request',
-            is_read=False
-        ).first()
+            status='pending'
+        ).count()
         
-        if not existing:
+        if pending_requests > 0:
             create_notification(
                 store_id=store_id,
                 notification_type='appointment_request',
