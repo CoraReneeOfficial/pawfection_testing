@@ -9,3 +9,7 @@
 ## 2025-03-01 - Aria Label for Chat Widget
 **Learning:** Icon-only buttons without textual context are completely invisible to screen reader users, providing a poor experience for accessibility. Always add `aria-label` attributes to icon-only buttons (like the AI chat send button).
 **Action:** Before declaring an icon-only button complete, ensure it has an explicitly declared, descriptive `aria-label`.
+
+## 2025-03-05 - Inline Confirmations for Destructive Actions
+**Learning:** Native `confirm()` dialogs provided by the browser are jarring and break the user's immersion in the application interface. Replacing them with an inline Alpine.js confirmation state (toggling between a regular button and an "Are you sure?" prompt with Cancel/Confirm options) provides a much smoother, intentional, and aesthetically consistent user experience for destructive actions like deleting an owner.
+**Action:** When implementing destructive actions (deletes, resets), use an Alpine.js `x-data="{ confirming: false }"` component with `x-show` to handle the confirmation flow directly within the UI instead of relying on `onsubmit="return confirm(...)"`.
