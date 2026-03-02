@@ -1080,13 +1080,13 @@ def walk_in_appointment():
         requested_services = sanitize_text_input(request.form.get('requested_services', ''))
         
         # Check if owner exists by phone number
-        owner = Owner.query.filter_by(phone=phone_number, store_id=store_id).first()
+        owner = Owner.query.filter_by(phone_number=phone_number, store_id=store_id).first()
         
         # Create new owner if not exists
         if not owner:
             owner = Owner(
                 name=customer_name,
-                phone=phone_number,
+                phone_number=phone_number,
                 email=email,
                 store_id=store_id
             )
@@ -1210,13 +1210,13 @@ def deposit_payment():
             # Check if owner exists
             owner = None
             if phone:
-                owner = Owner.query.filter_by(phone=phone, store_id=store_id).first()
+                owner = Owner.query.filter_by(phone_number=phone, store_id=store_id).first()
                 
             if not owner and customer_name:
                 # Create a new owner
                 owner = Owner(
                     name=customer_name,
-                    phone=phone,
+                    phone_number=phone,
                     store_id=store_id
                 )
                 db.session.add(owner)
@@ -1661,7 +1661,7 @@ def email_receipt_by_id(receipt_id):
             'email/receipt_email.html',
             store_name=data.get('store_name', store.name if store else ''),
             store_email=data.get('store_email', getattr(store, 'email', '')),
-            store_phone=data.get('store_phone', getattr(store, 'phone_number', '')),
+            store_phone=data.get('store_phone', getattr(store, 'phone', '')),
             date=data.get('date', ''),
             customer_name=data.get('customer_name', ''),
             pet_name=data.get('pet_name', ''),
@@ -1945,3 +1945,51 @@ def appointments_needing_details():
         Appointment.details_needed == True
     ).order_by(Appointment.appointment_datetime.asc()).all()
     return render_template('appointments_needing_details.html', appointments=appointments)
+
+@appointments_bp.route('/api/appointments/search', methods=['GET'])
+@subscription_required
+def api_search_appointments():
+    """API endpoint to search for appointments by customer name, phone, email, or pet name."""
+    if 'store_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    store_id = session['store_id']
+    query = request.args.get('q', '').strip().lower()
+
+    if not query:
+        return jsonify([])
+
+    now = datetime.datetime.now(timezone.utc)
+
+    appointments = Appointment.query.join(Dog).join(Owner).filter(
+        Appointment.store_id == store_id,
+        Appointment.appointment_datetime > now,
+        Appointment.status == 'Scheduled',
+        or_(
+            Owner.name.ilike(f'%{query}%'),
+            Owner.phone_number.ilike(f'%{query}%'),
+            Owner.email.ilike(f'%{query}%'),
+            Dog.name.ilike(f'%{query}%')
+        )
+    ).options(
+        joinedload(Appointment.dog).joinedload(Dog.owner)
+    ).order_by(Appointment.appointment_datetime.asc()).limit(10).all()
+
+    results = []
+    for appt in appointments:
+        results.append({
+            'id': appt.id,
+            'customer': {
+                'id': appt.dog.owner.id,
+                'name': appt.dog.owner.name
+            },
+            'pet': {
+                'id': appt.dog.id,
+                'name': appt.dog.name,
+                'breed': getattr(appt.dog, 'breed', 'Unknown')
+            },
+            'date': appt.appointment_datetime.isoformat(),
+            'services': appt.requested_services_text or 'No services specified'
+        })
+
+    return jsonify(results)
