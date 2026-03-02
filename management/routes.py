@@ -1332,3 +1332,300 @@ def edit_store():
     return render_template('edit_store.html', store=store, timezones=timezones)
 
 # ... (Rest of file unchanged, already reviewed)
+
+
+@management_bp.route('/manage/data', endpoint='data_management', methods=['GET'])
+@admin_required
+def data_management():
+    from flask_wtf import FlaskForm
+    from flask_wtf.file import FileField
+    from wtforms import RadioField
+    class DummyForm(FlaskForm):
+        database_file = FileField()
+        import_mode = RadioField(choices=[('overwrite', 'overwrite'), ('merge', 'merge')])
+
+    form = DummyForm()
+    return render_template('data_management.html', form=form)
+
+@management_bp.route('/manage/data/export/database', endpoint='export_database', methods=['GET'])
+@admin_required
+def export_database():
+    from decimal import Decimal
+    from datetime import time, timezone, datetime
+    import json
+    from flask import Response, current_app
+    from models import db
+
+    store_id = g.user.store_id
+
+    # Tables to export
+    from models import Store, User, Owner, Dog, Service, Appointment, AppointmentRequest, Receipt
+
+    export_data = {
+        'metadata': {
+            'exported_at': datetime.now(timezone.utc).isoformat(),
+            'store_id': store_id,
+            'version': '1.0'
+        },
+        'store': [],
+        'users': [],
+        'owners': [],
+        'dogs': [],
+        'services': [],
+        'appointments': [],
+        'appointment_requests': [],
+        'receipts': []
+    }
+
+    try:
+        # Get Store
+        store = Store.query.get(store_id)
+        if store:
+            store_data = {c.name: getattr(store, c.name) for c in store.__table__.columns if c.name not in ['password_hash', 'google_token_json']}
+            export_data['store'].append(store_data)
+
+        # Get Users
+        users = User.query.filter_by(store_id=store_id).all()
+        for user in users:
+            user_data = {c.name: getattr(user, c.name) for c in user.__table__.columns if c.name != 'password_hash'}
+            export_data['users'].append(user_data)
+
+        # Get Owners
+        owners = Owner.query.filter_by(store_id=store_id).all()
+        for owner in owners:
+            owner_data = {c.name: getattr(owner, c.name) for c in owner.__table__.columns}
+            export_data['owners'].append(owner_data)
+
+        # Get Dogs
+        dogs = Dog.query.join(Owner).filter(Owner.store_id == store_id).all()
+        for dog in dogs:
+            dog_data = {c.name: getattr(dog, c.name) for c in dog.__table__.columns}
+            export_data['dogs'].append(dog_data)
+
+        # Get Services
+        services = Service.query.filter_by(store_id=store_id).all()
+        for service in services:
+            service_data = {c.name: getattr(service, c.name) for c in service.__table__.columns}
+            # Handle Decimals
+            for k, v in service_data.items():
+                if isinstance(v, Decimal):
+                    service_data[k] = float(v)
+            export_data['services'].append(service_data)
+
+        # Get Appointments
+        appointments = Appointment.query.join(Dog).join(Owner).filter(Owner.store_id == store_id).all()
+        for appt in appointments:
+            appt_data = {c.name: getattr(appt, c.name) for c in appt.__table__.columns}
+            # Handle datetime objects and decimals
+            for k, v in appt_data.items():
+                if isinstance(v, datetime):
+                    appt_data[k] = v.isoformat()
+                elif isinstance(v, time):
+                    appt_data[k] = v.isoformat()
+                elif isinstance(v, Decimal):
+                    appt_data[k] = float(v)
+            export_data['appointments'].append(appt_data)
+
+        # Get Appointment Requests
+        requests = AppointmentRequest.query.filter_by(store_id=store_id).all()
+        for req in requests:
+            req_data = {c.name: getattr(req, c.name) for c in req.__table__.columns}
+            for k, v in req_data.items():
+                if isinstance(v, datetime):
+                    req_data[k] = v.isoformat()
+                elif isinstance(v, time):
+                    req_data[k] = v.isoformat()
+            export_data['appointment_requests'].append(req_data)
+
+        # Get Receipts
+        receipts = Receipt.query.filter_by(store_id=store_id).all()
+        for rec in receipts:
+            rec_data = {c.name: getattr(rec, c.name) for c in rec.__table__.columns}
+            for k, v in rec_data.items():
+                if isinstance(v, datetime):
+                    rec_data[k] = v.isoformat()
+                elif isinstance(v, Decimal):
+                    rec_data[k] = float(v)
+            export_data['receipts'].append(rec_data)
+
+    except Exception as e:
+        current_app.logger.error(f"Export error: {e}")
+        flash('Error generating export', 'danger')
+        return redirect(url_for('management.data_management'))
+
+    json_str = json.dumps(export_data, indent=2, default=str)
+
+    return Response(
+        json_str,
+        mimetype="application/json",
+        headers={"Content-disposition": "attachment; filename=store_data_export.json"}
+    )
+
+@management_bp.route('/manage/data/export/images', endpoint='export_images', methods=['GET'])
+@admin_required
+def export_images():
+    import os
+    import zipfile
+    from io import BytesIO
+    from flask import send_file, current_app, flash, redirect, url_for
+    from models import Dog, Owner, Store
+
+    # We should only export images that belong to this store
+    store_id = g.user.store_id
+
+    # Gather image filenames
+    image_files = []
+
+    # Store logo
+    store = Store.query.get(store_id)
+    if store and store.logo_filename:
+        image_files.append(os.path.join('store_logos', store.logo_filename))
+
+    # Dog images
+    dogs = Dog.query.join(Owner).filter(Owner.store_id == store_id).all()
+    for dog in dogs:
+        if dog.image_filename:
+            image_files.append(os.path.join('dog_images', dog.image_filename))
+
+    if not image_files:
+        flash('No images to export for this store.', 'info')
+        return redirect(url_for('management.data_management'))
+
+    upload_folder = os.path.join(current_app.static_folder, 'uploads')
+    memory_file = BytesIO()
+
+    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for img_rel_path in image_files:
+            full_path = os.path.join(upload_folder, img_rel_path)
+            if os.path.exists(full_path):
+                zf.write(full_path, img_rel_path)
+
+    memory_file.seek(0)
+    return send_file(memory_file, as_attachment=True, download_name='store_images_backup.zip', mimetype='application/zip')
+
+
+
+@management_bp.route('/manage/data/import_database', endpoint='import_database', methods=['POST'])
+@admin_required
+def import_database():
+    from decimal import Decimal
+    from datetime import time, timezone, datetime
+    import os
+    import json
+    from datetime import datetime
+    from dateutil.parser import parse as parse_date
+    from flask import request, flash, redirect, url_for, current_app
+    from models import db, ActivityLog, Owner, Dog, Service, Appointment
+
+    uploaded_file = request.files.get('database_file')
+    if not uploaded_file or not uploaded_file.filename.endswith('.json'):
+         flash("Please upload a valid JSON backup file.", "danger")
+         return redirect(url_for('management.data_management'))
+
+    import_mode = request.form.get('import_mode', 'merge')
+    store_id = g.user.store_id
+
+    try:
+        data = json.load(uploaded_file)
+
+        # Verify this is our export format
+        if 'metadata' not in data or 'owners' not in data:
+            flash("Invalid backup file format.", "danger")
+            return redirect(url_for('management.data_management'))
+
+        # Basic import logic for Owners, Dogs, Services (Merge mode only for safety for now)
+        if import_mode == 'overwrite':
+            flash("Overwrite mode is not yet fully supported for JSON imports to prevent accidental data loss. Defaulting to Merge.", "warning")
+
+        records_added = 0
+
+        # We need mapping from old IDs to new IDs to maintain relationships
+        owner_id_map = {}
+        dog_id_map = {}
+        service_id_map = {}
+
+        # Import Owners
+        for owner_data in data.get('owners', []):
+            old_id = owner_data.get('id')
+            # Check if owner with this email already exists in this store
+            existing = None
+            if owner_data.get('email'):
+                existing = Owner.query.filter_by(store_id=store_id, email=owner_data['email']).first()
+
+            if not existing:
+                new_owner = Owner(
+                    store_id=store_id,
+                    name=owner_data.get('name', 'Imported Owner'),
+
+                    phone_number=owner_data.get('phone_number') or owner_data.get('phone'),
+                    email=owner_data.get('email'),
+                    address=owner_data.get('address'),
+
+
+
+
+                    created_at=datetime.now(timezone.utc)
+                )
+                db.session.add(new_owner)
+                db.session.flush() # get new ID
+                owner_id_map[old_id] = new_owner.id
+                records_added += 1
+            else:
+                owner_id_map[old_id] = existing.id
+
+        # Import Dogs
+        for dog_data in data.get('dogs', []):
+            old_id = dog_data.get('id')
+            old_owner_id = dog_data.get('owner_id')
+            new_owner_id = owner_id_map.get(old_owner_id)
+
+            if new_owner_id:
+                # Check if dog already exists
+                existing = Dog.query.filter_by(owner_id=new_owner_id, name=dog_data.get('name')).first()
+                if not existing:
+                    new_dog = Dog(
+                        owner_id=new_owner_id,
+                        name=dog_data.get('name'),
+                        breed=dog_data.get('breed'),
+                        weight=dog_data.get('weight'),
+                        age=dog_data.get('age'),
+                        notes=dog_data.get('notes')
+                    )
+                    db.session.add(new_dog)
+                    db.session.flush()
+                    dog_id_map[old_id] = new_dog.id
+                    records_added += 1
+                else:
+                    dog_id_map[old_id] = existing.id
+
+        # Import Services
+        for service_data in data.get('services', []):
+            old_id = service_data.get('id')
+            existing = Service.query.filter_by(store_id=store_id, name=service_data.get('name')).first()
+            if not existing:
+                new_service = Service(
+                    store_id=store_id,
+                    name=service_data.get('name'),
+                    description=service_data.get('description'),
+                    price=service_data.get('price'),
+                    duration=service_data.get('duration')
+                )
+                db.session.add(new_service)
+                db.session.flush()
+                service_id_map[old_id] = new_service.id
+                records_added += 1
+            else:
+                service_id_map[old_id] = existing.id
+
+        db.session.commit()
+        log_activity(f"Imported data backup (Merged {records_added} new records)")
+        flash(f"Successfully imported {records_added} records.", "success")
+
+    except json.JSONDecodeError:
+        flash("Invalid JSON file.", "danger")
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Import error: {e}")
+        flash(f"Error during import: {str(e)}", "danger")
+
+    return redirect(url_for('management.data_management'))

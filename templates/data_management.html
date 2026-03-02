@@ -1,6 +1,6 @@
-{% extends 'base.html' %} {# Inherits the base layout, navbar, footer, etc. #}
+{% extends 'base.html' %}
 
-{% block title %}Data Management{% endblock %} {# Sets the title for this specific page #}
+{% block title %}Data Management{% endblock %}
 
 {% block head %}
 <style>
@@ -86,7 +86,7 @@
 </style>
 {% endblock %}
 
-{% block content %} {# Defines the main content area for this page #}
+{% block content %}
 <div class="content-card">
     <h1>Data Management</h1>
     <p>Export or import your store's data. This includes your database and uploaded images.</p>
@@ -107,18 +107,16 @@
         
         <div class="export-options">
             <a href="{{ url_for('management.export_database') }}" class="export-button">
-                <span class="icon">💾</span> Export Database File
+                <span class="icon">💾</span> Export Database (JSON)
             </a>
             <a href="{{ url_for('management.export_images') }}" class="export-button">
                 <span class="icon">🖼️</span> Export Uploaded Images
             </a>
-            <a href="{{ url_for('management.export_all_data') }}" class="export-button">
-                <span class="icon">📦</span> Export All Data (Database + Images)
-            </a>
+
         </div>
     </div>
     
-    {% if g.user and (g.user.role == 'superadmin' or session.get('is_superadmin')) %}
+    {% if g.user and g.user.is_admin %}
     <div class="section-card">
         <h2><span class="icon">📥</span> Import Data</h2>
         <p>Import a database file to restore or migrate your store's data.</p>
@@ -133,9 +131,9 @@
                 <label for="database_file">
                     <span class="icon" style="font-size: 2rem;">📄</span>
                     <p><strong>Click to select or drag & drop database file</strong></p>
-                    <p>Only .db files are supported</p>
+                    <p>Only .json backup files are supported</p>
                 </label>
-                <input type="file" id="database_file" name="database_file" accept=".db" style="display: none;">
+                <input type="file" id="database_file" name="database_file" accept=".json" style="display: none;">
             </div>
             
             <div class="import-options" style="margin: 1.5rem 0;">

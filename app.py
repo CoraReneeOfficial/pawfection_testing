@@ -30,6 +30,7 @@ from flask import request, jsonify, render_template
 from secure_headers import init_secure_headers  # Import secure headers
 import migrate_add_remind_at_to_notification
 import migrate_add_owner_notification_fields
+import migrate_add_deposit_amount
 # Removed import for datetime as it's not directly used at top level of app.py anymore
 # Removed log_activity definition as it's now in utils.py
 
@@ -245,6 +246,17 @@ def create_app():
         except Exception as e:
             app.logger.error(f"Failed to run owner migration: {e}")
 
+        # Check for and apply missing deposit_amount column in appointment table
+        try:
+            if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
+                app.logger.info("Checking for appointment schema updates (SQLite)...")
+                migrate_add_deposit_amount.migrate_sqlite(DATABASE_PATH)
+            else:
+                app.logger.info("Checking for appointment schema updates (Postgres)...")
+                migrate_add_deposit_amount.migrate_postgres(app.config['SQLALCHEMY_DATABASE_URI'])
+        except Exception as e:
+            app.logger.error(f"Failed to run appointment migration: {e}")
+
     # Register blueprints for modular routes
     app.register_blueprint(auth_bp)
     app.register_blueprint(owners_bp)
@@ -307,13 +319,11 @@ def create_app():
         """
         Loads the logged-in user into Flask's global 'g' object before each request.
         Also ensures session['store_id'] is managed correctly for superadmin and non-superadmin users.
-        Logs the session contents for debugging.
         """
         # --- START OF DEBUG PRINTS ---
         print("\n" + "="*20, "DEBUG: ENTERING @app.before_request (load_logged_in_user)", "="*20)
         # --- END OF DEBUG PRINTS ---
         
-        app.logger.debug(f"[SESSION DEBUG] Session at start of request: {dict(session)}")
         user_id = session.get('user_id')
         if user_id is None:
             g.user = None
@@ -687,7 +697,8 @@ def create_app():
         expired_subscriptions = Store.query.filter_by(subscription_status='expired').count()
         
         from models import ActivityLog
-        activity_logs = ActivityLog.query.order_by(ActivityLog.timestamp.desc()).limit(10).all()
+        from sqlalchemy.orm import joinedload
+        activity_logs = ActivityLog.query.options(joinedload(ActivityLog.user), joinedload(ActivityLog.store)).order_by(ActivityLog.timestamp.desc()).limit(10).all()
         
         return render_template('superadmin_dashboard.html', 
                               stores=stores, 

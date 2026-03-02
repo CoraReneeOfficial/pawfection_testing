@@ -132,8 +132,8 @@
                             {% for log in activity_logs %}
                             <tr>
                                 <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
-                                <td>{{ log.username }}</td>
-                                <td>{{ log.store_name }}</td>
+                                <td>{{ log.user.username if log.user else 'Unknown User' }}</td>
+                                <td>{{ log.store.name if log.store else 'Unknown Store' }}</td>
                                 <td>{{ log.action }}</td>
                             </tr>
                             {% endfor %}
@@ -160,7 +160,7 @@
                 </button>
             </div>
             <div class="modal-body">
-                                <form id="editStoreForm" action="{{ url_for('management.superadmin_edit_store') }}" method="POST" enctype="multipart/form-data">
+                                <form id="editStoreForm" action="{{ url_for('superadmin_edit_store') }}" method="POST" enctype="multipart/form-data">
                     <input type="hidden" id="editStoreId" name="store_id" value="">
                     
                     <div class="form-group">

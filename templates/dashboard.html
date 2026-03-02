@@ -298,7 +298,9 @@
                     </div>
                     <span class="status-badge status-{{ appt.status }}">{{ appt.status }}</span>
                     {% if appt.status == 'Scheduled' %}
-                                        <a href="{{ url_for('appointments.checkout_start', appointment_id=appt.id) }}" class="button button-primary" style="margin-left:1em;">Checkout</a>
+                        <a href="{{ url_for('appointments.checkout_start', appointment_id=appt.id) }}" class="button button-primary" style="margin-left:1em;">Checkout</a>
+                        <a href="{{ url_for('appointments.edit_appointment', appointment_id=appt.id) }}" class="button button-secondary" style="margin-left: 0.5em;">Edit</a>
+                        <a href="{{ url_for('appointments.calendar_view') }}" class="button button-danger" style="margin-left: 0.5em;">Delete</a>
                     {% endif %}
                 </li>
                 {% endfor %}

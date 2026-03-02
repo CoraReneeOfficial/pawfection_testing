@@ -1,7 +1,9 @@
+from typing import Union
 from flask import Blueprint, request, jsonify, render_template, current_app, session, g
 from ai_assistant.feature_flag import is_ai_enabled
 from google import genai
 from google.genai import types
+import ollama
 import os
 import markdown
 import datetime
@@ -103,16 +105,16 @@ def chat():
             current_app.logger.info(f"[AI Tool Call] get_owners returning {len(owners)} owners.")
             return result
 
-        def add_appointment(dog_id: int, date: str, time: str, groomer_id: int, services: list[str], notes: str = "") -> str:
+        def add_appointment(dog_id: Union[int, str], date: str, time: str, groomer_id: Union[int, str], services: list[str], notes: str = "") -> str:
             """
             Creates a new appointment for a dog, fully configured with groomer and services.
             Sends notifications and syncs with Google Calendar.
 
             Args:
-                dog_id: The ID of the dog.
+                dog_id: The ID of the dog, or the dog's exact name. If using a name, it must be exact.
                 date: The date of the appointment in YYYY-MM-DD format.
                 time: The time of the appointment in HH:MM format (24-hour).
-                groomer_id: The ID of the selected groomer.
+                groomer_id: The ID of the selected groomer, or the groomer's exact name.
                 services: A list of service names or service IDs to attach to the appointment.
                 notes: Optional notes for the appointment.
 
@@ -121,13 +123,33 @@ def chat():
             """
             current_app.logger.info(f"[AI Tool Call] add_appointment called with dog_id={dog_id}, groomer_id={groomer_id}, date='{date}', time='{time}', services='{services}', notes='{notes}'")
             try:
-                dog = Dog.query.options(db.joinedload(Dog.owner)).filter_by(id=dog_id, store_id=store_id).first()
-                if not dog:
-                    return f"Error: Dog with ID {dog_id} not found."
+                # Handle dog_id as int or string name
+                dog = None
+                if isinstance(dog_id, int) or (isinstance(dog_id, str) and dog_id.isdigit()):
+                    dog = Dog.query.options(db.joinedload(Dog.owner)).filter_by(id=int(dog_id), store_id=store_id).first()
+                else:
+                    dogs = Dog.query.options(db.joinedload(Dog.owner)).filter(Dog.name.ilike(f"%{dog_id}%"), Dog.store_id == store_id).all()
+                    if len(dogs) == 1:
+                        dog = dogs[0]
+                    elif len(dogs) > 1:
+                        return f"Error: Multiple dogs found matching '{dog_id}'. Please use get_dogs to find the specific ID and try again."
 
-                groomer = User.query.filter_by(id=groomer_id, store_id=store_id, is_groomer=True).first()
+                if not dog:
+                    return f"Error: Dog '{dog_id}' not found. Please verify the ID or name."
+
+                # Handle groomer_id as int or string name
+                groomer = None
+                if isinstance(groomer_id, int) or (isinstance(groomer_id, str) and groomer_id.isdigit()):
+                    groomer = User.query.filter_by(id=int(groomer_id), store_id=store_id, is_groomer=True).first()
+                else:
+                    groomers = User.query.filter(User.username.ilike(f"%{groomer_id}%"), User.store_id == store_id, User.is_groomer == True).all()
+                    if len(groomers) == 1:
+                        groomer = groomers[0]
+                    elif len(groomers) > 1:
+                         return f"Error: Multiple groomers found matching '{groomer_id}'. Please use get_groomers to find the specific ID and try again."
+
                 if not groomer:
-                    return f"Error: Groomer with ID {groomer_id} not found or is not a valid groomer."
+                    return f"Error: Groomer '{groomer_id}' not found. Please verify the ID or name."
 
                 try:
                     naive_dt = datetime.datetime.strptime(f"{date} {time}", "%Y-%m-%d %H:%M")
@@ -163,7 +185,7 @@ def chat():
                         service_obj = Service.query.filter(Service.name.ilike(s_str), Service.store_id == store_id).first()
 
                     if service_obj:
-                        services_text_list.append(service_obj.name)
+                        services_text_list.append(str(service_obj.id))
 
                 services_text = ','.join(services_text_list)
                 appt.requested_services_text = services_text
@@ -189,7 +211,12 @@ def chat():
                     current_app.logger.error(f"[AI Tool Call] Background task error (Sync/Email) for AI appointment: {e}", exc_info=True)
                     # Don't fail the tool call if background tasks fail
 
-                msg = f"Successfully booked appointment for {dog.name} with {groomer.username} on {appt_datetime.astimezone(store_tz).strftime('%Y-%m-%d at %I:%M %p')}. Services added: {services_text or 'None'}."
+                # URL link
+                # Appointments go to either calendar or checkout but checkout is specific.
+                # Better to link to the daily calendar view for that date
+                calendar_link = f"/calendar?date={date}"
+
+                msg = f"Successfully booked appointment for {dog.name} with {groomer.username} on {appt_datetime.astimezone(store_tz).strftime('%Y-%m-%d at %I:%M %p')}. Services added: {services_text or 'None'}. [View Calendar]({calendar_link})"
                 current_app.logger.info(f"[AI Tool Call] add_appointment succeeded: {msg}")
                 return msg
 
@@ -252,17 +279,87 @@ def chat():
                 owner = Owner(name=name, phone_number=phone, email=email, store_id=store_id)
                 db.session.add(owner)
                 db.session.commit()
-                return f"Successfully added owner '{name}' with ID {owner.id}."
+                link = f"/owners/{owner.id}"
+                return f"Successfully added owner '{name}' with ID {owner.id}. [View Owner Profile]({link})"
             except Exception as e:
                 db.session.rollback()
                 return f"Error adding owner: {str(e)}"
 
-        def add_dog(owner_id: int, name: str, breed: str = "") -> str:
+        def delete_owner(owner_id: Union[int, str]) -> str:
+            """
+            Deletes an existing owner from the store. This will also delete all associated dogs and appointments.
+
+            Args:
+                owner_id: The ID of the owner to delete, or exact owner name.
+
+            Returns:
+                A string indicating success or failure.
+            """
+            try:
+                owner = None
+                if isinstance(owner_id, int) or (isinstance(owner_id, str) and owner_id.isdigit()):
+                    owner = Owner.query.filter_by(id=int(owner_id), store_id=store_id).first()
+                else:
+                    owners = Owner.query.filter(Owner.name.ilike(f"%{owner_id}%"), Owner.store_id == store_id).all()
+                    if len(owners) == 1:
+                        owner = owners[0]
+                    elif len(owners) > 1:
+                        return f"Error: Multiple owners found matching '{owner_id}'. Please use get_owners to find the specific ID."
+
+                if not owner:
+                    return f"Error: Owner '{owner_id}' not found."
+
+                db.session.delete(owner)
+                db.session.commit()
+                return f"Successfully deleted owner '{owner.name}' with ID {owner.id}."
+            except Exception as e:
+                db.session.rollback()
+                return f"Error deleting owner: {str(e)}"
+
+        def edit_owner(owner_id: Union[int, str], name: str = "", phone: str = "", email: str = "") -> str:
+            """
+            Edits an existing owner in the store. Provide only the fields you want to change.
+
+            Args:
+                owner_id: The ID of the owner to edit, or exact owner name.
+                name: The new full name of the owner.
+                phone: The new phone number.
+                email: The new email address.
+
+            Returns:
+                A string indicating success or failure.
+            """
+            try:
+                owner = None
+                if isinstance(owner_id, int) or (isinstance(owner_id, str) and owner_id.isdigit()):
+                    owner = Owner.query.filter_by(id=int(owner_id), store_id=store_id).first()
+                else:
+                    owners = Owner.query.filter(Owner.name.ilike(f"%{owner_id}%"), Owner.store_id == store_id).all()
+                    if len(owners) == 1:
+                        owner = owners[0]
+                    elif len(owners) > 1:
+                        return f"Error: Multiple owners found matching '{owner_id}'. Please use get_owners to find the specific ID."
+
+                if not owner:
+                    return f"Error: Owner '{owner_id}' not found."
+                if name:
+                    owner.name = name
+                if phone:
+                    owner.phone_number = phone
+                if email:
+                    owner.email = email
+                db.session.commit()
+                return f"Successfully updated owner '{owner.name}' with ID {owner.id}."
+            except Exception as e:
+                db.session.rollback()
+                return f"Error editing owner: {str(e)}"
+
+        def add_dog(owner_id: Union[int, str], name: str, breed: str = "") -> str:
             """
             Adds a new dog to an existing owner's profile.
 
             Args:
-                owner_id: The ID of the dog's owner.
+                owner_id: The ID of the dog's owner, or the owner's exact name.
                 name: The name of the dog.
                 breed: Optional breed of the dog.
 
@@ -270,36 +367,320 @@ def chat():
                 A string indicating success or failure.
             """
             try:
-                owner = Owner.query.filter_by(id=owner_id, store_id=store_id).first()
+                owner = None
+                if isinstance(owner_id, int) or (isinstance(owner_id, str) and owner_id.isdigit()):
+                    owner = Owner.query.filter_by(id=int(owner_id), store_id=store_id).first()
+                else:
+                    owners = Owner.query.filter(Owner.name.ilike(f"%{owner_id}%"), Owner.store_id == store_id).all()
+                    if len(owners) == 1:
+                        owner = owners[0]
+                    elif len(owners) > 1:
+                        return f"Error: Multiple owners found matching '{owner_id}'. Please use get_owners to find the specific ID."
+
                 if not owner:
-                    return f"Error: Owner with ID {owner_id} not found."
+                    return f"Error: Owner '{owner_id}' not found."
 
                 dog = Dog(name=name, breed=breed, owner_id=owner.id, store_id=store_id)
                 db.session.add(dog)
                 db.session.commit()
-                return f"Successfully added dog '{name}' to owner '{owner.name}'. Dog ID: {dog.id}."
+                link = f"/dogs/{dog.id}"
+                return f"Successfully added dog '{name}' to owner '{owner.name}'. Dog ID: {dog.id}. [View Dog Profile]({link})"
             except Exception as e:
                 db.session.rollback()
                 return f"Error adding dog: {str(e)}"
 
-        def delete_appointment(appointment_id: int, send_notification: bool = True) -> str:
+        def edit_dog(dog_id: Union[int, str], name: str = "", breed: str = "") -> str:
             """
-            Cancels/deletes an existing appointment.
+            Edits an existing dog in the store. Provide only the fields you want to change.
 
             Args:
-                appointment_id: The ID of the appointment to delete.
-                send_notification: Whether to send a cancellation email/text to the owner.
+                dog_id: The ID of the dog to edit, or exact dog name.
+                name: The new name of the dog.
+                breed: The new breed of the dog.
 
             Returns:
                 A string indicating success or failure.
             """
             try:
-                appt = Appointment.query.options(
-                    db.joinedload(Appointment.dog).joinedload(Dog.owner)
-                ).filter_by(id=appointment_id, store_id=store_id).first()
+                dog = None
+                if isinstance(dog_id, int) or (isinstance(dog_id, str) and dog_id.isdigit()):
+                    dog = Dog.query.filter_by(id=int(dog_id), store_id=store_id).first()
+                else:
+                    dogs = Dog.query.filter(Dog.name.ilike(f"%{dog_id}%"), Dog.store_id == store_id).all()
+                    if len(dogs) == 1:
+                        dog = dogs[0]
+                    elif len(dogs) > 1:
+                        return f"Error: Multiple dogs found matching '{dog_id}'. Please use get_dogs to find the specific ID."
+
+                if not dog:
+                    return f"Error: Dog '{dog_id}' not found."
+
+                if name:
+                    dog.name = name
+                if breed:
+                    dog.breed = breed
+                db.session.commit()
+                return f"Successfully updated dog '{dog.name}' with ID {dog.id}."
+            except Exception as e:
+                db.session.rollback()
+                return f"Error editing dog: {str(e)}"
+
+        def delete_dog(dog_id: Union[int, str]) -> str:
+            """
+            Deletes an existing dog from the store. This will also delete all associated appointments.
+
+            Args:
+                dog_id: The ID of the dog to delete, or exact dog name.
+
+            Returns:
+                A string indicating success or failure.
+            """
+            try:
+                dog = None
+                if isinstance(dog_id, int) or (isinstance(dog_id, str) and dog_id.isdigit()):
+                    dog = Dog.query.filter_by(id=int(dog_id), store_id=store_id).first()
+                else:
+                    dogs = Dog.query.filter(Dog.name.ilike(f"%{dog_id}%"), Dog.store_id == store_id).all()
+                    if len(dogs) == 1:
+                        dog = dogs[0]
+                    elif len(dogs) > 1:
+                        return f"Error: Multiple dogs found matching '{dog_id}'. Please use get_dogs to find the specific ID."
+
+                if not dog:
+                    return f"Error: Dog '{dog_id}' not found."
+
+                db.session.delete(dog)
+                db.session.commit()
+                return f"Successfully deleted dog '{dog.name}' with ID {dog.id}."
+            except Exception as e:
+                db.session.rollback()
+                return f"Error deleting dog: {str(e)}"
+
+        def edit_appointment(appointment_id: Union[int, str], date: str = "", time: str = "", groomer_id: Union[int, str] = None, services: list[str] = None, notes: str = "") -> str:
+            """
+            Edits an existing appointment. Sends notifications and syncs with Google Calendar. Provide only the fields you want to change.
+
+            Args:
+                appointment_id: The ID of the appointment to edit.
+                date: The new date of the appointment in YYYY-MM-DD format.
+                time: The new time of the appointment in HH:MM format (24-hour).
+                groomer_id: The ID of the new groomer, or the exact groomer name.
+                services: A list of new service names or service IDs to attach to the appointment.
+                notes: The new notes for the appointment.
+
+            Returns:
+                A string indicating success or failure.
+            """
+            try:
+                appt = None
+                if isinstance(appointment_id, int) or (isinstance(appointment_id, str) and appointment_id.isdigit()):
+                    appt = Appointment.query.options(
+                        db.joinedload(Appointment.dog).joinedload(Dog.owner)
+                    ).filter_by(id=int(appointment_id), store_id=store_id).first()
+                else:
+                    return f"Error: Appointment ID must be an integer. Please provide a valid appointment ID."
 
                 if not appt:
                     return f"Error: Appointment {appointment_id} not found."
+
+                store_obj = Store.query.get(store_id)
+                store_tz_str = getattr(store_obj, 'timezone', None) or 'America/New_York'
+                try:
+                    store_tz = pytz.timezone(store_tz_str)
+                except pytz.UnknownTimeZoneError:
+                    store_tz = pytz.timezone('America/New_York')
+
+                if date and time:
+                    try:
+                        naive_dt = datetime.datetime.strptime(f"{date} {time}", "%Y-%m-%d %H:%M")
+                        local_dt = store_tz.localize(naive_dt)
+                        appt.appointment_datetime = local_dt.astimezone(timezone.utc)
+                    except ValueError:
+                        return "Error: Invalid date/time format. Expected YYYY-MM-DD and HH:MM."
+                elif date or time:
+                    return "Error: Both date and time must be provided to update the appointment datetime."
+
+                if groomer_id is not None:
+                    groomer = None
+                    if isinstance(groomer_id, int) or (isinstance(groomer_id, str) and groomer_id.isdigit()):
+                        groomer = User.query.filter_by(id=int(groomer_id), store_id=store_id, is_groomer=True).first()
+                    else:
+                        groomers = User.query.filter(User.username.ilike(f"%{groomer_id}%"), User.store_id == store_id, User.is_groomer == True).all()
+                        if len(groomers) == 1:
+                            groomer = groomers[0]
+                        elif len(groomers) > 1:
+                            return f"Error: Multiple groomers found matching '{groomer_id}'. Please use get_groomers to find the specific ID and try again."
+
+                    if not groomer:
+                        return f"Error: Groomer '{groomer_id}' not found. Please verify the ID or name."
+                    appt.groomer_id = groomer.id
+
+                services_text = appt.requested_services_text
+                if services is not None:
+                    services_text_list = []
+                    for s in services:
+                        s_str = str(s).strip()
+                        if s_str.isdigit():
+                            service_obj = Service.query.filter_by(id=int(s_str), store_id=store_id).first()
+                        else:
+                            service_obj = Service.query.filter(Service.name.ilike(s_str), Service.store_id == store_id).first()
+                        if service_obj:
+                            services_text_list.append(str(service_obj.id))
+                    services_text = ','.join(services_text_list)
+                    appt.requested_services_text = services_text
+
+                if notes:
+                    appt.notes = notes
+
+                db.session.commit()
+
+                try:
+                    from management.routes import sync_google_calendar_for_store
+                    if store_obj and store_obj.google_token_json and store_obj.google_calendar_id:
+                        sync_google_calendar_for_store(store_id)
+
+                    from notifications.email_utils import send_appointment_edited_email
+                    if appt.dog.owner:
+                        send_appointment_edited_email(store_obj, appt.dog.owner, appt.dog, appt)
+                except Exception as e:
+                    current_app.logger.error(f"[AI Tool Call] Background task error on edit: {e}")
+
+                appt_time = appt.appointment_datetime.astimezone(store_tz).strftime('%Y-%m-%d at %I:%M %p')
+                return f"Successfully updated appointment for {appt.dog.name} on {appt_time}. Services: {services_text or 'None'}."
+            except Exception as e:
+                db.session.rollback()
+                return f"Error editing appointment: {str(e)}"
+
+        def get_store_info() -> str:
+            """
+            Fetches the current store's business information (name, hours, description, etc).
+            """
+            store_obj = Store.query.get(store_id)
+            if not store_obj:
+                return "Error: Store not found."
+
+            info = []
+            info.append(f"Store Name: {store_obj.name}")
+            info.append(f"Address: {store_obj.address}")
+            info.append(f"Phone: {store_obj.phone}")
+            info.append(f"Email: {store_obj.email}")
+            info.append(f"Description: {store_obj.description}")
+            info.append(f"Business Hours: {store_obj.business_hours}")
+            info.append(f"Website: {store_obj.website_url}")
+            return "\n".join(info)
+
+        def update_store_info(name: str = None, description: str = None, business_hours: str = None, address: str = None, phone: str = None, email: str = None, website_url: str = None) -> str:
+            """
+            Updates the current store's business information. Requires admin privileges.
+            """
+            if not g.user.is_admin and g.user.role != 'superadmin':
+                return "Error: Only admins can update store information."
+
+            try:
+                store_obj = Store.query.get(store_id)
+                if not store_obj:
+                    return "Error: Store not found."
+
+                if name is not None: store_obj.name = name
+                if description is not None: store_obj.description = description
+                if business_hours is not None: store_obj.business_hours = business_hours
+                if address is not None: store_obj.address = address
+                if phone is not None: store_obj.phone = phone
+                if email is not None: store_obj.email = email
+                if website_url is not None: store_obj.website_url = website_url
+
+                db.session.commit()
+                return "Successfully updated store information."
+            except Exception as e:
+                db.session.rollback()
+                return f"Error updating store info: {str(e)}"
+
+        def get_revenue(period: str = "today") -> str:
+            """
+            Fetches revenue for a given period ('today', 'week', 'month', 'year'). Requires admin privileges.
+            """
+            if not g.user.is_admin and g.user.role != 'superadmin':
+                return "Error: Only admins can view revenue information."
+
+            import datetime
+            import pytz
+            from sqlalchemy import func
+
+            store_obj = Store.query.get(store_id)
+            store_tz_str = getattr(store_obj, 'timezone', None) or 'UTC'
+            try:
+                store_tz = pytz.timezone(store_tz_str)
+            except:
+                store_tz = pytz.UTC
+
+            now_utc = datetime.datetime.now(datetime.timezone.utc)
+            now_local = now_utc.astimezone(store_tz)
+
+            start_date = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_date = start_date + datetime.timedelta(days=1)
+
+            if period == "week":
+                start_date = start_date - datetime.timedelta(days=start_date.weekday())
+            elif period == "month":
+                start_date = start_date.replace(day=1)
+            elif period == "year":
+                start_date = start_date.replace(month=1, day=1)
+
+            start_utc = start_date.astimezone(datetime.timezone.utc)
+            end_utc = end_date.astimezone(datetime.timezone.utc)
+
+            revenue = db.session.query(func.sum(Appointment.checkout_total_amount)).filter(
+                Appointment.store_id == store_id,
+                Appointment.status == 'Completed',
+                Appointment.appointment_datetime >= start_utc,
+                Appointment.appointment_datetime < end_utc
+            ).scalar() or 0.0
+
+            return f"Revenue for {period}: ${revenue:.2f}"
+
+        def add_service(name: str, base_price: float, description: str = "") -> str:
+            """
+            Adds a new service to the store. Requires admin privileges.
+            """
+            if not g.user.is_admin and g.user.role != 'superadmin':
+                return "Error: Only admins can add services."
+
+            try:
+                service = Service(
+                    name=name,
+                    base_price=base_price,
+                    description=description,
+                    store_id=store_id,
+                    created_by_user_id=g.user.id
+                )
+                db.session.add(service)
+                db.session.commit()
+                return f"Successfully added service '{name}' with base price ${base_price:.2f}."
+            except Exception as e:
+                db.session.rollback()
+                return f"Error adding service: {str(e)}"
+
+        def delete_appointment(appointment_id: Union[int, str], send_notification: bool = True) -> str:
+            """
+            Cancels/deletes an existing appointment.
+
+            Args:
+                appointment_id: The ID of the appointment to delete.
+
+            Returns:
+                A string indicating success or failure.
+            """
+            try:
+                appt = None
+                if isinstance(appointment_id, int) or (isinstance(appointment_id, str) and appointment_id.isdigit()):
+                    appt = Appointment.query.options(
+                        db.joinedload(Appointment.dog).joinedload(Dog.owner)
+                    ).filter_by(id=int(appointment_id), store_id=store_id).first()
+                else:
+                    return f"Error: Appointment ID must be an integer. Please provide a valid appointment ID."
+
+                if not appt:
+                    return f"Error: Appointment '{appointment_id}' not found."
 
                 store_obj = Store.query.get(store_id)
                 store_tz_str = getattr(store_obj, 'timezone', None) or 'America/New_York'
@@ -333,16 +714,8 @@ def chat():
                 return f"Error deleting appointment: {str(e)}"
 
         system_prompt = f"""
-        You are 'Pawfection AI', a helpful assistant for a dog grooming business app.
-        Your goal is to help staff manage appointments, owners, and dogs.
-
-        The app has the following main features and routes:
-        - Dashboard: /dashboard
-        - Calendar: /calendar
-        - Add Appointment: /add_appointment (Params: dog_id, date, time, groomer_id, services, notes)
-        - Add Owner: /add_owner
-        - Add Dog: /add_dog
-        - Directory: /directory (List of owners/dogs)
+        You are 'Pawfection AI', a powerhouse assistant for a dog grooming business app.
+        Your goal is to automate everything, including managing appointments, owners, dogs, revenue, settings, and business information.
 
         CONTEXT:
         Current User Role: {g.user.role if hasattr(g, 'user') else 'Unknown'}
@@ -351,55 +724,119 @@ def chat():
 
         INSTRUCTIONS:
         1. Be concise, friendly, and professional.
-        2. You now have tools to look up groomers, services, dogs, owners, and to create/delete appointments, owners, and dogs directly!
-        3. ALWAYS OFFER A CHOICE FOR BOOKING: When a user wants to book an appointment, ask if they want you to "book it automatically in the background" or "provide a link to the booking page with the details filled out".
-           - If they choose automatic: You MUST gather all required details (dog, date, time, groomer, and services) before calling the `add_appointment` tool. Use your lookup tools to find the correct IDs for groomer and dog, and the correct names/IDs for services.
-           - If they choose the link: Generate a SMART LINK to `/add_appointment` with the parameters pre-filled (e.g., `[Book for Rex](/add_appointment?dog_id=1&date=2023-10-10&time=14:00&groomer_id=2&services=Bath,Nails)`).
-        4. When calling a tool, wait for its output and confirm the result with the user.
-        5. If you need to perform an action without a tool, generate a SMART LINK.
-        6. Use Markdown for formatting (bold, lists, links).
+        2. You have tools available. DO NOT output raw JSON strings for tool calls in your messages to the user. Use the actual tool calling framework.
+        3. DO NOT OFFER CHOICES OR WALKTHROUGHS. When a user wants to perform an action (like booking an appointment, adding an owner, or adding a dog), you MUST gather all required details and call the relevant tool immediately to perform the action in the background. DO NOT offer a "smart link" or ask them to fill out a form themselves. You handle everything fully.
+        4. When calling a tool, wait for its output and confirm the result with the user. DO NOT use made-up tool names.
+        5. The ID parameters for dogs, owners, and groomers can accept exact names if you do not know the ID. If an exact name match cannot be uniquely found, the tool will return an error, and you should use the get_dogs, get_owners, or get_groomers tools to look up the specific ID before trying again.
+        6. You can manage the business: use `get_revenue` to check earnings, `get_store_info` to see settings, and `update_store_info` / `add_service` to change them (these require admin privileges).
+        7. Only use the tools provided to you. If a task cannot be fully completed by a tool, inform the user.
+        8. Use Markdown for formatting (bold, lists, links).
         """
 
-        # Convert frontend history to genai.types.Content format
-        formatted_history = []
+
+        tools = [get_dogs, get_owners, add_appointment, get_groomers, get_services, add_owner, edit_owner, delete_owner, add_dog, edit_dog, delete_dog, edit_appointment, delete_appointment, get_store_info, update_store_info, get_revenue, add_service]
+
+        formatted_history = [{"role": "system", "content": system_prompt}]
         for msg in history:
             role = msg.get('role', 'user')
             if role not in ['user', 'model']:
                 continue
+            role = 'assistant' if role == 'model' else 'user'
             text = msg.get('text', '')
-            # Clean HTML from model responses in history if we are feeding it back,
-            # or just send it raw. The model can usually handle HTML.
             import re
-            clean_text = re.sub('<[^<]+>', '', text) if role == 'model' else text
+            clean_text = re.sub('<[^<]+>', '', text) if role == 'assistant' else text
+            formatted_history.append({"role": role, "content": clean_text})
 
-            # Simple construction according to memory limits and common API shapes.
-            # Usually we need: types.Content(role=role, parts=[types.Part.from_text(text)])
-            formatted_history.append({"role": role, "parts": [{"text": clean_text}]})
+        formatted_history.append({"role": "user", "content": user_message})
 
-        chat = client.chats.create(
-            model='gemini-flash-latest',
-            config=types.GenerateContentConfig(
-                system_instruction=system_prompt,
-                tools=[get_dogs, get_owners, add_appointment, get_groomers, get_services, add_owner, add_dog, delete_appointment],
-                temperature=0.7,
-                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=False),
-                tool_config=types.ToolConfig(
-                    function_calling_config=types.FunctionCallingConfig(mode='AUTO')
+        # Define a tool mapping dictionary
+        available_tools = {tool.__name__: tool for tool in tools}
+
+        response_text = ""
+        try:
+            # 1. Primary AI: Ollama
+            ollama_url = os.environ.get('OLLAMA_URL', 'https://erlene-nonadaptational-elden.ngrok-free.dev')
+            ollama_model = os.environ.get('OLLAMA_MODEL', 'llama3.1:8b')
+            current_app.logger.info(f"[AI Chat Request] Attempting Ollama ({ollama_model}) at {ollama_url}")
+
+            ollama_client = ollama.Client(host=ollama_url)
+            response = ollama_client.chat(
+                model=ollama_model,
+                messages=formatted_history,
+                tools=tools
+            )
+
+            # Process tool calls in a loop
+            while response.message.tool_calls:
+                formatted_history.append(response.message)
+                for tool_call in response.message.tool_calls:
+                    function_name = tool_call.function.name
+                    arguments = tool_call.function.arguments
+
+                    current_app.logger.info(f"[Ollama Tool Call] {function_name} with args: {arguments}")
+
+                    if function_name in available_tools:
+                        try:
+                            function_to_call = available_tools[function_name]
+                            function_response = function_to_call(**arguments)
+                        except Exception as e:
+                            function_response = f"Error executing tool {function_name}: {e}"
+                    else:
+                        function_response = f"Tool {function_name} not found."
+
+                    current_app.logger.info(f"[Ollama Tool Response] {function_response}")
+
+                    formatted_history.append({
+                        'role': 'tool',
+                        'content': str(function_response),
+                    })
+
+                # Send the tool responses back to Ollama to get the final answer
+                response = ollama_client.chat(
+                    model=ollama_model,
+                    messages=formatted_history,
+                    tools=tools
                 )
-            ),
-            history=formatted_history
-        )
 
-        response = chat.send_message(user_message)
+            response_text = response.message.content
+            current_app.logger.info(f"[Ollama Response] Result text: '{response_text}'")
 
-        current_app.logger.info(f"[AI Chat Response] Result text: '{response.text}'")
-        if getattr(response, 'function_calls', None):
-            current_app.logger.info(f"[AI Chat Response] Function calls: {response.function_calls}")
-        if getattr(response, 'candidates', None) and response.candidates:
-            current_app.logger.info(f"[AI Chat Response] Finish reason: {response.candidates[0].finish_reason}")
+        except Exception as ollama_error:
+            current_app.logger.warning(f"[AI Chat Fallback] Ollama failed: {ollama_error}. Falling back to Gemini.")
+
+            # 2. Fallback AI: Gemini
+            genai_history = []
+            for msg in history:
+                role = msg.get('role', 'user')
+                if role not in ['user', 'model']:
+                    continue
+                text = msg.get('text', '')
+                import re
+                clean_text = re.sub('<[^<]+>', '', text) if role == 'model' else text
+                genai_history.append({"role": role, "parts": [{"text": clean_text}]})
+
+            chat = client.chats.create(
+                model='gemini-flash-latest',
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    tools=tools,
+                    temperature=0.7,
+                    automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=False),
+                    tool_config=types.ToolConfig(
+                        function_calling_config=types.FunctionCallingConfig(mode='AUTO')
+                    )
+                ),
+                history=genai_history
+            )
+
+            gemini_response = chat.send_message(user_message)
+            response_text = gemini_response.text
+            current_app.logger.info(f"[Gemini Response] Result text: '{response_text}'")
+            if getattr(gemini_response, 'function_calls', None):
+                current_app.logger.info(f"[Gemini Response] Function calls: {gemini_response.function_calls}")
 
         # Convert Markdown to HTML for safe rendering on frontend
-        html_response = markdown.markdown(response.text if response.text else "")
+        html_response = markdown.markdown(response_text if response_text else "")
 
         return jsonify({"response": html_response})
 

@@ -205,7 +205,7 @@ var taxEnabled = (function() {
 function updateTotals() {
   // Calculate raw subtotal from line items
   var rawSubtotal = lineItems.reduce(function(sum, item) {
-    return sum + parseFloat(item.price);
+    return sum + (parseFloat(item.price) * (item.quantity || 1));
   }, 0);
   subtotal = rawSubtotal;
   
@@ -278,7 +278,14 @@ function renderLineItems() {
     services.forEach(function(item) {
       var row = document.createElement('div');
       row.className = 'line-item-row';
-      row.innerHTML = '<span>' + item.name + '</span> <span>$' + parseFloat(item.price).toFixed(2) + '</span> <button type="button" class="remove-btn" title="Remove item" onclick="removeItem(' + item.originalIndex + ')" style="margin-left:8px;"><i class="fas fa-trash-alt"></i></button>';
+      row.innerHTML = '<span>' + item.name + '</span>' +
+                      '<div style="display:flex;align-items:center;gap:0.5rem;margin:0 1rem;">' +
+                      '<button type="button" class="button button-secondary" style="padding:0.2rem 0.5rem; border-radius:4px;" onclick="decrementItem(' + item.originalIndex + ')">-</button>' +
+                      '<span style="font-weight:600;min-width:1rem;text-align:center;">' + (item.quantity || 1) + '</span>' +
+                      '<button type="button" class="button button-secondary" style="padding:0.2rem 0.5rem; border-radius:4px;" onclick="incrementItem(' + item.originalIndex + ')">+</button>' +
+                      '</div>' +
+                      '<span>$' + (parseFloat(item.price) * (item.quantity || 1)).toFixed(2) + '</span>' +
+                      '<button type="button" class="remove-btn" title="Remove item" onclick="removeItem(' + item.originalIndex + ')" style="margin-left:8px;"><i class="fas fa-trash-alt"></i></button>';
       document.getElementById('services-list').appendChild(row);
     });
   } else {
@@ -291,7 +298,14 @@ function renderLineItems() {
     fees.forEach(function(item) {
       var row = document.createElement('div');
       row.className = 'line-item-row';
-      row.innerHTML = '<span>' + item.name + '</span> <span>$' + parseFloat(item.price).toFixed(2) + '</span> <button type="button" class="remove-btn" title="Remove item" onclick="removeItem(' + item.originalIndex + ')" style="margin-left:8px;"><i class="fas fa-trash-alt"></i></button>';
+      row.innerHTML = '<span>' + item.name + '</span>' +
+                      '<div style="display:flex;align-items:center;gap:0.5rem;margin:0 1rem;">' +
+                      '<button type="button" class="button button-secondary" style="padding:0.2rem 0.5rem; border-radius:4px;" onclick="decrementItem(' + item.originalIndex + ')">-</button>' +
+                      '<span style="font-weight:600;min-width:1rem;text-align:center;">' + (item.quantity || 1) + '</span>' +
+                      '<button type="button" class="button button-secondary" style="padding:0.2rem 0.5rem; border-radius:4px;" onclick="incrementItem(' + item.originalIndex + ')">+</button>' +
+                      '</div>' +
+                      '<span>$' + (parseFloat(item.price) * (item.quantity || 1)).toFixed(2) + '</span>' +
+                      '<button type="button" class="remove-btn" title="Remove item" onclick="removeItem(' + item.originalIndex + ')" style="margin-left:8px;"><i class="fas fa-trash-alt"></i></button>';
       document.getElementById('fees-list').appendChild(row);
     });
   } else {
@@ -304,7 +318,14 @@ function renderLineItems() {
     customItems.forEach(function(item) {
       var row = document.createElement('div');
       row.className = 'line-item-row';
-      row.innerHTML = '<span>' + item.name + '</span> <span>$' + parseFloat(item.price).toFixed(2) + '</span> <button type="button" class="remove-btn" title="Remove item" onclick="removeItem(' + item.originalIndex + ')" style="margin-left:8px;"><i class="fas fa-trash-alt"></i></button>';
+      row.innerHTML = '<span>' + item.name + '</span>' +
+                      '<div style="display:flex;align-items:center;gap:0.5rem;margin:0 1rem;">' +
+                      '<button type="button" class="button button-secondary" style="padding:0.2rem 0.5rem; border-radius:4px;" onclick="decrementItem(' + item.originalIndex + ')">-</button>' +
+                      '<span style="font-weight:600;min-width:1rem;text-align:center;">' + (item.quantity || 1) + '</span>' +
+                      '<button type="button" class="button button-secondary" style="padding:0.2rem 0.5rem; border-radius:4px;" onclick="incrementItem(' + item.originalIndex + ')">+</button>' +
+                      '</div>' +
+                      '<span>$' + (parseFloat(item.price) * (item.quantity || 1)).toFixed(2) + '</span>' +
+                      '<button type="button" class="remove-btn" title="Remove item" onclick="removeItem(' + item.originalIndex + ')" style="margin-left:8px;"><i class="fas fa-trash-alt"></i></button>';
       document.getElementById('custom-list').appendChild(row);
     });
   } else {
@@ -322,8 +343,35 @@ function renderLineItems() {
 }
 
 function addItem(item) {
-  window.lineItems.push(item);
+  var existingItem = window.lineItems.find(function(i) {
+      return i.name === item.name && i.type === item.type && i.price === item.price;
+  });
+  if (existingItem) {
+      existingItem.quantity = (existingItem.quantity || 1) + 1;
+  } else {
+      item.quantity = 1;
+      window.lineItems.push(item);
+  }
   renderLineItems();
+}
+
+function incrementItem(idx) {
+  if (window.lineItems[idx]) {
+      window.lineItems[idx].quantity = (window.lineItems[idx].quantity || 1) + 1;
+      renderLineItems();
+  }
+}
+
+function decrementItem(idx) {
+  if (window.lineItems[idx]) {
+      var qty = window.lineItems[idx].quantity || 1;
+      if (qty > 1) {
+          window.lineItems[idx].quantity = qty - 1;
+          renderLineItems();
+      } else {
+          removeItem(idx);
+      }
+  }
 }
 
 function removeItem(idx) {
@@ -406,8 +454,16 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('DEBUG: lineItems length:', window.lineItems.length);
     console.log('DEBUG: window.lineItems:', window.lineItems);
     
-    // Create a copy of the line items array
-    var itemsToSubmit = window.lineItems.slice();
+    // Create a flattened copy of the line items array for the backend
+    var itemsToSubmit = [];
+    window.lineItems.forEach(function(item) {
+        var qty = item.quantity || 1;
+        for (var i = 0; i < qty; i++) {
+            var itemCopy = Object.assign({}, item);
+            delete itemCopy.quantity;
+            itemsToSubmit.push(itemCopy);
+        }
+    });
     
     // If there's a discount, add it as a negative line item
     if (discount.amount > 0) {

@@ -717,12 +717,21 @@
                 </div>
             </section>
 
+            <section class="cta-section" style="padding-top: 0;">
+                <div class="container">
+                    <div class="cta-content">
+                        <h2 class="cta-title">Google Integration Transparency</h2>
+                        <p class="cta-description">We request access to your Google account solely to enable you to send appointment reminders and receipts via Gmail directly from our CRM, and to sync appointments with your Google Calendar. <strong>We do not store your emails, read them, or use your data for advertising.</strong> For more details, please view our <a href="{{ url_for('view_privacy_policy') }}" style="color: var(--primary-color);">Privacy Policy</a>.</p>
+                    </div>
+                </div>
+            </section>
+
             <footer class="home-footer">
                 <div class="container">
                     <div class="footer-grid">
                         <div class="footer-column">
                             <h3 class="footer-title">Pawfection</h3>
-                            <p class="footer-description">Professional pet grooming management software that helps you focus on what matters most - the pets.</p>
+                            <p class="footer-description">Professional pet grooming management software by Cora Renee Kirkpatrick that helps you focus on what matters most - the pets.</p>
                         </div>
                         <div class="footer-column">
                             <h3 class="footer-title">Features</h3>
@@ -752,7 +761,7 @@
                         </div>
                     </div>
                     <div class="footer-bottom">
-                        <p>&copy; {{ now_utc().year if now_utc else "" }} Pawfection Grooming Solutions. All rights reserved.</p>
+                        <p>Pawfection Grooming Solutions: Website by Cora Renee Kirkpatrick &copy; {{ now_utc().year if now_utc else "" }} All Rights Reserved.</p>
                     </div>
                 </div>
             </footer>
