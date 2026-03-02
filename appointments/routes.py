@@ -636,7 +636,7 @@ def delete_appointment(appointment_id):
     """
     Handles deleting an appointment.
     Ensures that only appointments from the current store can be deleted.
-    Provides a choice: delete from both app and Google Calendar, or just mark as Cancelled (and update Google Calendar event status).
+    Deletes the appointment from the app and Google Calendar unconditionally.
     """
     store_id = session.get('store_id')
     appt = Appointment.query.options(db.joinedload(Appointment.dog)).filter_by(
@@ -657,88 +657,46 @@ def delete_appointment(appointment_id):
         local_time = appt.appointment_datetime.astimezone(store_timezone)
     time_str = local_time.strftime('%Y-%m-%d %I:%M %p %Z')
 
-    action = request.form.get('delete_action', 'cancel')
     google_event_id = appt.google_event_id
     store = db.session.get(Store, store_id)
     google_calendar_deleted = False
-    google_calendar_cancelled = False
     try:
-        if action == 'delete':
-            # ... (rest of delete logic is fine)
-            if store and store.google_token_json and google_event_id:
-                try:
-                    # Build credentials and Google Calendar service
-                    service = get_google_service('calendar', 'v3', store=store)
-                    if not service:
-                        raise Exception("Failed to build Google Calendar service")
+        # Build credentials and Google Calendar service
+        if store and store.google_token_json and google_event_id:
+            try:
+                service = get_google_service('calendar', 'v3', store=store)
+                if not service:
+                    raise Exception("Failed to build Google Calendar service")
 
-                    calendar_id = store.google_calendar_id if store.google_calendar_id else 'primary'
+                calendar_id = store.google_calendar_id if store.google_calendar_id else 'primary'
 
-                    # Delete the event from Google Calendar
-                    service.events().delete(calendarId=calendar_id, eventId=google_event_id).execute()
-                    google_calendar_deleted = True
-                except Exception as e:
-                    current_app.logger.error(f"Failed to delete Google Calendar event: {e}", exc_info=True)
+                # Delete the event from Google Calendar
+                service.events().delete(calendarId=calendar_id, eventId=google_event_id).execute()
+                google_calendar_deleted = True
+            except Exception as e:
+                current_app.logger.error(f"Failed to delete Google Calendar event: {e}", exc_info=True)
 
-            # Delete any associated notifications
-            Notification.query.filter_by(
-                reference_id=appt.id,
-                reference_type='appointment'
-            ).delete(synchronize_session=False)
+        # Delete any associated notifications
+        Notification.query.filter_by(
+            reference_id=appt.id,
+            reference_type='appointment'
+        ).delete(synchronize_session=False)
 
-            db.session.delete(appt)
-            db.session.commit()
-            log_activity("Deleted Local Appt", details=f"Appt ID: {appointment_id}, Dog: {dog_name}")
-            msg = f"Appt for {dog_name} on {time_str} deleted!"
-            if google_calendar_deleted:
-                msg += " (Google Calendar event deleted)"
-            # Send cancellation email to owner
-            if appt.dog is not None and appt.dog.owner is not None:
-                owner = appt.dog.owner
-                groomer = appt.groomer if hasattr(appt, 'groomer') else None
-                services_text = appt.requested_services_text
-                send_appointment_cancelled_email(store, owner, appt.dog, appt, groomer, services_text)
-            else:
-                current_app.logger.warning(f"[CANCEL EMAIL] Skipping email: appt.dog or appt.dog.owner missing for appt ID {appointment_id}")
-            flash(msg, "success")
+        db.session.delete(appt)
+        db.session.commit()
+        log_activity("Deleted Local Appt", details=f"Appt ID: {appointment_id}, Dog: {dog_name}")
+        msg = f"Appt for {dog_name} on {time_str} deleted!"
+        if google_calendar_deleted:
+            msg += " (Google Calendar event deleted)"
+        # Send cancellation email to owner
+        if appt.dog is not None and appt.dog.owner is not None:
+            owner = appt.dog.owner
+            groomer = appt.groomer if hasattr(appt, 'groomer') else None
+            services_text = appt.requested_services_text
+            send_appointment_cancelled_email(store, owner, appt.dog, appt, groomer, services_text)
         else:
-            # Mark as Cancelled in app
-            appt.status = 'Cancelled'
-            db.session.commit()
-            db.session.refresh(appt) # <<< FIX: Refresh the object to get the latest state from the DB.
-
-            # Update Google Calendar event if possible
-            if store and store.google_token_json and google_event_id:
-                try:
-                    # Build credentials and Google Calendar service
-                    service = get_google_service('calendar', 'v3', store=store)
-                    if not service:
-                        raise Exception("Failed to build Google Calendar service")
-
-                    calendar_id = store.google_calendar_id if store.google_calendar_id else 'primary'
-
-                    # Mark the event as cancelled in Google Calendar (soft delete so history remains)
-                    service.events().patch(
-                        calendarId=calendar_id,
-                        eventId=google_event_id,
-                        body={"status": "cancelled", "summary": f"[CANCELLED] ({appt.dog.name}) Appointment"}
-                    ).execute()
-                    google_calendar_cancelled = True
-                except Exception as e:
-                    current_app.logger.error(f"Failed to cancel Google Calendar event: {e}", exc_info=True)
-            log_activity("Cancelled Local Appt", details=f"Appt ID: {appointment_id}, Dog: {dog_name}")
-            msg = f"Appt for {dog_name} on {time_str} marked as Cancelled."
-            if google_calendar_cancelled:
-                msg += " (Google Calendar event cancelled)"
-            # Send cancellation email to owner
-            if appt.dog is not None and appt.dog.owner is not None:
-                owner = appt.dog.owner
-                groomer = appt.groomer if hasattr(appt, 'groomer') else None
-                services_text = appt.requested_services_text
-                send_appointment_cancelled_email(store, owner, appt.dog, appt, groomer, services_text)
-            else:
-                current_app.logger.warning(f"[CANCEL EMAIL] Skipping email: appt.dog or appt.dog.owner missing for appt ID {appointment_id}")
-            flash(msg, "success")
+            current_app.logger.warning(f"[CANCEL EMAIL] Skipping email: appt.dog or appt.dog.owner missing for appt ID {appointment_id}")
+        flash(msg, "success")
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error deleting/cancelling appt {appointment_id}: {e}", exc_info=True)
