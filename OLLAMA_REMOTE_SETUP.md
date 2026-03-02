@@ -25,7 +25,7 @@ Ensure Ollama is running and the model is downloaded:
 ```bash
 ollama serve
 # In a separate terminal, ensure the model is ready
-ollama run Gemma3:12b
+ollama run llama3.1:8b
 ```
 
 ### Step 3: Start the ngrok tunnel
