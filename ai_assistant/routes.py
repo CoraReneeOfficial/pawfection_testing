@@ -195,9 +195,14 @@ def chat():
                 # Post-appointment tasks (Sync and Notify)
                 try:
                     store_obj = Store.query.get(store_id)
-                    from management.routes import sync_google_calendar_for_store
-                    if store_obj and store_obj.google_token_json and store_obj.google_calendar_id:
-                        sync_google_calendar_for_store(store_id)
+
+                    # 1. Sync Google Calendar
+                    try:
+                        from management.routes import sync_google_calendar_for_store
+                        if store_obj and store_obj.google_token_json and store_obj.google_calendar_id:
+                            sync_google_calendar_for_store(store_id)
+                    except Exception as e:
+                        current_app.logger.error(f"[AI Tool Call] Google Calendar sync failed: {e}")
 
                     # Reload appointment with relationships
                     new_appt = Appointment.query.options(
@@ -205,8 +210,26 @@ def chat():
                         db.joinedload(Appointment.groomer)
                     ).filter_by(id=appt.id).first()
 
+                    # 2. Send Notifications (Email/Text) based on settings
                     if dog.owner:
-                        send_appointment_confirmation_email(store_obj, dog.owner, dog, new_appt, groomer=groomer, services_text=services_text)
+                        import json
+                        import os
+
+                        notification_settings_path = os.path.join(current_app.root_path, 'notification_settings.json')
+                        try:
+                            with open(notification_settings_path, 'r') as f:
+                                notification_settings = json.load(f)
+                        except Exception as e:
+                            notification_settings = {}
+                            current_app.logger.error(f"[AI Tool Call] Could not load notification settings: {e}")
+
+                        if notification_settings.get('send_confirmation_email', False):
+                            try:
+                                from notifications.email_utils import send_appointment_confirmation_email
+                                send_appointment_confirmation_email(store_obj, dog.owner, dog, new_appt, groomer=groomer, services_text=services_text)
+                            except Exception as e:
+                                current_app.logger.error(f"[AI Tool Call] Failed to send email/text notification: {e}")
+
                 except Exception as e:
                     current_app.logger.error(f"[AI Tool Call] Background task error (Sync/Email) for AI appointment: {e}", exc_info=True)
                     # Don't fail the tool call if background tasks fail
@@ -613,7 +636,7 @@ def chat():
             except:
                 store_tz = pytz.UTC
 
-            now_utc = datetime.datetime.now(datetime.timezone.utc)
+            now_utc = datetime.datetime.now(timezone.utc)
             now_local = now_utc.astimezone(store_tz)
 
             start_date = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -626,8 +649,8 @@ def chat():
             elif period == "year":
                 start_date = start_date.replace(month=1, day=1)
 
-            start_utc = start_date.astimezone(datetime.timezone.utc)
-            end_utc = end_date.astimezone(datetime.timezone.utc)
+            start_utc = start_date.astimezone(timezone.utc)
+            end_utc = end_date.astimezone(timezone.utc)
 
             revenue = db.session.query(func.sum(Appointment.checkout_total_amount)).filter(
                 Appointment.store_id == store_id,
@@ -713,10 +736,83 @@ def chat():
                 db.session.rollback()
                 return f"Error deleting appointment: {str(e)}"
 
+        def get_appointments(date: str = "", dog_name: str = "", owner_name: str = "") -> list[str]:
+            """
+            Fetches a list of appointments. You can optionally filter by date, dog name, or owner name.
+            If no filters are provided, returns upcoming appointments.
+
+            Args:
+                date: Optional date to filter by (YYYY-MM-DD).
+                dog_name: Optional dog name to filter by.
+                owner_name: Optional owner name to filter by.
+
+            Returns:
+                A list of strings containing appointment details (appointment_id, date, time, dog, groomer, services).
+            """
+            current_app.logger.info(f"[AI Tool Call] get_appointments called with date='{date}', dog_name='{dog_name}', owner_name='{owner_name}'")
+
+            store_obj = Store.query.get(store_id)
+            store_tz_str = getattr(store_obj, 'timezone', None) or 'America/New_York'
+            try:
+                store_tz = pytz.timezone(store_tz_str)
+            except pytz.UnknownTimeZoneError:
+                store_tz = pytz.timezone('America/New_York')
+
+            query = Appointment.query.options(
+                db.joinedload(Appointment.dog).joinedload(Dog.owner),
+                db.joinedload(Appointment.groomer)
+            ).filter(Appointment.store_id == store_id)
+
+            if date:
+                try:
+                    # Filter by the entire day in the store's timezone
+                    naive_start = datetime.datetime.strptime(f"{date} 00:00", "%Y-%m-%d %H:%M")
+                    naive_end = datetime.datetime.strptime(f"{date} 23:59", "%Y-%m-%d %H:%M")
+                    local_start = store_tz.localize(naive_start)
+                    local_end = store_tz.localize(naive_end)
+                    utc_start = local_start.astimezone(timezone.utc)
+                    utc_end = local_end.astimezone(timezone.utc)
+                    query = query.filter(Appointment.appointment_datetime >= utc_start, Appointment.appointment_datetime <= utc_end)
+                except ValueError:
+                    return ["Error: Invalid date format. Expected YYYY-MM-DD."]
+            else:
+                # Default to upcoming appointments if no date given
+                now_utc = datetime.datetime.now(timezone.utc)
+                query = query.filter(Appointment.appointment_datetime >= now_utc)
+
+            if dog_name:
+                query = query.join(Dog).filter(Dog.name.ilike(f"%{dog_name}%"))
+            if owner_name:
+                # If we didn't already join dog, join it
+                if not dog_name:
+                    query = query.join(Dog)
+                query = query.join(Owner).filter(Owner.name.ilike(f"%{owner_name}%"))
+
+            appts = query.order_by(Appointment.appointment_datetime.asc()).limit(15).all()
+
+            if not appts:
+                current_app.logger.info(f"[AI Tool Call] get_appointments returning 'No appointments found.'")
+                return ["No appointments found matching those criteria."]
+
+            result = []
+            for a in appts:
+                local_dt = a.appointment_datetime.astimezone(store_tz)
+                date_str = local_dt.strftime('%Y-%m-%d')
+                time_str = local_dt.strftime('%I:%M %p')
+                dog_n = a.dog.name if a.dog else "Unknown"
+                owner_n = a.dog.owner.name if a.dog and a.dog.owner else "Unknown"
+                groomer_n = a.groomer.username if a.groomer else "Unknown"
+                services = a.requested_services_text or "None"
+
+                result.append(f"Appointment ID: {a.id}, Date: {date_str}, Time: {time_str}, Dog: {dog_n}, Owner: {owner_n}, Groomer: {groomer_n}, Services: {services}")
+
+            current_app.logger.info(f"[AI Tool Call] get_appointments returning {len(result)} appointments.")
+            return result
+
         system_prompt = f"""
         Role: You are the "Pawfection Business Agent." You are a highly efficient, professional administrative assistant for pet grooming businesses.
 
-        Core Objective: Help the user manage their Client & Pet Directory and Schedule New Appointments with 100% accuracy and structured data.
+        Core Objective: Help the user manage their Client & Pet Directory and Schedule New Appointments with 100% accuracy and structured data. You are using `qwen2.5-coder:7b`.
 
         CONTEXT:
         Current User Role: {g.user.role if hasattr(g, 'user') else 'Unknown'}
@@ -725,34 +821,43 @@ def chat():
 
         Task Execution Protocol:
 
-        1. Identify Intent: Determine if the user wants to ADD, EDIT, DELETE, or VIEW a record (Owner, Dog, or Appointment).
+        1. Identify Intent: Determine if the user wants to ADD, EDIT, DELETE, or VIEW a record (Owner, Dog, Appointment, Service, Store Info, Revenue).
 
-        2. Verification: Check the provided information against required fields:
-           - Appointment: Needs a Dog, Date, Time, and at least one Service.
-           - Owner: Needs a Name and Phone Number.
-           - Dog: Needs a Name, Breed, and Owner link.
+        2. Verification: Check the provided information against ALL required fields. You MUST NOT proceed without ALL of these:
+           - Add Appointment: Needs a Dog Name, Date (YYYY-MM-DD), Time (HH:MM), Groomer Name, and at least one Service.
+           - Edit Appointment: Needs Appointment ID.
+           - Delete Appointment: Needs Appointment ID.
+           - Add Owner: Needs a Name and Phone Number.
+           - Edit Owner: Needs Owner Name or ID.
+           - Delete Owner: Needs Owner Name or ID.
+           - Add Dog: Needs a Name, Breed, and Owner Name.
+           - Edit Dog: Needs Dog Name or ID.
+           - Delete Dog: Needs Dog Name or ID.
+           - Add Service: Needs Name and Base Price.
 
-        3. The "Clarification" Loop: If a request is vague (e.g., "Book a dog"), you MUST reply by listing exactly what is missing: "I can help with that! To complete the booking, I just need the dog's name, the date/time, and the service type, groomer and any optional notes"
+        3. The "Clarification" Loop: If a request is missing ANY required information (e.g., "Book a dog"), you MUST reply by asking for exactly what is missing: "I can help with that! To complete the booking, I just need the dog's name, the date/time, the service type, and the groomer's name." Do not try to guess or hallucinate missing information.
 
-        4. Safety Check: Always confirm before performing a DELETE action.
+        4. Lookups & Names: You do not need to ask the user for ID numbers (like dog_id, owner_id, groomer_id). You can and should use exact names for these parameters in the tools. If a tool fails because a name is not unique, THEN use `get_dogs`, `get_owners`, `get_groomers`, or `get_appointments` to find the exact ID.
 
-        5. Output Formatting:
+        5. Safety Check: Always confirm before performing a DELETE action.
+
+        6. Output Formatting:
            - Provide a polite, concise confirmation to the user.
-           - To perform actions, YOU MUST call the appropriate function provided to you. Do NOT write or output JSON, code blocks, or markdown code syntax. Rely entirely on the tool calling framework.
+           - To perform actions, use the provided tools. DO NOT generate raw JSON strings in your conversational response. DO NOT output code blocks or markdown code syntax containing tool calls. Use the native tool calling framework. If you MUST output JSON, format it exactly like this on its own line: {{"name": "tool_name", "arguments": {{"arg1": "value1"}}}}
            - Use a helpful, organized tone—break down multi-step processes into bulleted lists for clarity.
-           - Never output json or any other code in the chat for users to see. DO NOT output raw JSON strings for tool calls in your messages to the user.
+           - Never output JSON or any other code in the chat for users to see.
 
         ADDITIONAL INSTRUCTIONS:
         - DO NOT OFFER CHOICES OR WALKTHROUGHS. When a user wants to perform an action, you MUST gather all required details and call the relevant tool immediately to perform the action in the background. DO NOT offer a "smart link" or ask them to fill out a form themselves. You handle everything fully.
         - When calling a tool, wait for its output and confirm the result with the user. DO NOT use made-up tool names.
-        - The ID parameters for dogs, owners, and groomers can accept exact names if you do not know the ID. If an exact name match cannot be uniquely found, the tool will return an error, and you should use the get_dogs, get_owners, or get_groomers tools to look up the specific ID before trying again.
         - You can manage the business: use `get_revenue` to check earnings, `get_store_info` to see settings, and `update_store_info` / `add_service` to change them (these require admin privileges).
+        - To get appointment details, use `get_appointments`. Do not make the user look up IDs.
         - Only use the tools provided to you. If a task cannot be fully completed by a tool, inform the user.
         - Use Markdown for formatting (bold, lists, links).
         """
 
 
-        tools = [get_dogs, get_owners, add_appointment, get_groomers, get_services, add_owner, edit_owner, delete_owner, add_dog, edit_dog, delete_dog, edit_appointment, delete_appointment, get_store_info, update_store_info, get_revenue, add_service]
+        tools = [get_dogs, get_owners, add_appointment, get_groomers, get_services, add_owner, edit_owner, delete_owner, add_dog, edit_dog, delete_dog, edit_appointment, delete_appointment, get_store_info, update_store_info, get_revenue, add_service, get_appointments]
 
         formatted_history = [{"role": "system", "content": system_prompt}]
         for msg in history:
@@ -788,39 +893,127 @@ def chat():
                 tools=tools
             )
 
-            # Process tool calls in a loop
-            while response.message.tool_calls:
-                formatted_history.append(response.message)
-                for tool_call in response.message.tool_calls:
-                    function_name = tool_call.function.name
-                    arguments = tool_call.function.arguments
+            import json
 
-                    current_app.logger.info(f"[Ollama Tool Call] {function_name} with args: {arguments}")
+            def extract_json_from_text(text):
+                import re
 
-                    if function_name in available_tools:
-                        try:
-                            function_to_call = available_tools[function_name]
-                            function_response = function_to_call(**arguments)
-                        except Exception as e:
-                            function_response = f"Error executing tool {function_name}: {e}"
+                # First try code blocks
+                code_blocks = re.findall(r'```(?:json)?\s*(.*?)\s*```', text, re.DOTALL)
+                for block in code_blocks:
+                    try:
+                        return json.loads(block)
+                    except json.JSONDecodeError:
+                        pass
+
+                # Then try to find raw JSON objects in the text that have "name" and "arguments"
+                match = re.search(r'\{\s*"name"\s*:\s*"[^"]+"\s*,\s*"arguments"\s*:\s*\{.*?\}\s*\}', text, re.DOTALL)
+                if match:
+                    try:
+                        return json.loads(match.group(0))
+                    except json.JSONDecodeError:
+                        pass
+
+                return None
+
+            # Process tool calls in a loop (handle both native and fallback)
+            max_loops = 5
+            loop_count = 0
+
+            while loop_count < max_loops:
+                loop_count += 1
+
+                # Native Tool Calling
+                if response.message.tool_calls:
+                    formatted_history.append(response.message)
+                    for tool_call in response.message.tool_calls:
+                        function_name = tool_call.function.name
+                        arguments = tool_call.function.arguments
+
+                        current_app.logger.info(f"[Ollama Tool Call] {function_name} with args: {arguments}")
+
+                        if function_name in available_tools:
+                            try:
+                                function_to_call = available_tools[function_name]
+                                function_response = function_to_call(**arguments)
+                            except Exception as e:
+                                function_response = f"Error executing tool {function_name}: {e}"
+                        else:
+                            function_response = f"Tool {function_name} not found."
+
+                        current_app.logger.info(f"[Ollama Tool Response] {function_response}")
+
+                        formatted_history.append({
+                            'role': 'tool',
+                            'content': str(function_response),
+                        })
+
+                    # Send the tool responses back to Ollama to get the final answer
+                    response = ollama_client.chat(
+                        model=ollama_model,
+                        messages=formatted_history,
+                        tools=tools
+                    )
+
+                # Fallback: Manual JSON Parsing
+                elif response.message.content:
+                    extracted_json = extract_json_from_text(response.message.content)
+                    if extracted_json and 'name' in extracted_json and 'arguments' in extracted_json:
+                        function_name = extracted_json['name']
+                        arguments = extracted_json['arguments']
+
+                        current_app.logger.info(f"[Ollama Fallback Tool Call] {function_name} with args: {arguments}")
+
+                        # Add assistant message with the thought process but strip the JSON for the final output
+                        clean_content = response.message.content
+                        if extracted_json:
+                            # Try to strip the json representation
+                            try:
+                                json_str = json.dumps(extracted_json)
+                                clean_content = clean_content.replace(json_str, "")
+                            except:
+                                pass
+
+                            # Strip code blocks
+                            clean_content = re.sub(r'```(?:json)?\s*.*?\s*```', '', clean_content, flags=re.DOTALL)
+                            # Strip raw tool calls
+                            clean_content = re.sub(r'\{\s*"name"\s*:\s*"[^"]+"\s*,\s*"arguments"\s*:\s*\{.*?\}\s*\}', '', clean_content, flags=re.DOTALL)
+
+                        formatted_history.append({'role': 'assistant', 'content': clean_content})
+
+                        if function_name in available_tools:
+                            try:
+                                function_to_call = available_tools[function_name]
+                                function_response = function_to_call(**arguments)
+                            except Exception as e:
+                                function_response = f"Error executing tool {function_name}: {e}"
+                        else:
+                            function_response = f"Tool {function_name} not found."
+
+                        current_app.logger.info(f"[Ollama Fallback Tool Response] {function_response}")
+
+                        formatted_history.append({
+                            'role': 'tool',
+                            'content': str(function_response),
+                        })
+
+                        # Send the tool responses back to Ollama to get the final answer
+                        response = ollama_client.chat(
+                            model=ollama_model,
+                            messages=formatted_history,
+                            tools=tools
+                        )
                     else:
-                        function_response = f"Tool {function_name} not found."
-
-                    current_app.logger.info(f"[Ollama Tool Response] {function_response}")
-
-                    formatted_history.append({
-                        'role': 'tool',
-                        'content': str(function_response),
-                    })
-
-                # Send the tool responses back to Ollama to get the final answer
-                response = ollama_client.chat(
-                    model=ollama_model,
-                    messages=formatted_history,
-                    tools=tools
-                )
+                        break # No native tools, no fallback tools found. Break loop.
+                else:
+                    break # No content and no tool calls. Break loop.
 
             response_text = response.message.content
+            # Make absolutely sure we strip out JSON from the final response text
+            if response_text:
+                import re
+                response_text = re.sub(r'```(?:json)?\s*.*?\s*```', '', response_text, flags=re.DOTALL)
+                response_text = re.sub(r'\{\s*"name"\s*:\s*"[^"]+"\s*,\s*"arguments"\s*:\s*\{.*?\}\s*\}', '', response_text, flags=re.DOTALL)
             current_app.logger.info(f"[Ollama Response] Result text: '{response_text}'")
 
         except Exception as ollama_error:
