@@ -741,7 +741,7 @@ def create_app():
         Displays superadmin tools page.
         """
         from flask import render_template
-        if not session.get('is_superadmin'):
+        if not session.get('is_superadmin') or not g.user:
             flash('Access denied.', 'danger')
             return redirect(url_for('superadmin_login'))
 
