@@ -755,8 +755,12 @@ def chat():
         response_text = ""
         try:
             # 1. Primary AI: Ollama
-            ollama_url = os.environ.get('OLLAMA_URL', 'http://localhost:11434')
-            ollama_model = os.environ.get('OLLAMA_MODEL', 'Gemma3:12b')
+            ollama_url = os.environ.get('OLLAMA_URL')
+            ollama_model = os.environ.get('OLLAMA_MODEL')
+
+            if not ollama_url or not ollama_model:
+                raise ValueError("OLLAMA_URL and OLLAMA_MODEL must be explicitly set in environment variables.")
+
             current_app.logger.info(f"[AI Chat Request] Attempting Ollama ({ollama_model}) at {ollama_url}")
 
             ollama_client = ollama.Client(host=ollama_url)
