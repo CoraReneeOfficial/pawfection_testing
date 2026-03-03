@@ -367,8 +367,8 @@
             <input type="hidden" name="appointment_id" :value="selectedAppointmentId">
             <input type="hidden" name="line_items" :value="JSON.stringify(
                 discountAmount > 0
-                ? [...getFlattenedCart(), {name: discountName || 'Discount', price: -discountAmount, type: 'discount'}]
-                : getFlattenedCart()
+                ? [...cart, {name: discountName || 'Discount', price: -discountAmount, type: 'discount'}]
+                : cart
             )">
             <input type="hidden" name="subtotal" :value="subtotal.toFixed(2)">
             <input type="hidden" name="taxes" :value="taxes.toFixed(2)">
@@ -388,12 +388,7 @@
                                 <div class="pos-cart-item-name" x-text="item.name"></div>
                                 <div class="pos-cart-item-type" x-text="item.type"></div>
                             </div>
-                            <div class="pos-cart-item-quantity" style="display: flex; align-items: center; gap: 0.5rem; margin: 0 1rem;">
-                                <button type="button" @click="decrementQuantity(index)" class="button button-secondary" style="padding: 0.2rem 0.5rem; border-radius: 4px;">-</button>
-                                <span style="font-weight: 600; min-width: 1rem; text-align: center;" x-text="item.quantity || 1"></span>
-                                <button type="button" @click="incrementQuantity(index)" class="button button-secondary" style="padding: 0.2rem 0.5rem; border-radius: 4px;">+</button>
-                            </div>
-                            <div class="pos-cart-item-price" x-text="'$' + ((parseFloat(item.price)) * (item.quantity || 1)).toFixed(2)"></div>
+                            <div class="pos-cart-item-price" x-text="'$' + (parseFloat(item.price)).toFixed(2)"></div>
                             <button type="button" class="pos-cart-item-remove" @click="removeFromCart(index)" title="Remove">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
