@@ -738,7 +738,7 @@ def chat():
 
         5. Output Formatting:
            - Provide a polite, concise confirmation to the user.
-           - Internally generate the corresponding JSON for the app's backend to process using the actual tool calling framework.
+           - To perform actions, YOU MUST call the appropriate function provided to you. Do NOT write or output JSON, code blocks, or markdown code syntax. Rely entirely on the tool calling framework.
            - Use a helpful, organized tone—break down multi-step processes into bulleted lists for clarity.
            - Never output json or any other code in the chat for users to see. DO NOT output raw JSON strings for tool calls in your messages to the user.
 
