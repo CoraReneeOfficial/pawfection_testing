@@ -31,6 +31,7 @@ from secure_headers import init_secure_headers  # Import secure headers
 import migrate_add_remind_at_to_notification
 import migrate_add_owner_notification_fields
 import migrate_add_deposit_amount
+import migrate_add_google_token_json_to_user
 # Removed import for datetime as it's not directly used at top level of app.py anymore
 # Removed log_activity definition as it's now in utils.py
 
@@ -245,6 +246,18 @@ def create_app():
                 migrate_add_owner_notification_fields.migrate_postgres(app.config['SQLALCHEMY_DATABASE_URI'])
         except Exception as e:
             app.logger.error(f"Failed to run owner migration: {e}")
+
+
+        # Check for and apply missing google_token_json column in user table
+        try:
+            if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
+                app.logger.info("Checking for user schema updates (SQLite)...")
+                migrate_add_google_token_json_to_user.migrate_sqlite(DATABASE_PATH)
+            else:
+                app.logger.info("Checking for user schema updates (Postgres)...")
+                migrate_add_google_token_json_to_user.migrate_postgres(app.config['SQLALCHEMY_DATABASE_URI'])
+        except Exception as e:
+            app.logger.error(f"Failed to run user migration: {e}")
 
         # Check for and apply missing deposit_amount column in appointment table
         try:
