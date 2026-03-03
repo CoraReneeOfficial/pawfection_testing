@@ -717,8 +717,12 @@ def create_app():
         if not session.get('is_superadmin'):
             flash('Access denied.', 'danger')
             return redirect(url_for('superadmin_login'))
+
+        user = User.query.get(g.user.id)
+        is_google_connected = user and user.google_token_json is not None
+
         app.logger.info("Superadmin viewed tools page.")
-        return render_template('superadmin_tools.html')
+        return render_template('superadmin_tools.html', is_google_connected=is_google_connected)
     
     # Superadmin System Health route
     @app.route('/superadmin/system-health')
@@ -1325,179 +1329,6 @@ def create_app():
                               level_counts=level_counts)
                               
     # Superadmin Email Test route
-    @app.route('/superadmin/email-test', methods=['GET', 'POST'])
-    def superadmin_email_test():
-        """
-        Allows superadmins to test email functionality.
-        """
-        from flask import render_template, request, flash, redirect, url_for
-        import smtplib
-        from email.mime.multipart import MIMEMultipart
-        from email.mime.text import MIMEText
-        import os
-        import json
-        import time
-        
-        if not session.get('is_superadmin'):
-            flash('Access denied.', 'danger')
-            return redirect(url_for('superadmin_login'))
-        
-        # Path to email config file
-        config_dir = os.path.join(os.path.dirname(__file__), 'config')
-        email_config_path = os.path.join(config_dir, 'email_config.json')
-        os.makedirs(config_dir, exist_ok=True)
-        
-        # Default email configuration
-        default_email_config = {
-            "smtp_server": "smtp.example.com",
-            "smtp_port": 587,
-            "smtp_username": "your-email@example.com",
-            "smtp_password": "",
-            "use_tls": True,
-            "from_email": "info@pawfection.com",
-            "from_name": "Pawfection Grooming Solutions"
-        }
-        
-        # Load current email configuration or create default if not exists
-        email_config = default_email_config
-        try:
-            if os.path.exists(email_config_path):
-                with open(email_config_path, 'r') as file:
-                    email_config = json.load(file)
-        except Exception as e:
-            app.logger.error(f"Error loading email configuration: {str(e)}")
-            flash('Error loading email configuration.', 'danger')
-        
-        # Initialize test result variables
-        test_result = None
-        test_message = None
-        test_time = None
-        
-        # Process form submission
-        if request.method == 'POST':
-            csrf.protect()
-            action = request.form.get('action', '')
-            
-            if action == 'test_email':
-                # Test email functionality
-                recipient = request.form.get('test_recipient', '')
-                subject = request.form.get('test_subject', 'Email Test from Pawfection')
-                body = request.form.get('test_body', 'This is a test email from Pawfection Grooming Solutions.')
-                
-                if not recipient:
-                    flash('Recipient email is required.', 'danger')
-                    return redirect(url_for('superadmin_email_test'))
-                
-                try:
-                    # Start timing
-                    start_time = time.time()
-                    
-                    # Create message
-                    msg = MIMEMultipart()
-                    msg['From'] = f"{email_config['from_name']} <{email_config['from_email']}>"
-                    msg['To'] = recipient
-                    msg['Subject'] = subject
-                    
-                    # Add HTML body
-                    html = f"""<html>
-                    <body>
-                        <div style="font-family: Arial, sans-serif; padding: 20px;">
-                            <h2 style="color: #4c6ef5;">Email Test from Pawfection</h2>
-                            <p>{body}</p>
-                            <hr>
-                            <p style="color: #6c757d; font-size: 0.8rem;">This is a test email sent from the Pawfection Grooming Solutions admin panel.</p>
-                        </div>
-                    </body>
-                    </html>
-                    """
-                    msg.attach(MIMEText(html, 'html'))
-                    
-                    # Connect to SMTP server and send email
-                    with smtplib.SMTP(email_config['smtp_server'], email_config['smtp_port']) as server:
-                        if email_config['use_tls']:
-                            server.starttls()
-                        
-                        if email_config['smtp_username'] and email_config['smtp_password']:
-                            server.login(email_config['smtp_username'], email_config['smtp_password'])
-                        
-                        server.send_message(msg)
-                    
-                    # End timing
-                    test_time = round(time.time() - start_time, 2)
-                    
-                    test_result = 'success'
-                    test_message = f"Email successfully sent to {recipient} in {test_time} seconds."
-                    flash(test_message, 'success')
-                    app.logger.info(f"Superadmin sent test email to {recipient}.")
-                    
-                except Exception as e:
-                    test_result = 'error'
-                    test_message = f"Error sending email: {str(e)}"
-                    flash(test_message, 'danger')
-                    app.logger.error(f"Error sending test email: {str(e)}")
-            
-            elif action == 'save_config':
-                # Update email configuration
-                try:
-                    updated_config = {
-                        "smtp_server": request.form.get('smtp_server', ''),
-                        "smtp_port": int(request.form.get('smtp_port', 587)),
-                        "smtp_username": request.form.get('smtp_username', ''),
-                        "smtp_password": request.form.get('smtp_password', ''),
-                        "use_tls": 'use_tls' in request.form,
-                        "from_email": request.form.get('from_email', ''),
-                        "from_name": request.form.get('from_name', '')
-                    }
-                    
-                    # Preserve password if not changed
-                    if not updated_config['smtp_password'] and email_config['smtp_password']:
-                        updated_config['smtp_password'] = email_config['smtp_password']
-                    
-                    # Save updated configuration
-                    with open(email_config_path, 'w') as file:
-                        json.dump(updated_config, file, indent=2)
-                    
-                    email_config = updated_config
-                    flash('Email configuration saved successfully.', 'success')
-                    app.logger.info("Superadmin updated email configuration.")
-                    
-                except Exception as e:
-                    flash(f'Error saving email configuration: {str(e)}', 'danger')
-                    app.logger.error(f"Error saving email configuration: {str(e)}")
-        
-        # Sample email templates for testing
-        email_templates = [
-            {
-                'name': 'Welcome Email',
-                'subject': 'Welcome to Pawfection Grooming Solutions',
-                'body': 'Thank you for choosing Pawfection Grooming Solutions for your pet grooming needs. We look forward to serving you and your furry friend!'
-            },
-            {
-                'name': 'Appointment Confirmation',
-                'subject': 'Your Appointment is Confirmed',
-                'body': 'This email confirms your appointment with Pawfection Grooming Solutions on [DATE] at [TIME].'
-            },
-            {
-                'name': 'Appointment Reminder',
-                'subject': 'Reminder: Upcoming Appointment',
-                'body': 'This is a friendly reminder about your upcoming appointment with Pawfection Grooming Solutions tomorrow at [TIME].'
-            },
-            {
-                'name': 'Custom Test',
-                'subject': 'Email Test from Pawfection',
-                'body': 'This is a custom test email from Pawfection Grooming Solutions admin panel.'
-            }
-        ]
-        
-        # Render the email test page
-        app.logger.info("Superadmin viewed email test page.")
-        return render_template('superadmin_email_test.html',
-                              email_config=email_config,
-                              email_templates=email_templates,
-                              test_result=test_result,
-                              test_message=test_message,
-                              test_time=test_time)
-                              
     # Superadmin Database Management route
     @app.route('/superadmin/database', methods=['GET', 'POST'])
     def superadmin_database():
@@ -3401,6 +3232,39 @@ def create_app():
 
 
     # --- Stripe Webhook ---
+    @app.route('/feedback', methods=['GET', 'POST'])
+    def feedback_route():
+        """Route for submitting feedback and reports."""
+        if not g.user:
+            return redirect(url_for('auth.login'))
+
+        if request.method == 'POST':
+            from notifications.feedback_email import send_feedback_email
+
+            category = request.form.get('category')
+            message = request.form.get('message')
+            browser_info = request.user_agent.string if request.user_agent else "Unknown Browser"
+
+            if not category or not message:
+                flash('Please fill out all fields.', 'danger')
+                return render_template('feedback.html')
+
+            success = send_feedback_email(
+                sender_email=g.user.email or "unknown@email.com",
+                sender_name=g.user.username,
+                category=category,
+                message_body=message,
+                browser_info=browser_info
+            )
+
+            if success:
+                flash('Thank you! Your feedback has been sent to the developer.', 'success')
+                return redirect(url_for('dashboard'))
+            else:
+                flash('There was an error sending your feedback. This may be because the system email is not configured.', 'danger')
+
+        return render_template('feedback.html')
+
     @app.route('/stripe_webhook', methods=['POST'])
     def stripe_webhook():
         payload = request.data

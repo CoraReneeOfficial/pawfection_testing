@@ -108,6 +108,7 @@
                             <div class="nav-dropdown-user-info">
                                 Hello, {{ g.user.username if g.user else "User" }}!
                             </div>
+                            <a href="{{ url_for('feedback_route') }}" class="nav-dropdown-item {% if request.endpoint == 'feedback_route' %}active{% endif %}">Feedback / Report Issue</a>
                             <a href="{{ url_for('auth.logout') }}" class="nav-dropdown-item logout">Logout</a>
                         </div>
                     </div>
