@@ -108,6 +108,18 @@
                         </button>
                     </div>
                 </div>
+                <div class="form-group" style="margin-top: 1.5rem; display: flex; align-items: flex-start; gap: 0.5rem;">
+                    <input type="checkbox" id="agree_user_agreement" name="agree_user_agreement" required style="margin-top: 0.25rem;">
+                    <label for="agree_user_agreement" style="font-weight: normal; margin-bottom: 0;">
+                        I have read and agree to the <a href="{{ url_for('view_user_agreement') }}" target="_blank">User Agreement</a>.
+                    </label>
+                </div>
+                <div class="form-group" style="margin-top: 0.5rem; display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 1.5rem;">
+                    <input type="checkbox" id="agree_privacy_policy" name="agree_privacy_policy" required style="margin-top: 0.25rem;">
+                    <label for="agree_privacy_policy" style="font-weight: normal; margin-bottom: 0;">
+                        I have read and agree to the <a href="{{ url_for('view_privacy_policy') }}" target="_blank">Privacy Policy</a>.
+                    </label>
+                </div>
                 <div class="form-button-wrapper">
                     <button type="submit" class="button button-primary" style="width: 100%;">
                         Register Store

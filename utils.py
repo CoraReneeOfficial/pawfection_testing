@@ -40,6 +40,14 @@ def is_user_subscribed(user):
         return False
     status = getattr(store, 'subscription_status', None)
     allowed = status == 'active'
+
+    if status == 'trial':
+        import datetime
+        from datetime import timezone
+        ends_at = getattr(store, 'subscription_ends_at', None)
+        if ends_at and ends_at.replace(tzinfo=timezone.utc) > datetime.datetime.now(timezone.utc):
+            allowed = True
+
     current_app.logger.info(f"[SUBSCRIPTION] is_user_subscribed: user_id={getattr(user, 'id', None)}, store_id={getattr(store, 'id', None)}, subscription_status={status}, allowed={allowed}")
     print(f"[SUBSCRIPTION] is_user_subscribed: user_id={getattr(user, 'id', None)}, store_id={getattr(store, 'id', None)}, subscription_status={status}, allowed={allowed}")
     return allowed

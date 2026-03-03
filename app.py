@@ -620,6 +620,8 @@ def create_app():
             security_answer = request.form.get('security_answer')
             admin_username = request.form.get('admin_username')
             admin_password = request.form.get('admin_password')
+            agree_user_agreement = request.form.get('agree_user_agreement')
+            agree_privacy_policy = request.form.get('agree_privacy_policy')
             
             errors = []
             if not store_name: errors.append('Store Name is required.')
@@ -630,6 +632,8 @@ def create_app():
             if not security_answer: errors.append('Security Answer is required.')
             if not admin_username: errors.append('Admin Username is required.')
             if not admin_password: errors.append('Admin Password is required.')
+            if not agree_user_agreement: errors.append('You must agree to the User Agreement.')
+            if not agree_privacy_policy: errors.append('You must agree to the Privacy Policy.')
 
             if len(store_password) < 8: errors.append('Store password must be at least 8 characters.')
             if len(admin_password) < 8: errors.append('Admin password must be at least 8 characters.')
@@ -645,7 +649,17 @@ def create_app():
                 return render_template('store_register.html'), 400
             
             try:
-                store = Store(name=store_name, username=store_username, email=store_email, security_question=security_question)
+                import datetime
+                from datetime import timezone
+                trial_ends_at = datetime.datetime.now(timezone.utc) + datetime.timedelta(days=15)
+                store = Store(
+                    name=store_name,
+                    username=store_username,
+                    email=store_email,
+                    security_question=security_question,
+                    subscription_status='trial',
+                    subscription_ends_at=trial_ends_at
+                )
                 store.set_password(store_password)
                 store.set_security_answer(security_answer)
                 db.session.add(store)
