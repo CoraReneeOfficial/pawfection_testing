@@ -109,6 +109,9 @@ class User(SecurityMixin, db.Model):
     google_sub = db.Column(db.String(255), unique=True, nullable=True)  # Google unique user ID
     email = db.Column(db.String(255), unique=True, nullable=True)  # Email address
 
+    # Google OAuth token for system/superadmin accounts to send emails
+    google_token_json = db.Column(db.Text, nullable=True)
+
     # Stripe subscription fields
     stripe_customer_id = db.Column(db.String(255), nullable=True)
     stripe_subscription_id = db.Column(db.String(255), nullable=True)
