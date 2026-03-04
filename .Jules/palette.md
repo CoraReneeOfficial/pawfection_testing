@@ -16,3 +16,7 @@
 ## 2024-03-03 - Aria labels on dynamic Jinja content
 **Learning:** Screen readers cannot deduce context for repeated action buttons like 'Edit', 'Details', 'Checkout', or 'Delete' inside lists. Using Jinja variables directly within `aria-label` attributes (e.g., `aria-label="Edit appointment for {{ appointment.dog.name }}"`) is a safe, effective, and zero-CSS way to provide contextual meaning to these actions, resolving accessibility warnings efficiently.
 **Action:** Default to using templating variables in `aria-label` attributes for any recurring list actions across the application.
+
+## 2025-03-05 - Form Input Focus Rings
+**Learning:** Using undefined CSS variables (like `--primary-color-transparent`) for focus rings (`box-shadow`) leads to invisible focus states, harming keyboard accessibility.
+**Action:** Always verify custom CSS variables exist before using them, especially for critical accessibility states like `:focus`. Use existing design system variables or hardcoded fallbacks (e.g. `rgba(59, 130, 246, 0.3)`) when ensuring focus visibility.
