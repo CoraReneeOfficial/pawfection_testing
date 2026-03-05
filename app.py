@@ -557,7 +557,7 @@ def create_app():
                 .order_by(Appointment.appointment_datetime.asc())
                 .limit(5)
                 .all()
-)
+            )
 
         return render_template(
             'dashboard.html',

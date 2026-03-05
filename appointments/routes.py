@@ -1919,12 +1919,23 @@ def appointments_needs_review():
         flash("You must be logged in to view this page.", "danger")
         return redirect(url_for('auth.login'))
     store_id = g.user.store_id
-    needs_review_appts = Appointment.query.filter(
+
+    # BOLT OPTIMIZATION: Eagerly load dog and owner relationships to prevent N+1 queries
+    # when rendering the appointments_needs_review.html template which accesses appt.dog.name
+    # and appt.dog.owner.name in a loop.
+    needs_review_appts = Appointment.query.options(
+        db.joinedload(Appointment.dog).joinedload(Dog.owner)
+    ).filter(
         Appointment.store_id == store_id,
         Appointment.details_needed == True,
         ~Appointment.status.in_(['Completed', 'Cancelled', 'No Show'])
     ).order_by(Appointment.appointment_datetime.desc()).all()
-    return render_template('appointments_needs_review.html', appointments=needs_review_appts)
+
+    store = db.session.get(Store, store_id)
+    store_timezone_name = getattr(store, 'timezone', None) or 'America/New_York'
+    store_timezone = tz.gettz(store_timezone_name) or tz.gettz('America/New_York')
+
+    return render_template('appointments_needs_review.html', appointments=needs_review_appts, STORE_TIMEZONE=store_timezone, tz=tz)
 
 @appointments_bp.route('/appointments/appointments_needing_details')
 @subscription_required
