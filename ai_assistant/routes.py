@@ -80,13 +80,13 @@ def chat():
 
         def get_dogs(name: str = "") -> list[str]:
             """
-            Fetches a list of dogs in the store. Optionally filters by name.
+            Fetches a list of dogs in the store to find their IDs and details. Always use this to look up a dog's ID before performing actions like booking an appointment or editing a dog, unless you already know the exact ID.
 
             Args:
-                name: Optional dog name to filter by.
+                name: Optional string. The name of the dog to search for. Leave empty to get a general list.
 
             Returns:
-                A list of strings containing dog details (name, breed, dog_id).
+                A list of strings. Each string contains the dog's ID, Name, Breed, and their Owner's ID. Example: "Dog ID: 1, Name: Fido, Breed: Poodle, Owner ID: 5"
             """
             current_app.logger.info(f"[AI Tool Call] get_dogs called with name='{name}'")
             query = Dog.query.filter_by(store_id=store_id)
@@ -102,13 +102,13 @@ def chat():
 
         def get_owners(name: str = "") -> list[str]:
             """
-            Fetches a list of owners in the store. Optionally filters by name.
+            Fetches a list of owners in the store to find their IDs and contact information. Always use this to look up an owner's ID before editing or deleting them, unless you already know the exact ID.
 
             Args:
-                name: Optional owner name to filter by.
+                name: Optional string. The name of the owner to search for. Leave empty to get a general list.
 
             Returns:
-                A list of strings containing owner details (name, phone, owner_id).
+                A list of strings. Each string contains the owner's ID, Name, and Phone Number. Example: "Owner ID: 5, Name: Jane Doe, Phone: 555-1234"
             """
             current_app.logger.info(f"[AI Tool Call] get_owners called with name='{name}'")
             query = Owner.query.filter_by(store_id=store_id)
@@ -124,19 +124,18 @@ def chat():
 
         def add_appointment(dog_id: Union[int, str], date: str, time: str, groomer_id: Union[int, str], services: list[str], notes: str = "") -> str:
             """
-            Creates a new appointment for a dog, fully configured with groomer and services.
-            Sends notifications and syncs with Google Calendar.
+            Books a brand new appointment for a specific dog. You must gather all required information before calling this tool.
 
             Args:
-                dog_id: The ID of the dog, or the dog's exact name. If using a name, it must be exact.
-                date: The date of the appointment in YYYY-MM-DD format.
-                time: The time of the appointment in HH:MM format (24-hour).
-                groomer_id: The ID of the selected groomer, or the groomer's exact name.
-                services: A list of service names or service IDs to attach to the appointment.
-                notes: Optional notes for the appointment.
+                dog_id: Required. The integer ID of the dog, OR the dog's exact name as a string. If using a name, it must perfectly match the database.
+                date: Required string. The date for the appointment, strictly in YYYY-MM-DD format (e.g., "2024-10-31").
+                time: Required string. The time for the appointment, strictly in 24-hour HH:MM format (e.g., "14:30" for 2:30 PM).
+                groomer_id: Required. The integer ID of the groomer, OR the groomer's exact name as a string.
+                services: Required list of strings. A list containing the names or IDs of the services to be performed (e.g., ["Bath", "Nail Trim"]).
+                notes: Optional string. Any special instructions or notes for the appointment.
 
             Returns:
-                A string indicating success or failure.
+                A string indicating whether the appointment booking was successful or if an error occurred.
             """
             current_app.logger.info(f"[AI Tool Call] add_appointment called with dog_id={dog_id}, groomer_id={groomer_id}, date='{date}', time='{time}', services='{services}', notes='{notes}'")
             try:
@@ -269,13 +268,13 @@ def chat():
 
         def get_groomers(name: str = "") -> list[str]:
             """
-            Fetches a list of available groomers in the store. Optionally filters by name.
+            Fetches a list of available groomers (employees) in the store to find their IDs. Use this when you need a groomer's ID to book an appointment.
 
             Args:
-                name: Optional groomer name to filter by.
+                name: Optional string. The name of the groomer to search for. Leave empty to get a general list.
 
             Returns:
-                A list of strings containing groomer details (name, user_id).
+                A list of strings. Each string contains the groomer's ID and Name. Example: "Groomer ID: 2, Name: Alice"
             """
             query = User.query.filter_by(store_id=store_id, is_groomer=True)
             if name:
@@ -287,13 +286,13 @@ def chat():
 
         def get_services(name: str = "") -> list[str]:
             """
-            Fetches a list of available services in the store. Optionally filters by name.
+            Fetches a list of available services in the store to find their IDs and prices.
 
             Args:
-                name: Optional service name to filter by.
+                name: Optional string. The name of the service to search for.
 
             Returns:
-                A list of strings containing service details (name, service_id, base_price).
+                A list of strings. Each string contains the service's ID, Name, and Base Price. Example: "Service ID: 10, Name: Full Groom, Price: $50.0"
             """
             query = Service.query.filter_by(store_id=store_id)
             if name:
@@ -305,15 +304,15 @@ def chat():
 
         def add_owner(name: str, phone: str = "", email: str = "") -> str:
             """
-            Adds a new owner to the store.
+            Creates a new owner (client) record in the directory.
 
             Args:
-                name: The full name of the owner.
-                phone: Optional phone number.
-                email: Optional email address.
+                name: Required string. The full name of the new owner.
+                phone: Optional string. The phone number of the owner. Highly recommended.
+                email: Optional string. The email address of the owner.
 
             Returns:
-                A string indicating success or failure.
+                A string confirming the creation and providing the new Owner ID, or an error message.
             """
             try:
                 owner = Owner(name=name, phone_number=phone, email=email, store_id=store_id)
@@ -327,13 +326,13 @@ def chat():
 
         def delete_owner(owner_id: Union[int, str]) -> str:
             """
-            Deletes an existing owner from the store. This will also delete all associated dogs and appointments.
+            Permanently deletes an owner and ALL of their associated dogs and appointments. Ask for confirmation before using this.
 
             Args:
-                owner_id: The ID of the owner to delete, or exact owner name.
+                owner_id: Required. The integer ID of the owner to delete, OR their exact name as a string.
 
             Returns:
-                A string indicating success or failure.
+                A string indicating success or failure of the deletion.
             """
             try:
                 owner = None
@@ -358,16 +357,16 @@ def chat():
 
         def edit_owner(owner_id: Union[int, str], name: str = "", phone: str = "", email: str = "") -> str:
             """
-            Edits an existing owner in the store. Provide only the fields you want to change.
+            Updates the details of an existing owner. Only provide the arguments for the fields that need to change.
 
             Args:
-                owner_id: The ID of the owner to edit, or exact owner name.
-                name: The new full name of the owner.
-                phone: The new phone number.
-                email: The new email address.
+                owner_id: Required. The integer ID of the owner to edit, OR their exact name as a string.
+                name: Optional string. The new name to set.
+                phone: Optional string. The new phone number to set.
+                email: Optional string. The new email address to set.
 
             Returns:
-                A string indicating success or failure.
+                A string indicating success or failure of the update.
             """
             try:
                 owner = None
@@ -396,15 +395,15 @@ def chat():
 
         def add_dog(owner_id: Union[int, str], name: str, breed: str = "") -> str:
             """
-            Adds a new dog to an existing owner's profile.
+            Adds a new dog and attaches it to an existing owner.
 
             Args:
-                owner_id: The ID of the dog's owner, or the owner's exact name.
-                name: The name of the dog.
-                breed: Optional breed of the dog.
+                owner_id: Required. The integer ID of the owner who owns this dog, OR the owner's exact name as a string.
+                name: Required string. The name of the new dog.
+                breed: Optional string. The breed of the dog.
 
             Returns:
-                A string indicating success or failure.
+                A string confirming the creation and providing the new Dog ID, or an error message.
             """
             try:
                 owner = None
@@ -431,15 +430,15 @@ def chat():
 
         def edit_dog(dog_id: Union[int, str], name: str = "", breed: str = "") -> str:
             """
-            Edits an existing dog in the store. Provide only the fields you want to change.
+            Updates the details of an existing dog. Only provide the arguments for the fields that need to change.
 
             Args:
-                dog_id: The ID of the dog to edit, or exact dog name.
-                name: The new name of the dog.
-                breed: The new breed of the dog.
+                dog_id: Required. The integer ID of the dog to edit, OR their exact name as a string.
+                name: Optional string. The new name to set.
+                breed: Optional string. The new breed to set.
 
             Returns:
-                A string indicating success or failure.
+                A string indicating success or failure of the update.
             """
             try:
                 dog = None
@@ -467,13 +466,13 @@ def chat():
 
         def delete_dog(dog_id: Union[int, str]) -> str:
             """
-            Deletes an existing dog from the store. This will also delete all associated appointments.
+            Permanently deletes a dog and ALL of their associated appointments. Ask for confirmation before using this.
 
             Args:
-                dog_id: The ID of the dog to delete, or exact dog name.
+                dog_id: Required. The integer ID of the dog to delete, OR their exact name as a string.
 
             Returns:
-                A string indicating success or failure.
+                A string indicating success or failure of the deletion.
             """
             try:
                 dog = None
@@ -498,18 +497,18 @@ def chat():
 
         def edit_appointment(appointment_id: Union[int, str], date: str = "", time: str = "", groomer_id: Union[int, str] = None, services: list[str] = None, notes: str = "") -> str:
             """
-            Edits an existing appointment. Sends notifications and syncs with Google Calendar. Provide only the fields you want to change.
+            Modifies an existing appointment. Only provide the arguments for the fields that need to change.
 
             Args:
-                appointment_id: The ID of the appointment to edit.
-                date: The new date of the appointment in YYYY-MM-DD format.
-                time: The new time of the appointment in HH:MM format (24-hour).
-                groomer_id: The ID of the new groomer, or the exact groomer name.
-                services: A list of new service names or service IDs to attach to the appointment.
-                notes: The new notes for the appointment.
+                appointment_id: Required. The integer ID of the appointment to edit.
+                date: Optional string. The new date, strictly in YYYY-MM-DD format. If changing datetime, MUST provide BOTH date and time.
+                time: Optional string. The new time, strictly in 24-hour HH:MM format. If changing datetime, MUST provide BOTH date and time.
+                groomer_id: Optional. The integer ID of the new groomer, OR the groomer's exact name as a string.
+                services: Optional list of strings. The new list of services (names or IDs) to replace the old ones.
+                notes: Optional string. The new notes to set.
 
             Returns:
-                A string indicating success or failure.
+                A string indicating success or failure of the update.
             """
             try:
                 appt = None
@@ -593,7 +592,10 @@ def chat():
 
         def get_current_time() -> str:
             """
-            Gets the current date and time in the store's timezone.
+            Retrieves the current date and time in the store's local timezone. Use this to orient yourself when the user uses relative terms like "today", "tomorrow", "next Tuesday", or "at 5pm".
+
+            Returns:
+                A string containing the current date and time. Example: "Current Date and Time: 2024-10-25 10:30 AM EDT"
             """
             import datetime
             import pytz
@@ -613,10 +615,13 @@ def chat():
 
         def get_daily_appointment_count(date: str = "") -> str:
             """
-            Fetches the total number of appointments for a specific date (defaults to today).
+            Counts the total number of appointments scheduled for a specific date. Useful when the user asks "How many appointments do I have today?" or "How busy is tomorrow?".
 
             Args:
-                date: Optional date to check (YYYY-MM-DD). If not provided, checks today.
+                date: Optional string. The date to check, strictly in YYYY-MM-DD format (e.g., "2024-10-31"). If left empty, it will default to the current date (today).
+
+            Returns:
+                A string stating the number of appointments. Example: "There are 5 appointments scheduled for 2024-10-31."
             """
             import datetime
             import pytz
@@ -659,7 +664,10 @@ def chat():
 
         def get_store_info() -> str:
             """
-            Fetches the current store's business information (name, hours, description, etc).
+            Retrieves the general business information for the store, such as its name, address, phone number, and operating hours.
+
+            Returns:
+                A multi-line string containing the store's details.
             """
             store_obj = Store.query.get(store_id)
             if not store_obj:
@@ -677,7 +685,19 @@ def chat():
 
         def update_store_info(name: str = None, description: str = None, business_hours: str = None, address: str = None, phone: str = None, email: str = None, website_url: str = None) -> str:
             """
-            Updates the current store's business information. Requires admin privileges.
+            Updates the store's general business information. Requires the user to have admin privileges. Only provide arguments for the fields being changed.
+
+            Args:
+                name: Optional string. New store name.
+                description: Optional string. New description.
+                business_hours: Optional string. New operating hours.
+                address: Optional string. New physical address.
+                phone: Optional string. New contact phone number.
+                email: Optional string. New contact email.
+                website_url: Optional string. New website URL.
+
+            Returns:
+                A string indicating success or failure of the update.
             """
             if not g.user.is_admin and g.user.role != 'superadmin':
                 return "Error: Only admins can update store information."
@@ -703,7 +723,13 @@ def chat():
 
         def get_revenue(period: str = "today") -> str:
             """
-            Fetches revenue for a given period ('today', 'week', 'month', 'year'). Requires admin privileges.
+            Calculates the total revenue earned during a specific time period based on completed appointments. Requires the user to have admin privileges.
+
+            Args:
+                period: Optional string. The time frame to calculate. Must be exactly one of: "today", "week", "month", or "year". Defaults to "today".
+
+            Returns:
+                A string stating the revenue amount. Example: "Revenue for today: $150.00"
             """
             if not g.user.is_admin and g.user.role != 'superadmin':
                 return "Error: Only admins can view revenue information."
@@ -746,7 +772,15 @@ def chat():
 
         def add_service(name: str, base_price: float, description: str = "") -> str:
             """
-            Adds a new service to the store. Requires admin privileges.
+            Creates a new service offering for the store. Requires the user to have admin privileges.
+
+            Args:
+                name: Required string. The name of the new service (e.g., "Teeth Brushing").
+                base_price: Required float. The base cost of the service (e.g., 15.0).
+                description: Optional string. Details about what the service includes.
+
+            Returns:
+                A string indicating success or failure of the creation.
             """
             if not g.user.is_admin and g.user.role != 'superadmin':
                 return "Error: Only admins can add services."
@@ -768,13 +802,14 @@ def chat():
 
         def delete_appointment(appointment_id: Union[int, str], send_notification: bool = True) -> str:
             """
-            Cancels/deletes an existing appointment.
+            Cancels and permanently deletes an existing appointment.
 
             Args:
-                appointment_id: The ID of the appointment to delete.
+                appointment_id: Required. The integer ID of the appointment to delete.
+                send_notification: Optional boolean. Whether to send a cancellation email to the owner. Defaults to True.
 
             Returns:
-                A string indicating success or failure.
+                A string indicating success or failure of the cancellation.
             """
             try:
                 appt = None
@@ -821,16 +856,15 @@ def chat():
 
         def get_appointments(date: str = "", dog_name: str = "", owner_name: str = "") -> list[str]:
             """
-            Fetches a list of appointments. You can optionally filter by date, dog name, or owner name.
-            If no filters are provided, returns upcoming appointments.
+            Retrieves a list of scheduled appointments. Can be filtered by date, dog name, or owner name. If no filters are provided, it returns a list of all upcoming appointments. Use this when the user asks "What's my schedule like?" or "When is Fido's next appointment?".
 
             Args:
-                date: Optional date to filter by (YYYY-MM-DD).
-                dog_name: Optional dog name to filter by.
-                owner_name: Optional owner name to filter by.
+                date: Optional string. Filter by a specific date, strictly in YYYY-MM-DD format.
+                dog_name: Optional string. Filter by a specific dog's name.
+                owner_name: Optional string. Filter by a specific owner's name.
 
             Returns:
-                A list of strings containing appointment details (appointment_id, date, time, dog, groomer, services).
+                A list of strings. Each string contains the Appointment ID, Date, Time, Dog Name, Owner Name, Groomer Name, and Services. Example: "Appointment ID: 42, Date: 2024-10-31, Time: 02:30 PM, Dog: Rex, Owner: John Smith, Groomer: Alice, Services: Bath, Trim"
             """
             current_app.logger.info(f"[AI Tool Call] get_appointments called with date='{date}', dog_name='{dog_name}', owner_name='{owner_name}'")
 
