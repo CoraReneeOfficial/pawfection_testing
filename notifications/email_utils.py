@@ -64,9 +64,8 @@ def send_appointment_confirmation_email(store, owner, dog, appointment, groomer=
         logger.debug("Token data keys: %s", list(token_data.keys()) if token_data else 'No token data')
         
         SCOPES = [
-            "https://www.googleapis.com/auth/calendar",
+            "https://www.googleapis.com/auth/calendar.calendars",
             "https://www.googleapis.com/auth/calendar.events",
-            "https://www.googleapis.com/auth/calendar.readonly",
             "https://www.googleapis.com/auth/gmail.send",
             "openid",
             "https://www.googleapis.com/auth/userinfo.email",
@@ -226,9 +225,8 @@ def send_appointment_edited_email(store, owner, dog, appointment, groomer=None, 
     try:
         token_data = json.loads(store.google_token_json)
         SCOPES = [
-            "https://www.googleapis.com/auth/calendar",
+            "https://www.googleapis.com/auth/calendar.calendars",
             "https://www.googleapis.com/auth/calendar.events",
-            "https://www.googleapis.com/auth/calendar.readonly",
             "https://www.googleapis.com/auth/gmail.send",
             "openid",
             "https://www.googleapis.com/auth/userinfo.email",
@@ -331,9 +329,8 @@ def send_appointment_cancelled_email(store, owner, dog, appointment, groomer=Non
     try:
         token_data = json.loads(store.google_token_json)
         SCOPES = [
-            "https://www.googleapis.com/auth/calendar",
+            "https://www.googleapis.com/auth/calendar.calendars",
             "https://www.googleapis.com/auth/calendar.events",
-            "https://www.googleapis.com/auth/calendar.readonly",
             "https://www.googleapis.com/auth/gmail.send",
             "openid",
             "https://www.googleapis.com/auth/userinfo.email",
