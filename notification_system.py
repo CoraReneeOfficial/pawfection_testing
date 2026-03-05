@@ -7,6 +7,7 @@ from flask_login import login_required
 from datetime import datetime, timezone
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
+from extensions import csrf
 
 bp = Blueprint('notification_system', __name__, url_prefix='/notifications')
 
@@ -28,10 +29,11 @@ def view_all():
     
     return render_template('notifications/all.html', notifications=notifications)
 
-@bp.route('/mark_read/<int:id>', methods=['POST', 'GET'])
+@bp.route('/mark_read/<int:id>', methods=['POST'])
 @login_required
 def mark_read(id):
     """Mark a notification as read."""
+    csrf.protect()
     notification = Notification.query.get_or_404(id)
     
     # Make sure the notification belongs to the user's store
@@ -44,10 +46,11 @@ def mark_read(id):
     # Redirect back to referring page
     return redirect(request.referrer or url_for('notification_system.view_all'))
 
-@bp.route('/mark_all_read', methods=['POST', 'GET'])
+@bp.route('/mark_all_read', methods=['POST'])
 @login_required
 def mark_all_read():
     """Mark all notifications as read for the current user's store."""
+    csrf.protect()
     # Get all unread notifications for this user's store
     notifications = Notification.query.filter_by(
         store_id=g.user.store_id,
@@ -230,6 +233,7 @@ def check_new():
 @login_required
 def mark_popup_shown(id):
     """Mark notification as shown in popup."""
+    csrf.protect()
     notification = Notification.query.get_or_404(id)
     if notification.store_id != g.user.store_id:
         abort(403)
@@ -254,6 +258,7 @@ def mark_popup_shown(id):
 @login_required
 def set_reminder(id):
     """Set a reminder for a notification."""
+    csrf.protect()
     notification = Notification.query.get_or_404(id)
     if notification.store_id != g.user.store_id:
         abort(403)

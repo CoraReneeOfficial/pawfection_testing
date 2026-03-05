@@ -56,7 +56,10 @@
                             <div class="notification-header-container">
                                 <h3 class="notification-header">Notifications</h3>
                                 {% if notifications %}
-                                <a href="{{ url_for('notification_system.mark_all_read') }}" class="mark-all-read-btn">Mark All Read</a>
+                                <form method="POST" action="{{ url_for('notification_system.mark_all_read') }}" style="display: inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="mark-all-read-btn" style="background: none; border: none; padding: 0; font: inherit; cursor: pointer; text-decoration: underline;">Mark All Read</button>
+                                </form>
                                 {% endif %}
                             </div>
                             {% if notifications %}
@@ -311,11 +314,21 @@
                 },
 
                 markPopupShown(id) {
-                    fetch(`/notifications/mark_popup_shown/${id}`, { method: 'POST' });
+                    fetch(`/notifications/mark_popup_shown/${id}`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token() }}'
+                        }
+                    });
                 },
 
                 markRead(id) {
-                    fetch(`/notifications/mark_read/${id}`, { method: 'POST' })
+                    fetch(`/notifications/mark_read/${id}`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token() }}'
+                        }
+                    })
                         .then(() => {
                             this.popupShow = false;
                             this.unreadCount = Math.max(0, this.unreadCount - 1);
@@ -345,7 +358,10 @@
 
                     fetch(`/notifications/set_reminder/${this.reminderNotification.id}`, {
                         method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': '{{ csrf_token() }}'
+                            },
                         body: JSON.stringify({ remind_at: utcDate })
                     }).then(res => {
                         if (res.ok) {

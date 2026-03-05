@@ -7,7 +7,10 @@
     <div class="notification-page-header">
         <h1>Notifications</h1>
         {% if notifications %}
-        <a href="{{ url_for('notification_system.mark_all_read') }}" class="button button-small">Mark All Read</a>
+        <form method="POST" action="{{ url_for('notification_system.mark_all_read') }}" style="display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <button type="submit" class="button button-small">Mark All Read</button>
+        </form>
         {% endif %}
     </div>
     
@@ -20,7 +23,10 @@
                         <div class="notification-time">{{ notification.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
                     </div>
                     <div class="notification-actions">
-                        <a href="{{ url_for('notification_system.mark_read', id=notification.id) }}" class="button button-small">Mark as Read</a>
+                        <form method="POST" action="{{ url_for('notification_system.mark_read', id=notification.id) }}" style="display: inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <button type="submit" class="button button-small">Mark as Read</button>
+                        </form>
                     </div>
                 </div>
             {% endfor %}
