@@ -301,17 +301,24 @@ def create_app():
         if not hasattr(g, 'user') or g.user is None or not hasattr(g, 'user') or not g.user.store_id:
             return {'notifications': [], 'unread_notifications_count': 0}
         
-        # Get the latest 5 unread notifications
+        # Bolt Optimization: Fetch up to 6 notifications to determine if there are more than 5
+        # This avoids a separate COUNT() query for the majority of users who keep their unread count low
         notifications = Notification.query.filter_by(
             store_id=g.user.store_id,
             is_read=False
-        ).order_by(Notification.created_at.desc()).limit(5).all()
+        ).order_by(Notification.created_at.desc()).limit(6).all()
         
-        # Get the total count of unread notifications
-        unread_count = Notification.query.filter_by(
-            store_id=g.user.store_id,
-            is_read=False
-        ).count()
+        if len(notifications) < 6:
+            unread_count = len(notifications)
+        else:
+            # Only perform the count query if we have more than 5 notifications
+            unread_count = Notification.query.filter_by(
+                store_id=g.user.store_id,
+                is_read=False
+            ).count()
+
+        # Keep only 5 for the UI dropdown
+        notifications = notifications[:5]
         
         # Import the function to generate notification links
         from notification_system import get_notification_link
