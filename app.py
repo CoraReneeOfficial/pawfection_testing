@@ -32,6 +32,7 @@ import migrate_add_remind_at_to_notification
 import migrate_add_owner_notification_fields
 import migrate_add_deposit_amount
 import migrate_add_google_token_json_to_user
+import migrate_add_notification_index
 # Removed import for datetime as it's not directly used at top level of app.py anymore
 # Removed log_activity definition as it's now in utils.py
 
@@ -269,6 +270,17 @@ def create_app():
                 migrate_add_deposit_amount.migrate_postgres(app.config['SQLALCHEMY_DATABASE_URI'])
         except Exception as e:
             app.logger.error(f"Failed to run appointment migration: {e}")
+
+        # Check for and apply missing notification index
+        try:
+            if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
+                app.logger.info("Checking for notification index updates (SQLite)...")
+                migrate_add_notification_index.migrate_sqlite(DATABASE_PATH)
+            else:
+                app.logger.info("Checking for notification index updates (Postgres)...")
+                migrate_add_notification_index.migrate_postgres(app.config['SQLALCHEMY_DATABASE_URI'])
+        except Exception as e:
+            app.logger.error(f"Failed to run notification index migration: {e}")
 
     # Register blueprints for modular routes
     app.register_blueprint(auth_bp)
