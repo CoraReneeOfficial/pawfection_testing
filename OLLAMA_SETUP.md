@@ -54,7 +54,7 @@ The application is now configured to attempt connection to Ollama first.
 If you wish to use a different Ollama host URL or a different model, you can set the following environment variables in your `.env` file:
 ```env
 OLLAMA_URL=https://erlene-nonadaptational-elden.ngrok-free.dev
-OLLAMA_MODEL=llama3.1:8b
+OLLAMA_MODEL=qwen2.5-coder:14b
 ```
 Ensure your `GEMINI_API_KEY` is still configured so the fallback works if needed!
 

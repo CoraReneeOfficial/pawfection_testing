@@ -127,10 +127,10 @@ def chat():
             Books a brand new appointment for a specific dog. You must gather all required information before calling this tool.
 
             Args:
-                dog_id: Required. The integer ID of the dog, OR the dog's exact name as a string. If using a name, it must perfectly match the database.
+                dog_id: Required. The integer ID of the dog, OR the dog's name as a string. Using the name is highly encouraged! It will fuzzy match the database.
                 date: Required string. The date for the appointment, strictly in YYYY-MM-DD format (e.g., "2024-10-31").
                 time: Required string. The time for the appointment, strictly in 24-hour HH:MM format (e.g., "14:30" for 2:30 PM).
-                groomer_id: Required. The integer ID of the groomer, OR the groomer's exact name as a string.
+                groomer_id: Required. The integer ID of the groomer, OR the groomer's name as a string. Using the name is encouraged!
                 services: Required list of strings. A list containing the names or IDs of the services to be performed (e.g., ["Bath", "Nail Trim"]).
                 notes: Optional string. Any special instructions or notes for the appointment.
 
@@ -144,28 +144,37 @@ def chat():
                 if isinstance(dog_id, int) or (isinstance(dog_id, str) and dog_id.isdigit()):
                     dog = Dog.query.options(db.joinedload(Dog.owner)).filter_by(id=int(dog_id), store_id=store_id).first()
                 else:
-                    dogs = Dog.query.options(db.joinedload(Dog.owner)).filter(Dog.name.ilike(f"%{dog_id}%"), Dog.store_id == store_id).all()
+                    # Try exact match first
+                    dogs = Dog.query.options(db.joinedload(Dog.owner)).filter(Dog.name.ilike(dog_id), Dog.store_id == store_id).all()
+                    if not dogs:
+                        # Fallback to fuzzy match
+                        dogs = Dog.query.options(db.joinedload(Dog.owner)).filter(Dog.name.ilike(f"%{dog_id}%"), Dog.store_id == store_id).all()
                     if len(dogs) == 1:
                         dog = dogs[0]
                     elif len(dogs) > 1:
-                        return f"Error: Multiple dogs found matching '{dog_id}'. Please use get_dogs to find the specific ID and try again."
+                        # Just take the first one if there are multiple matches to be helpful instead of failing
+                        dog = dogs[0]
 
                 if not dog:
-                    return f"Error: Dog '{dog_id}' not found. Please verify the ID or name."
+                    return f"Error: Dog '{dog_id}' not found. Please ask the user to clarify or provide more details."
 
                 # Handle groomer_id as int or string name
                 groomer = None
                 if isinstance(groomer_id, int) or (isinstance(groomer_id, str) and groomer_id.isdigit()):
                     groomer = User.query.filter_by(id=int(groomer_id), store_id=store_id, is_groomer=True).first()
                 else:
-                    groomers = User.query.filter(User.username.ilike(f"%{groomer_id}%"), User.store_id == store_id, User.is_groomer == True).all()
+                    # Try exact match first
+                    groomers = User.query.filter(User.username.ilike(groomer_id), User.store_id == store_id, User.is_groomer == True).all()
+                    if not groomers:
+                        # Fallback to fuzzy match
+                        groomers = User.query.filter(User.username.ilike(f"%{groomer_id}%"), User.store_id == store_id, User.is_groomer == True).all()
                     if len(groomers) == 1:
                         groomer = groomers[0]
                     elif len(groomers) > 1:
-                         return f"Error: Multiple groomers found matching '{groomer_id}'. Please use get_groomers to find the specific ID and try again."
+                         groomer = groomers[0]
 
                 if not groomer:
-                    return f"Error: Groomer '{groomer_id}' not found. Please verify the ID or name."
+                    return f"Error: Groomer '{groomer_id}' not found. Please ask the user to clarify."
 
                 try:
                     naive_dt = datetime.datetime.strptime(f"{date} {time}", "%Y-%m-%d %H:%M")
@@ -376,7 +385,7 @@ def chat():
             Updates the details of an existing owner. Only provide the arguments for the fields that need to change.
 
             Args:
-                owner_id: Required. The integer ID of the owner to edit, OR their exact name as a string.
+                owner_id: Required. The integer ID of the owner to edit, OR their name as a string. Using the name is highly encouraged! It will fuzzy match.
                 name: Optional string. The new name to set.
                 phone: Optional string. The new phone number to set.
                 email: Optional string. The new email address to set.
@@ -389,11 +398,15 @@ def chat():
                 if isinstance(owner_id, int) or (isinstance(owner_id, str) and owner_id.isdigit()):
                     owner = Owner.query.filter_by(id=int(owner_id), store_id=store_id).first()
                 else:
-                    owners = Owner.query.filter(Owner.name.ilike(f"%{owner_id}%"), Owner.store_id == store_id).all()
+                    # Try exact match first
+                    owners = Owner.query.filter(Owner.name.ilike(owner_id), Owner.store_id == store_id).all()
+                    if not owners:
+                        # Fallback to fuzzy match
+                        owners = Owner.query.filter(Owner.name.ilike(f"%{owner_id}%"), Owner.store_id == store_id).all()
                     if len(owners) == 1:
                         owner = owners[0]
                     elif len(owners) > 1:
-                        return f"Error: Multiple owners found matching '{owner_id}'. Please use get_owners to find the specific ID."
+                        owner = owners[0]
 
                 if not owner:
                     return f"Error: Owner '{owner_id}' not found."
@@ -414,7 +427,7 @@ def chat():
             Adds a new dog and attaches it to an existing owner.
 
             Args:
-                owner_id: Required. The integer ID of the owner who owns this dog, OR the owner's exact name as a string.
+                owner_id: Required. The integer ID of the owner who owns this dog, OR the owner's name as a string. Using the name is highly encouraged!
                 name: Required string. The name of the new dog.
                 breed: Optional string. The breed of the dog.
 
@@ -426,11 +439,15 @@ def chat():
                 if isinstance(owner_id, int) or (isinstance(owner_id, str) and owner_id.isdigit()):
                     owner = Owner.query.filter_by(id=int(owner_id), store_id=store_id).first()
                 else:
-                    owners = Owner.query.filter(Owner.name.ilike(f"%{owner_id}%"), Owner.store_id == store_id).all()
+                    # Try exact match first
+                    owners = Owner.query.filter(Owner.name.ilike(owner_id), Owner.store_id == store_id).all()
+                    if not owners:
+                        # Fallback to fuzzy match
+                        owners = Owner.query.filter(Owner.name.ilike(f"%{owner_id}%"), Owner.store_id == store_id).all()
                     if len(owners) == 1:
                         owner = owners[0]
                     elif len(owners) > 1:
-                        return f"Error: Multiple owners found matching '{owner_id}'. Please use get_owners to find the specific ID."
+                        owner = owners[0]
 
                 if not owner:
                     return f"Error: Owner '{owner_id}' not found."
@@ -449,7 +466,7 @@ def chat():
             Updates the details of an existing dog. Only provide the arguments for the fields that need to change.
 
             Args:
-                dog_id: Required. The integer ID of the dog to edit, OR their exact name as a string.
+                dog_id: Required. The integer ID of the dog to edit, OR their name as a string. Using the name is highly encouraged! It will fuzzy match.
                 name: Optional string. The new name to set.
                 breed: Optional string. The new breed to set.
 
@@ -461,11 +478,15 @@ def chat():
                 if isinstance(dog_id, int) or (isinstance(dog_id, str) and dog_id.isdigit()):
                     dog = Dog.query.filter_by(id=int(dog_id), store_id=store_id).first()
                 else:
-                    dogs = Dog.query.filter(Dog.name.ilike(f"%{dog_id}%"), Dog.store_id == store_id).all()
+                    # Try exact match first
+                    dogs = Dog.query.filter(Dog.name.ilike(dog_id), Dog.store_id == store_id).all()
+                    if not dogs:
+                        # Fallback to fuzzy match
+                        dogs = Dog.query.filter(Dog.name.ilike(f"%{dog_id}%"), Dog.store_id == store_id).all()
                     if len(dogs) == 1:
                         dog = dogs[0]
                     elif len(dogs) > 1:
-                        return f"Error: Multiple dogs found matching '{dog_id}'. Please use get_dogs to find the specific ID."
+                        dog = dogs[0]
 
                 if not dog:
                     return f"Error: Dog '{dog_id}' not found."
@@ -485,7 +506,7 @@ def chat():
             Permanently deletes a dog and ALL of their associated appointments. Ask for confirmation before using this.
 
             Args:
-                dog_id: Required. The integer ID of the dog to delete, OR their exact name as a string.
+                dog_id: Required. The integer ID of the dog to delete, OR their name as a string. Using the name is highly encouraged!
 
             Returns:
                 A string indicating success or failure of the deletion.
@@ -495,11 +516,15 @@ def chat():
                 if isinstance(dog_id, int) or (isinstance(dog_id, str) and dog_id.isdigit()):
                     dog = Dog.query.filter_by(id=int(dog_id), store_id=store_id).first()
                 else:
-                    dogs = Dog.query.filter(Dog.name.ilike(f"%{dog_id}%"), Dog.store_id == store_id).all()
+                    # Try exact match first
+                    dogs = Dog.query.filter(Dog.name.ilike(dog_id), Dog.store_id == store_id).all()
+                    if not dogs:
+                        # Fallback to fuzzy match
+                        dogs = Dog.query.filter(Dog.name.ilike(f"%{dog_id}%"), Dog.store_id == store_id).all()
                     if len(dogs) == 1:
                         dog = dogs[0]
                     elif len(dogs) > 1:
-                        return f"Error: Multiple dogs found matching '{dog_id}'. Please use get_dogs to find the specific ID."
+                        dog = dogs[0]
 
                 if not dog:
                     return f"Error: Dog '{dog_id}' not found."
@@ -516,10 +541,10 @@ def chat():
             Modifies an existing appointment. Only provide the arguments for the fields that need to change.
 
             Args:
-                appointment_id: Required. The integer ID of the appointment to edit, OR the dog's exact name to find their appointment.
+                appointment_id: Required. The integer ID of the appointment to edit, OR the dog's name to find their appointment. Using the name is highly encouraged!
                 date: Optional string. The new date, strictly in YYYY-MM-DD format. If changing datetime, MUST provide BOTH date and time.
                 time: Optional string. The new time, strictly in 24-hour HH:MM format. If changing datetime, MUST provide BOTH date and time.
-                groomer_id: Optional. The integer ID of the new groomer, OR the groomer's exact name as a string.
+                groomer_id: Optional. The integer ID of the new groomer, OR the groomer's name as a string. Using the name is highly encouraged!
                 services: Optional list of strings. The new list of services (names or IDs) to replace the old ones.
                 notes: Optional string. The new notes to set.
 
@@ -533,16 +558,25 @@ def chat():
                         db.joinedload(Appointment.dog).joinedload(Dog.owner)
                     ).filter_by(id=int(appointment_id), store_id=store_id).first()
                 else:
+                    # Try exact match first
                     appts = Appointment.query.options(
                         db.joinedload(Appointment.dog).joinedload(Dog.owner)
                     ).join(Dog).filter(
-                        Dog.name.ilike(f"%{appointment_id}%"),
+                        Dog.name.ilike(appointment_id),
                         Appointment.store_id == store_id
                     ).all()
+                    if not appts:
+                        # Fallback to fuzzy match
+                        appts = Appointment.query.options(
+                            db.joinedload(Appointment.dog).joinedload(Dog.owner)
+                        ).join(Dog).filter(
+                            Dog.name.ilike(f"%{appointment_id}%"),
+                            Appointment.store_id == store_id
+                        ).all()
                     if len(appts) == 1:
                         appt = appts[0]
                     elif len(appts) > 1:
-                        return f"Error: Multiple appointments found for dog matching '{appointment_id}'. Please provide the specific Appointment ID or be more specific."
+                        appt = appts[0]
 
                 if appt is None:
                     return f"Error: Appointment '{appointment_id}' not found."
@@ -569,14 +603,18 @@ def chat():
                     if isinstance(groomer_id, int) or (isinstance(groomer_id, str) and groomer_id.isdigit()):
                         groomer = User.query.filter_by(id=int(groomer_id), store_id=store_id, is_groomer=True).first()
                     else:
-                        groomers = User.query.filter(User.username.ilike(f"%{groomer_id}%"), User.store_id == store_id, User.is_groomer == True).all()
+                        # Try exact match first
+                        groomers = User.query.filter(User.username.ilike(groomer_id), User.store_id == store_id, User.is_groomer == True).all()
+                        if not groomers:
+                            # Fallback to fuzzy match
+                            groomers = User.query.filter(User.username.ilike(f"%{groomer_id}%"), User.store_id == store_id, User.is_groomer == True).all()
                         if len(groomers) == 1:
                             groomer = groomers[0]
                         elif len(groomers) > 1:
-                            return f"Error: Multiple groomers found matching '{groomer_id}'. Please use get_groomers to find the specific ID and try again."
+                            groomer = groomers[0]
 
                     if not groomer:
-                        return f"Error: Groomer '{groomer_id}' not found. Please verify the ID or name."
+                        return f"Error: Groomer '{groomer_id}' not found."
                     appt.groomer_id = groomer.id
 
                 services_text = appt.requested_services_text
@@ -830,7 +868,7 @@ def chat():
             Cancels and permanently deletes an existing appointment.
 
             Args:
-                appointment_id: Required. The integer ID of the appointment to delete, OR the dog's exact name to find their appointment.
+                appointment_id: Required. The integer ID of the appointment to delete, OR the dog's name to find their appointment. Using the name is highly encouraged!
                 send_notification: Optional boolean. Whether to send a cancellation email to the owner. Defaults to True.
 
             Returns:
@@ -843,16 +881,25 @@ def chat():
                         db.joinedload(Appointment.dog).joinedload(Dog.owner)
                     ).filter_by(id=int(appointment_id), store_id=store_id).first()
                 else:
+                    # Try exact match first
                     appts = Appointment.query.options(
                         db.joinedload(Appointment.dog).joinedload(Dog.owner)
                     ).join(Dog).filter(
-                        Dog.name.ilike(f"%{appointment_id}%"),
+                        Dog.name.ilike(appointment_id),
                         Appointment.store_id == store_id
                     ).all()
+                    if not appts:
+                        # Fallback to fuzzy match
+                        appts = Appointment.query.options(
+                            db.joinedload(Appointment.dog).joinedload(Dog.owner)
+                        ).join(Dog).filter(
+                            Dog.name.ilike(f"%{appointment_id}%"),
+                            Appointment.store_id == store_id
+                        ).all()
                     if len(appts) == 1:
                         appt = appts[0]
                     elif len(appts) > 1:
-                        return f"Error: Multiple appointments found for dog matching '{appointment_id}'. Please provide the specific Appointment ID or be more specific."
+                        appt = appts[0]
 
                 if appt is None:
                     return f"Error: Appointment '{appointment_id}' not found."
@@ -966,7 +1013,7 @@ def chat():
         system_prompt = f"""
         Role: You are the "Pawfection Business Agent." You are a highly efficient, professional administrative assistant for pet grooming businesses.
 
-        Core Objective: Help the user manage their Client & Pet Directory and Schedule New Appointments with 100% accuracy and structured data. You are using `qwen2.5-coder:7b`.
+        Core Objective: Help the user manage their Client & Pet Directory and Schedule New Appointments with 100% accuracy and structured data. You are using `qwen2.5-coder:14b`.
 
         CONTEXT:
         Current User Role: {g.user.role if hasattr(g, 'user') else 'Unknown'}
