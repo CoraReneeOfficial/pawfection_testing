@@ -332,6 +332,11 @@ class Notification(db.Model):
     store = db.relationship('Store', backref='notifications')
     user = db.relationship('User', backref='notifications')
     
+    # Indexes to optimize polling and context processor queries
+    __table_args__ = (
+        db.Index('idx_notification_store_is_read', 'store_id', 'is_read'),
+    )
+
     def __repr__(self):
         return f"<Notification ID: {self.id}, Type: {self.type}, Read: {self.is_read}, Store: {self.store_id}>"
 
