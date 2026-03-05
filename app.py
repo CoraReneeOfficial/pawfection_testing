@@ -2254,6 +2254,7 @@ def create_app():
         # Handle API requests
         if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             action = request.json.get('action')
+            csrf.protect()
             
             try:
                 if action == 'get_user_details':
