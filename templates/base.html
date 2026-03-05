@@ -8,6 +8,7 @@
     {% block head %}{% endblock %}
 </head>
 <body x-data="notificationManager()">
+    <a href="#main-content" class="skip-link">Skip to main content</a>
     <div class="page-wrapper">
 
         {% if g.user %}
@@ -140,7 +141,7 @@
             {% endwith %}
         </div>
 
-        <main class="main-content container">
+        <main id="main-content" class="main-content container" tabindex="-1">
             {% if session.impersonating %}
             <div style="background: #ffe066; color: #333; padding: 1rem; text-align: center; font-weight: bold;">
                 Superadmin: Impersonating Store
