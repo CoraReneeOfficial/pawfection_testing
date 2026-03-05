@@ -9,7 +9,7 @@ import markdown
 import datetime
 from datetime import timezone
 from functools import wraps
-from models import Service, Dog, Owner, Appointment, User, Store
+from models import Service, Dog, Owner, Appointment, User, Store, Receipt
 from extensions import db
 from notifications.email_utils import send_appointment_confirmation_email
 from dateutil import tz
@@ -929,6 +929,8 @@ def chat():
                         send_appointment_cancelled_email(store_obj, owner, dog, appt)
                 except Exception as e:
                     current_app.logger.error(f"[AI Tool Call] Background task error on delete: {e}")
+
+                Receipt.query.filter_by(appointment_id=appt.id).delete(synchronize_session=False)
 
                 db.session.delete(appt)
                 db.session.commit()
