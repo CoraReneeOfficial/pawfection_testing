@@ -10,23 +10,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
         cache: 'pip'
-
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
     - name: Run Health Check
       run: |
         # Run the new robust health check
         python -m unittest tests/test_ci_health.py
-
     - name: Run Additional Tests (Failure Allowed)
       continue-on-error: true
       run: |
@@ -39,22 +35,19 @@ jobs:
   auto-approve:
     needs: test
     runs-on: ubuntu-latest
-    # Only run if the PR author is the Jules bot (adjust username as needed)
-    # Checking for 'bot' in the actor name is a heuristic, adjust specifically for 'Jules-AI' or the actual bot username.
-    if: contains(github.actor, 'google-labs-jules') || contains(github.actor, 'jules') || github.actor == 'github-actions[bot]'
+    # VIP List: Jules bots and Cora are allowed to bypass the velvet rope
+    if: contains(github.actor, 'google-labs-jules') || contains(github.actor, 'jules') || github.actor == 'github-actions[bot]' || github.actor == 'CoraReneeOfficial'
     permissions:
       contents: write
       pull-requests: write
     steps:
     - uses: actions/checkout@v3 # Checkout is needed for gh cli context sometimes, though not strictly for pr review command if passing number
-
     - name: Auto-approve PR
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         echo "Approving PR #${{ github.event.pull_request.number }} from ${{ github.actor }}"
         gh pr review ${{ github.event.pull_request.number }} --approve --body "Automated approval: CI Health Checks passed successfully. App starts, DB initializes, and Login page is accessible."
-
     - name: Auto-merge PR
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
