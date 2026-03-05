@@ -39,17 +39,17 @@ def get_google_credentials(store):
             current_app.logger.error(f"[GCAL SYNC] Missing required token fields: {', '.join(missing_fields)}")
             return None
             
+
         # Get the access token - could be stored as 'token' or 'access_token'
         access_token = token_data.get('token') or token_data.get('access_token')
         
-        # Create credentials object
-        creds = Credentials(
-            token=access_token,
-            refresh_token=token_data.get('refresh_token'),
-            token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
-            client_id=token_data.get('client_id') or os.environ.get('GOOGLE_CLIENT_ID'),
-            client_secret=token_data.get('client_secret') or os.environ.get('GOOGLE_CLIENT_SECRET'),
-            scopes=[
+        # Use scopes from the database if available, otherwise use defaults
+        scopes = token_data.get('scopes')
+        if not scopes:
+            scopes = token_data.get('scope', '').split()
+
+        if not scopes:
+            scopes = [
                 "https://www.googleapis.com/auth/calendar.calendars",
                 "https://www.googleapis.com/auth/calendar.events",
                 "https://www.googleapis.com/auth/gmail.send",
@@ -57,6 +57,15 @@ def get_google_credentials(store):
                 "https://www.googleapis.com/auth/userinfo.email",
                 "https://www.googleapis.com/auth/userinfo.profile"
             ]
+
+        # Create credentials object
+        creds = Credentials(
+            token=access_token,
+            refresh_token=token_data.get('refresh_token'),
+            token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
+            client_id=token_data.get('client_id') or os.environ.get('GOOGLE_CLIENT_ID'),
+            client_secret=token_data.get('client_secret') or os.environ.get('GOOGLE_CLIENT_SECRET'),
+            scopes=scopes
         )
         
         # Check if token is expired and needs refresh
