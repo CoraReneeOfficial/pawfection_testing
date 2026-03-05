@@ -226,6 +226,25 @@ a:hover {
   border-width: 0;
 }
 
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--primary-color);
+    color: var(--white);
+    padding: 8px;
+    z-index: 9999;
+    font-weight: bold;
+    border-bottom-right-radius: var(--border-radius);
+    transition: top 0.2s ease-in-out;
+}
+
+.skip-link:focus {
+    top: 0;
+    outline: 2px solid var(--white);
+    outline-offset: -2px;
+}
+
 /* --- Navigation Bar --- */
 .main-nav {
     background-color: var(--primary-color);
