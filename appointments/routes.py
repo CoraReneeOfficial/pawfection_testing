@@ -31,9 +31,8 @@ BUSINESS_TIMEZONE_NAME = 'America/New_York'
 BUSINESS_TIMEZONE = tz.gettz(BUSINESS_TIMEZONE_NAME)
 
 SCOPES = [
-    "https://www.googleapis.com/auth/calendar",
+    "https://www.googleapis.com/auth/calendar.calendars",
     "https://www.googleapis.com/auth/calendar.events",
-    "https://www.googleapis.com/auth/calendar.readonly",
     "https://www.googleapis.com/auth/gmail.send",
     "openid",
     "https://www.googleapis.com/auth/userinfo.email",

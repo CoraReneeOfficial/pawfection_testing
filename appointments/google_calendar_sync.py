@@ -50,9 +50,8 @@ def get_google_credentials(store):
             client_id=token_data.get('client_id') or os.environ.get('GOOGLE_CLIENT_ID'),
             client_secret=token_data.get('client_secret') or os.environ.get('GOOGLE_CLIENT_SECRET'),
             scopes=[
-                "https://www.googleapis.com/auth/calendar",
+                "https://www.googleapis.com/auth/calendar.calendars",
                 "https://www.googleapis.com/auth/calendar.events",
-                "https://www.googleapis.com/auth/calendar.readonly",
                 "https://www.googleapis.com/auth/gmail.send",
                 "openid",
                 "https://www.googleapis.com/auth/userinfo.email",

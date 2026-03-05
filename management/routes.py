@@ -449,7 +449,7 @@ def management():
                     scopes = []
                 current_app.logger.info(f"[DEBUG] store.google_token_json: {store.google_token_json}")
                 current_app.logger.info(f"[DEBUG] parsed scopes: {scopes}")
-                is_google_calendar_connected = 'https://www.googleapis.com/auth/calendar' in scopes
+                is_google_calendar_connected = 'https://www.googleapis.com/auth/calendar.events' in scopes or 'https://www.googleapis.com/auth/calendar' in scopes
                 is_gmail_for_sending_connected = 'https://www.googleapis.com/auth/gmail.send' in scopes
             except Exception as e:
                 current_app.logger.error(f"[DEBUG] Error parsing google_token_json: {e}")
@@ -1058,9 +1058,8 @@ def google_authorize():
             }
         },
         scopes=[
-            "https://www.googleapis.com/auth/calendar",
+            "https://www.googleapis.com/auth/calendar.calendars",
             "https://www.googleapis.com/auth/calendar.events",
-            "https://www.googleapis.com/auth/calendar.readonly",
             "https://www.googleapis.com/auth/gmail.send",
             "openid",
             "https://www.googleapis.com/auth/userinfo.email",
@@ -1106,9 +1105,8 @@ def google_oauth2callback():
             }
         },
         scopes=[
-            "https://www.googleapis.com/auth/calendar",
+            "https://www.googleapis.com/auth/calendar.calendars",
             "https://www.googleapis.com/auth/calendar.events",
-            "https://www.googleapis.com/auth/calendar.readonly",
             "https://www.googleapis.com/auth/gmail.send",
             "openid",
             "https://www.googleapis.com/auth/userinfo.email",
