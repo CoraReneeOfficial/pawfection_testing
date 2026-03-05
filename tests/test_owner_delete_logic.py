@@ -13,7 +13,7 @@ MOCKED_MODULES = [
     'googleapiclient', 'authlib', 'authlib.integrations.flask_client',
     'apscheduler', 'apscheduler.schedulers.background', 'stripe',
     'secure_headers', 'flask', 'bcrypt', 'werkzeug', 'werkzeug.security',
-    'sqlalchemy'
+    'sqlalchemy', 'sqlalchemy.orm', 'sqlalchemy.exc'
 ]
 
 for module_name in MOCKED_MODULES:

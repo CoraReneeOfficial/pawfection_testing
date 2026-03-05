@@ -681,6 +681,9 @@ def delete_appointment(appointment_id):
             reference_type='appointment'
         ).delete(synchronize_session=False)
 
+        # Delete associated receipt if any
+        Receipt.query.filter_by(appointment_id=appt.id).delete(synchronize_session=False)
+
         db.session.delete(appt)
         db.session.commit()
         log_activity("Deleted Local Appt", details=f"Appt ID: {appointment_id}, Dog: {dog_name}")
