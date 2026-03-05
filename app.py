@@ -3196,6 +3196,7 @@ def create_app():
     @app.route('/create-checkout-session', methods=['POST'])
     @login_required
     def create_checkout_session():
+        csrf.protect()
         from flask_login import current_user
         from models import Store
         domain_url = request.host_url.rstrip('/')
@@ -3266,6 +3267,7 @@ def create_app():
             return redirect(url_for('auth.login'))
 
         if request.method == 'POST':
+            csrf.protect()
             from notifications.feedback_email import send_feedback_email
 
             category = request.form.get('category')
