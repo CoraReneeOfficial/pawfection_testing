@@ -51,15 +51,32 @@ def chat():
         # Construct System Prompt with Context
         store_id = session.get('store_id')
         context_data = ""
-
         if store_id:
             # Fetch minimal context for better answers (e.g. Service list)
             try:
                 services = Service.query.filter_by(store_id=store_id).all()
                 service_list = ", ".join([f"{s.name} (${s.base_price})" for s in services])
-                context_data += f"\nAvailable Services: {service_list}"
+                context_data += "\nAvailable Services: " + service_list
             except Exception as e:
-                current_app.logger.warning(f"AI Context Error (Services): {e}")
+                current_app.logger.warning("AI Context Error (Services): " + str(e))
+
+            try:
+                import datetime
+                import pytz
+                from datetime import timezone
+                store_obj = Store.query.get(store_id)
+                store_tz_str = getattr(store_obj, 'timezone', None) or 'America/New_York'
+                try:
+                    store_tz = pytz.timezone(store_tz_str)
+                except pytz.UnknownTimeZoneError:
+                    store_tz = pytz.timezone('America/New_York')
+
+                now_utc = datetime.datetime.now(timezone.utc)
+                now_local = now_utc.astimezone(store_tz)
+                time_str = now_local.strftime('%A, %Y-%m-%d %I:%M %p %Z')
+                context_data += "\nCurrent Date and Time: " + time_str
+            except Exception as e:
+                current_app.logger.warning("AI Context Error (Timezone): " + str(e))
 
         def get_dogs(name: str = "") -> list[str]:
             """
@@ -574,6 +591,72 @@ def chat():
                 db.session.rollback()
                 return f"Error editing appointment: {str(e)}"
 
+        def get_current_time() -> str:
+            """
+            Gets the current date and time in the store's timezone.
+            """
+            import datetime
+            import pytz
+            from datetime import timezone
+
+            store_obj = Store.query.get(store_id)
+            store_tz_str = getattr(store_obj, 'timezone', None) or 'America/New_York'
+            try:
+                store_tz = pytz.timezone(store_tz_str)
+            except pytz.UnknownTimeZoneError:
+                store_tz = pytz.timezone('America/New_York')
+
+            now_utc = datetime.datetime.now(timezone.utc)
+            now_local = now_utc.astimezone(store_tz)
+            time_str = now_local.strftime('%Y-%m-%d %I:%M %p %Z')
+            return f"Current Date and Time: {time_str}"
+
+        def get_daily_appointment_count(date: str = "") -> str:
+            """
+            Fetches the total number of appointments for a specific date (defaults to today).
+
+            Args:
+                date: Optional date to check (YYYY-MM-DD). If not provided, checks today.
+            """
+            import datetime
+            import pytz
+            from datetime import timezone
+
+            store_obj = Store.query.get(store_id)
+            store_tz_str = getattr(store_obj, 'timezone', None) or 'America/New_York'
+            try:
+                store_tz = pytz.timezone(store_tz_str)
+            except pytz.UnknownTimeZoneError:
+                store_tz = pytz.timezone('America/New_York')
+
+            if not date:
+                now_utc = datetime.datetime.now(timezone.utc)
+                now_local = now_utc.astimezone(store_tz)
+                target_date = now_local.date()
+            else:
+                try:
+                    target_date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
+                except ValueError:
+                    return "Error: Invalid date format. Expected YYYY-MM-DD."
+
+            naive_start = datetime.datetime.combine(target_date, datetime.time.min)
+            naive_end = datetime.datetime.combine(target_date, datetime.time.max)
+
+            local_start = store_tz.localize(naive_start)
+            local_end = store_tz.localize(naive_end)
+
+            utc_start = local_start.astimezone(timezone.utc)
+            utc_end = local_end.astimezone(timezone.utc)
+
+            count = Appointment.query.filter(
+                Appointment.store_id == store_id,
+                Appointment.appointment_datetime >= utc_start,
+                Appointment.appointment_datetime <= utc_end
+            ).count()
+
+            time_str = target_date.strftime('%Y-%m-%d')
+            return f"There are {count} appointments scheduled for {time_str}."
+
         def get_store_info() -> str:
             """
             Fetches the current store's business information (name, hours, description, etc).
@@ -821,10 +904,10 @@ def chat():
 
         Task Execution Protocol:
 
-        1. Identify Intent: Determine if the user wants to ADD, EDIT, DELETE, or VIEW a record (Owner, Dog, Appointment, Service, Store Info, Revenue).
+        1. Identify Intent: Determine if the user wants to ADD, EDIT, DELETE, or VIEW a record (Owner, Dog, Appointment, Service, Store Info, Revenue). Note: Ensure you account for relative dates/times provided by the user using the Current Date and Time context provided to you. For example, if today is Tuesday, and the user asks for "next Wednesday", you must calculate what date next Wednesday is based on the Current Date and Time context before making tool calls.
 
         2. Verification: Check the provided information against ALL required fields. You MUST NOT proceed without ALL of these:
-           - Add Appointment: Needs a Dog Name, Date (YYYY-MM-DD), Time (HH:MM), Groomer Name, and at least one Service.
+           - Add Appointment: Needs a Dog Name, Date (YYYY-MM-DD), Time (HH:MM), Groomer Name, and at least one Service. Note that if the user did not specify the Date, but mentioned "today" or "tomorrow", you should infer the date using the Current Date and Time. Also, infer times like "5pm".
            - Edit Appointment: Needs Appointment ID.
            - Delete Appointment: Needs Appointment ID.
            - Add Owner: Needs a Name and Phone Number.
@@ -851,13 +934,16 @@ def chat():
         - DO NOT OFFER CHOICES OR WALKTHROUGHS. When a user wants to perform an action, you MUST gather all required details and call the relevant tool immediately to perform the action in the background. DO NOT offer a "smart link" or ask them to fill out a form themselves. You handle everything fully.
         - When calling a tool, wait for its output and confirm the result with the user. DO NOT use made-up tool names.
         - You can manage the business: use `get_revenue` to check earnings, `get_store_info` to see settings, and `update_store_info` / `add_service` to change them (these require admin privileges).
-        - To get appointment details, use `get_appointments`. Do not make the user look up IDs.
+        - To get appointment details, use `get_appointments`. Do not make the user look up IDs. You can also use `get_daily_appointment_count` to find out how many appointments exist on a particular date.
         - Only use the tools provided to you. If a task cannot be fully completed by a tool, inform the user.
         - Use Markdown for formatting (bold, lists, links).
         """
 
 
-        tools = [get_dogs, get_owners, add_appointment, get_groomers, get_services, add_owner, edit_owner, delete_owner, add_dog, edit_dog, delete_dog, edit_appointment, delete_appointment, get_store_info, update_store_info, get_revenue, add_service, get_appointments]
+
+
+
+        tools = [get_dogs, get_owners, add_appointment, get_groomers, get_services, add_owner, edit_owner, delete_owner, add_dog, edit_dog, delete_dog, edit_appointment, delete_appointment, get_store_info, update_store_info, get_revenue, add_service, get_appointments, get_current_time, get_daily_appointment_count]
 
         formatted_history = [{"role": "system", "content": system_prompt}]
         for msg in history:
