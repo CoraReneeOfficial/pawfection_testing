@@ -153,7 +153,7 @@
         }
 
         .logo-img {
-            height: 45px;
+            max-height: 45px;
             width: auto;
             object-fit: contain;
             transition: var(--transition-smooth);
@@ -610,7 +610,7 @@
         .footer-brand .logo-img {
             filter: brightness(0) invert(1);
             margin-bottom: 1.5rem;
-            height: 40px;
+            max-height: 40px;
         }
 
         .footer-brand p {
@@ -672,7 +672,12 @@
         }
 
         @media (max-width: 768px) {
-            .nav-links .btn-outline { display: none; } /* Hide secondary button on mobile header to save space */
+            /* Adjust nav for mobile to fit both buttons */
+            .logo-link img { max-height: 28px; }
+            .logo-text { font-size: 0.9rem; display: none; } /* Hide text to save space for auth buttons on tiny screens */
+            .nav-links { gap: 0.75rem; }
+            .nav-links .btn { padding: 0.6rem 1.25rem; font-size: 0.9rem; }
+
             .hero { padding: 8rem 0 5rem; }
             .hero h1 { font-size: 2.25rem; }
             .hero p { font-size: 1.1rem; }
@@ -683,6 +688,11 @@
             .final-cta h2 { font-size: 2.25rem; }
             .bio-quote { font-size: 1.1rem; }
         }
+        @media (max-width: 480px) {
+             .nav-links { gap: 0.5rem; }
+             .nav-links .btn { padding: 0.5rem 0.75rem; font-size: 0.8rem; }
+             .logo-link img { max-height: 24px; }
+        }
     </style>
 </head>
 <body>
@@ -691,6 +701,7 @@
         <div class="container nav-container">
             <a href="/" class="logo-link">
                 <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pawfection Grooming Solutions" class="logo-img">
+                <span class="logo-text">Pawfection</span>
             </a>
             <div class="nav-links">
                 <a href="{{ url_for('auth.login') }}" class="btn btn-outline">Log In</a>
