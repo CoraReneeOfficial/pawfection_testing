@@ -43,12 +43,14 @@ jobs:
     steps:
     - uses: actions/checkout@v3 # Checkout is needed for gh cli context sometimes, though not strictly for pr review command if passing number
     - name: Auto-approve PR
+      continue-on-error: true
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         echo "Approving PR #${{ github.event.pull_request.number }} from ${{ github.actor }}"
         gh pr review ${{ github.event.pull_request.number }} --approve --body "Automated approval: CI Health Checks passed successfully. App starts, DB initializes, and Login page is accessible."
     - name: Auto-merge PR
+      continue-on-error: true
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
