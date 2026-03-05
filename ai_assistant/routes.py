@@ -214,9 +214,25 @@ def chat():
 
                     # 1. Sync Google Calendar
                     try:
-                        from management.routes import sync_google_calendar_for_store
-                        if store_obj and store_obj.google_token_json and store_obj.google_calendar_id:
-                            sync_google_calendar_for_store(store_id)
+                        from utils import get_google_service
+                        if store_obj and store_obj.google_token_json:
+                            service = get_google_service('calendar', 'v3', store=store_obj)
+                            if service:
+                                status_str = 'Scheduled'
+                                event = {
+                                    'summary': f"[{status_str.upper()}] ({dog.name}) Appointment",
+                                    'description': f"Owner: {dog.owner.name if dog and dog.owner else ''}\n" +
+                                                   f"Groomer: {groomer.username if groomer else ''}\n" +
+                                                   f"Services: {services_text if services_text else ''}\n" +
+                                                   f"Notes: {notes if notes else ''}\n" +
+                                                   f"Status: {status_str}",
+                                    'start': {'dateTime': appt_datetime.isoformat(), 'timeZone': 'UTC'},
+                                    'end': {'dateTime': (appt_datetime + datetime.timedelta(hours=1)).isoformat(), 'timeZone': 'UTC'},
+                                }
+                                calendar_id = store_obj.google_calendar_id if store_obj.google_calendar_id else 'primary'
+                                created_event = service.events().insert(calendarId=calendar_id, body=event).execute()
+                                appt.google_event_id = created_event.get('id')
+                                db.session.commit()
                     except Exception as e:
                         current_app.logger.error(f"[AI Tool Call] Google Calendar sync failed: {e}")
 
@@ -500,7 +516,7 @@ def chat():
             Modifies an existing appointment. Only provide the arguments for the fields that need to change.
 
             Args:
-                appointment_id: Required. The integer ID of the appointment to edit.
+                appointment_id: Required. The integer ID of the appointment to edit, OR the dog's exact name to find their appointment.
                 date: Optional string. The new date, strictly in YYYY-MM-DD format. If changing datetime, MUST provide BOTH date and time.
                 time: Optional string. The new time, strictly in 24-hour HH:MM format. If changing datetime, MUST provide BOTH date and time.
                 groomer_id: Optional. The integer ID of the new groomer, OR the groomer's exact name as a string.
@@ -517,10 +533,19 @@ def chat():
                         db.joinedload(Appointment.dog).joinedload(Dog.owner)
                     ).filter_by(id=int(appointment_id), store_id=store_id).first()
                 else:
-                    return f"Error: Appointment ID must be an integer. Please provide a valid appointment ID."
+                    appts = Appointment.query.options(
+                        db.joinedload(Appointment.dog).joinedload(Dog.owner)
+                    ).join(Dog).filter(
+                        Dog.name.ilike(f"%{appointment_id}%"),
+                        Appointment.store_id == store_id
+                    ).all()
+                    if len(appts) == 1:
+                        appt = appts[0]
+                    elif len(appts) > 1:
+                        return f"Error: Multiple appointments found for dog matching '{appointment_id}'. Please provide the specific Appointment ID or be more specific."
 
-                if not appt:
-                    return f"Error: Appointment {appointment_id} not found."
+                if appt is None:
+                    return f"Error: Appointment '{appointment_id}' not found."
 
                 store_obj = Store.query.get(store_id)
                 store_tz_str = getattr(store_obj, 'timezone', None) or 'America/New_York'
@@ -805,7 +830,7 @@ def chat():
             Cancels and permanently deletes an existing appointment.
 
             Args:
-                appointment_id: Required. The integer ID of the appointment to delete.
+                appointment_id: Required. The integer ID of the appointment to delete, OR the dog's exact name to find their appointment.
                 send_notification: Optional boolean. Whether to send a cancellation email to the owner. Defaults to True.
 
             Returns:
@@ -818,9 +843,18 @@ def chat():
                         db.joinedload(Appointment.dog).joinedload(Dog.owner)
                     ).filter_by(id=int(appointment_id), store_id=store_id).first()
                 else:
-                    return f"Error: Appointment ID must be an integer. Please provide a valid appointment ID."
+                    appts = Appointment.query.options(
+                        db.joinedload(Appointment.dog).joinedload(Dog.owner)
+                    ).join(Dog).filter(
+                        Dog.name.ilike(f"%{appointment_id}%"),
+                        Appointment.store_id == store_id
+                    ).all()
+                    if len(appts) == 1:
+                        appt = appts[0]
+                    elif len(appts) > 1:
+                        return f"Error: Multiple appointments found for dog matching '{appointment_id}'. Please provide the specific Appointment ID or be more specific."
 
-                if not appt:
+                if appt is None:
                     return f"Error: Appointment '{appointment_id}' not found."
 
                 store_obj = Store.query.get(store_id)
@@ -836,9 +870,12 @@ def chat():
 
                 # Background tasks
                 try:
-                    from management.routes import sync_google_calendar_for_store
-                    if store_obj and store_obj.google_token_json and store_obj.google_calendar_id:
-                        sync_google_calendar_for_store(store_id)
+                    from utils import get_google_service
+                    if store_obj and store_obj.google_token_json and appt.google_event_id:
+                        service = get_google_service('calendar', 'v3', store=store_obj)
+                        if service:
+                            calendar_id = store_obj.google_calendar_id if store_obj.google_calendar_id else 'primary'
+                            service.events().delete(calendarId=calendar_id, eventId=appt.google_event_id).execute()
 
                     if send_notification and owner:
                         from notifications.email_utils import send_appointment_cancelled_email
@@ -942,8 +979,8 @@ def chat():
 
         2. Verification: Check the provided information against ALL required fields. You MUST NOT proceed without ALL of these:
            - Add Appointment: Needs a Dog Name, Date (YYYY-MM-DD), Time (HH:MM), Groomer Name, and at least one Service. Note that if the user did not specify the Date, but mentioned "today" or "tomorrow", you should infer the date using the Current Date and Time. Also, infer times like "5pm".
-           - Edit Appointment: Needs Appointment ID.
-           - Delete Appointment: Needs Appointment ID.
+           - Edit Appointment: Needs Appointment ID or Dog Name.
+           - Delete Appointment: Needs Appointment ID or Dog Name.
            - Add Owner: Needs a Name and Phone Number.
            - Edit Owner: Needs Owner Name or ID.
            - Delete Owner: Needs Owner Name or ID.
@@ -954,7 +991,7 @@ def chat():
 
         3. The "Clarification" Loop: If a request is missing ANY required information (e.g., "Book a dog"), you MUST reply by asking for exactly what is missing: "I can help with that! To complete the booking, I just need the dog's name, the date/time, the service type, and the groomer's name." Do not try to guess or hallucinate missing information.
 
-        4. Lookups & Names: You do not need to ask the user for ID numbers (like dog_id, owner_id, groomer_id). You can and should use exact names for these parameters in the tools. If a tool fails because a name is not unique, THEN use `get_dogs`, `get_owners`, `get_groomers`, or `get_appointments` to find the exact ID.
+        4. Lookups & Names: You do not need to ask the user for ID numbers (like dog_id, owner_id, groomer_id, appointment_id). You can and should use exact names for these parameters in the tools. If a tool fails because a name is not unique, THEN use `get_dogs`, `get_owners`, `get_groomers`, or `get_appointments` to find the exact ID.
 
         5. Safety Check: Always confirm before performing a DELETE action.
 
