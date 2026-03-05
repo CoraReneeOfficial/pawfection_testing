@@ -63,14 +63,18 @@ def send_appointment_confirmation_email(store, owner, dog, appointment, groomer=
         # Log token data (without sensitive info)
         logger.debug("Token data keys: %s", list(token_data.keys()) if token_data else 'No token data')
         
-        SCOPES = [
-            "https://www.googleapis.com/auth/calendar.calendars",
-            "https://www.googleapis.com/auth/calendar.events",
-            "https://www.googleapis.com/auth/gmail.send",
-            "openid",
-            "https://www.googleapis.com/auth/userinfo.email",
-            "https://www.googleapis.com/auth/userinfo.profile"
-        ]
+        scopes = token_data.get('scopes')
+        if not scopes:
+            scopes = token_data.get('scope', '').split()
+        if not scopes:
+            scopes = [
+                "https://www.googleapis.com/auth/calendar.calendars",
+                "https://www.googleapis.com/auth/calendar.events",
+                "https://www.googleapis.com/auth/gmail.send",
+                "openid",
+                "https://www.googleapis.com/auth/userinfo.email",
+                "https://www.googleapis.com/auth/userinfo.profile"
+            ]
         
         # Get client ID and secret from environment or token data
         client_id = token_data.get('client_id') or os.environ.get('GOOGLE_CLIENT_ID')
@@ -85,7 +89,7 @@ def send_appointment_confirmation_email(store, owner, dog, appointment, groomer=
             token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
             client_id=client_id,
             client_secret=client_secret,
-            scopes=SCOPES
+            scopes=scopes
         )
         
         logger.debug("Building Gmail service")
@@ -224,21 +228,25 @@ def send_appointment_edited_email(store, owner, dog, appointment, groomer=None, 
         return False
     try:
         token_data = json.loads(store.google_token_json)
-        SCOPES = [
-            "https://www.googleapis.com/auth/calendar.calendars",
-            "https://www.googleapis.com/auth/calendar.events",
-            "https://www.googleapis.com/auth/gmail.send",
-            "openid",
-            "https://www.googleapis.com/auth/userinfo.email",
-            "https://www.googleapis.com/auth/userinfo.profile"
-        ]
+        scopes = token_data.get('scopes')
+        if not scopes:
+            scopes = token_data.get('scope', '').split()
+        if not scopes:
+            scopes = [
+                "https://www.googleapis.com/auth/calendar.calendars",
+                "https://www.googleapis.com/auth/calendar.events",
+                "https://www.googleapis.com/auth/gmail.send",
+                "openid",
+                "https://www.googleapis.com/auth/userinfo.email",
+                "https://www.googleapis.com/auth/userinfo.profile"
+            ]
         credentials = Credentials(
             token=token_data.get('token') or token_data.get('access_token'),
             refresh_token=token_data.get('refresh_token'),
             token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
             client_id=token_data.get('client_id') or os.environ.get('GOOGLE_CLIENT_ID'),
             client_secret=token_data.get('client_secret') or os.environ.get('GOOGLE_CLIENT_SECRET'),
-            scopes=SCOPES
+            scopes=scopes
         )
         service = get_google_service('gmail', 'v1', credentials=credentials)
         if not service:
@@ -328,21 +336,25 @@ def send_appointment_cancelled_email(store, owner, dog, appointment, groomer=Non
         return False
     try:
         token_data = json.loads(store.google_token_json)
-        SCOPES = [
-            "https://www.googleapis.com/auth/calendar.calendars",
-            "https://www.googleapis.com/auth/calendar.events",
-            "https://www.googleapis.com/auth/gmail.send",
-            "openid",
-            "https://www.googleapis.com/auth/userinfo.email",
-            "https://www.googleapis.com/auth/userinfo.profile"
-        ]
+        scopes = token_data.get('scopes')
+        if not scopes:
+            scopes = token_data.get('scope', '').split()
+        if not scopes:
+            scopes = [
+                "https://www.googleapis.com/auth/calendar.calendars",
+                "https://www.googleapis.com/auth/calendar.events",
+                "https://www.googleapis.com/auth/gmail.send",
+                "openid",
+                "https://www.googleapis.com/auth/userinfo.email",
+                "https://www.googleapis.com/auth/userinfo.profile"
+            ]
         credentials = Credentials(
             token=token_data.get('token') or token_data.get('access_token'),
             refresh_token=token_data.get('refresh_token'),
             token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
             client_id=token_data.get('client_id') or os.environ.get('GOOGLE_CLIENT_ID'),
             client_secret=token_data.get('client_secret') or os.environ.get('GOOGLE_CLIENT_SECRET'),
-            scopes=SCOPES
+            scopes=scopes
         )
         service = get_google_service('gmail', 'v1', credentials=credentials)
         if not service:
@@ -436,11 +448,15 @@ def send_receipt_notification(store, owner, receipt_data):
 
     try:
         token_data = json.loads(store.google_token_json)
-        SCOPES = [
-            "https://www.googleapis.com/auth/gmail.send",
-            "https://www.googleapis.com/auth/userinfo.email",
-            "https://www.googleapis.com/auth/userinfo.profile"
-        ]
+        scopes = token_data.get('scopes')
+        if not scopes:
+            scopes = token_data.get('scope', '').split()
+        if not scopes:
+            scopes = [
+                "https://www.googleapis.com/auth/gmail.send",
+                "https://www.googleapis.com/auth/userinfo.email",
+                "https://www.googleapis.com/auth/userinfo.profile"
+            ]
 
         credentials = Credentials(
             token=token_data.get('token') or token_data.get('access_token'),
@@ -448,7 +464,7 @@ def send_receipt_notification(store, owner, receipt_data):
             token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
             client_id=token_data.get('client_id') or os.environ.get('GOOGLE_CLIENT_ID'),
             client_secret=token_data.get('client_secret') or os.environ.get('GOOGLE_CLIENT_SECRET'),
-            scopes=SCOPES
+            scopes=scopes
         )
 
         service = get_google_service('gmail', 'v1', credentials=credentials)

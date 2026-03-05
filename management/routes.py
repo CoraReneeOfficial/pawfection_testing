@@ -1329,6 +1329,536 @@ def edit_store():
             flash('Failed to update store information.', 'danger')
     return render_template('edit_store.html', store=store, timezones=timezones)
 
+def sync_google_calendar_for_store(store, user, force=False):
+    # Check cooldown cache
+    if not force:
+        last_sync = _SYNC_CACHE.get(store.id)
+        if last_sync:
+            elapsed = (datetime.now(timezone.utc).replace(tzinfo=None) - last_sync).total_seconds()
+            if elapsed < SYNC_COOLDOWN_SECONDS:
+                current_app.logger.info(f"[SYNC] Skipping Google Calendar sync for store {store.id} (cooldown active: {int(SYNC_COOLDOWN_SECONDS - elapsed)}s remaining)")
+                return 0
+
+    if not store or not store.google_token_json or not store.google_calendar_id:
+        current_app.logger.warning("[SYNC] Store missing Google token or calendar ID.")
+        return 0
+    try:
+        # Use store's timezone if set, else default to UTC
+        store_tz_str = getattr(store, 'timezone', None) or 'UTC'
+        try:
+            store_tz = pytz.timezone(store_tz_str)
+        except Exception:
+            store_tz = pytz.UTC
+
+        service = get_google_service('calendar', 'v3', store=store)
+        if not service:
+            current_app.logger.warning("[SYNC] Failed to build Google Calendar service.")
+            return 0
+
+        now_utc = datetime.now(timezone.utc).replace(tzinfo=None).replace(tzinfo=pytz.UTC)
+        now = now_utc.astimezone(store_tz).isoformat()
+        events_result = service.events().list(
+            calendarId=store.google_calendar_id,
+            timeMin=now,
+            maxResults=250,
+            singleEvents=True,
+            orderBy='startTime'
+        ).execute()
+        events = events_result.get('items', [])
+        current_app.logger.info(f"[SYNC] Retrieved {len(events)} events from Google Calendar.")
+        for event in events:
+            current_app.logger.info(f"[SYNC] Event: id={event.get('id')}, summary={event.get('summary')}, description={event.get('description')}, start={event.get('start')}")
+        created_appointments = []
+        for event in events:
+            details_needed = False
+            missing_fields = []
+            desc = event.get('description', '')
+            # Parse fields from description using regex or simple search
+            dog = owner = groomer = services = notes = None
+            dog_match = re.search(r'Dog: ([^\n]+)', desc)
+            owner_match = re.search(r'Owner: ([^\n]+)', desc)
+            groomer_match = re.search(r'Groomer: ([^\n]+)', desc)
+            services_match = re.search(r'Services: ([^\n]+)', desc)
+            notes_match = re.search(r'Notes: ([^\n]+)', desc)
+            status_match = re.search(r'Status: ([^\n]+)', desc)
+            if dog_match:
+                dog = dog_match.group(1).strip()
+            if owner_match:
+                owner = owner_match.group(1).strip()
+            if groomer_match:
+                groomer = groomer_match.group(1).strip()
+            if services_match:
+                services = services_match.group(1).strip()
+            if notes_match:
+                notes = notes_match.group(1).strip()
+            status = status_match.group(1).strip() if status_match else 'Scheduled'
+            # Check if the event is cancelled in Google Calendar
+            is_cancelled = event.get('status', '').lower() == 'cancelled'
+            # Parse start time
+            start_str = event['start'].get('dateTime') or event['start'].get('date')
+            appt_dt = None
+            try:
+                if start_str:
+                    # Parse with timezone awareness
+                    appt_dt = dateutil_parser.isoparse(start_str)
+                    if appt_dt.tzinfo is None:
+                        appt_dt = store_tz.localize(appt_dt)
+                    # Always convert to UTC for storage
+                    appt_dt = appt_dt.astimezone(pytz.UTC)
+            except Exception:
+                appt_dt = None
+            # Skip if required info is missing or dog is a placeholder
+            if not dog or dog == 'Unknown Dog':
+                dog = 'Unknown Dog'
+                missing_fields.append('dog')
+            if not owner:
+                owner = 'Unknown Owner'
+                missing_fields.append('owner')
+            if not appt_dt:
+                # Use a far-future date as a placeholder if missing
+                appt_dt = datetime.datetime(2099, 1, 1, tzinfo=pytz.UTC)
+                missing_fields.append('date')
+            if missing_fields:
+                details_needed = True
+                current_app.logger.warning(f"[SYNC] Event {event.get('id')} missing: {', '.join(missing_fields)}. Created/updated with placeholders and details_needed=True.")
+            # Find or create owner (by full name or first name)
+            owner_first = owner.split()[0]
+            owner_obj = Owner.query.filter(
+                Owner.store_id == store.id,
+                or_(func.lower(Owner.name) == owner.lower(),
+                    Owner.name.ilike(f"{owner_first} %") if owner_first else False)
+            ).first()
+            # --- BEGIN: Updated logic for unknown dog/owner ---
+            owner_obj_found = True
+            if not owner_obj:
+                owner_obj_found = False
+            dog_obj_found = True
+            dog_first = dog.split()[0]
+            dog_obj = None
+            if owner_obj:
+                dog_obj = Dog.query.filter(
+                    Dog.owner_id == owner_obj.id,
+                    Dog.store_id == store.id,
+                    or_(func.lower(Dog.name) == dog.lower(),
+                        Dog.name.ilike(f"{dog_first} %") if dog_first else False)
+                ).first()
+            if not dog_obj:
+                dog_obj_found = False
+
+            # If neither owner nor dog found, create both as unknown and link them
+            if not owner_obj_found and not dog_obj_found:
+                owner_obj = Owner(name="Unknown Owner", phone_number='000-000-0000', email='unknown@unknown.com', store_id=store.id)
+                db.session.add(owner_obj)
+                db.session.commit()
+                dog_obj = Dog(name="Unknown Dog", owner_id=owner_obj.id, store_id=store.id)
+                db.session.add(dog_obj)
+                db.session.commit()
+            else:
+                # If only owner is missing, create owner as usual
+                if not owner_obj_found:
+                    owner_obj = Owner(name=owner, phone_number='000-000-0000', email='unknown@unknown.com', store_id=store.id)
+                    try:
+                        db.session.add(owner_obj)
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+                        details_needed = True
+                        missing_fields.append('Owner')
+                # If only dog is missing, create dog as usual **but skip if the dog name is the placeholder**
+                if not dog_obj_found and dog.lower() != 'unknown dog':
+                    dog_obj = Dog(name=dog, owner_id=owner_obj.id, store_id=store.id)
+                    db.session.add(dog_obj)
+                    db.session.commit()
+                elif not dog_obj_found and dog.lower() == 'unknown dog':
+                    # Do not create a placeholder dog record tied to a real owner; instead, flag that details are needed.
+                    details_needed = True
+                    missing_fields.append('dog')
+            # --- END: Updated logic for unknown dog/owner ---
+            # Find groomer (by full username or first name)
+            groomer_obj = None
+            if groomer:
+                groomer_first = groomer.split()[0]
+                groomer_obj = User.query.filter(
+                    User.is_groomer == True,
+                    User.store_id == store.id,
+                    or_(func.lower(User.username) == groomer.lower(),
+                        User.username.ilike(f"{groomer_first} %") if groomer_first else False)
+                ).first()
+            # Add missing info to notes
+            notes_with_missing = notes or ''
+            if status == 'Scheduled' and (not dog_obj or not owner_obj or not appt_dt):
+                details_needed = True
+                missing_fields = []
+                if not dog_obj:
+                    missing_fields.append('Dog')
+                if not owner_obj:
+                    missing_fields.append('Owner')
+                if not appt_dt:
+                    missing_fields.append('Date/Time')
+            if details_needed and missing_fields:
+                notes_with_missing += ('\n' if notes_with_missing else '') + f"[Needs Review: Missing {', '.join(missing_fields)}]"
+            # Check if appointment already exists (by eventId and store_id)
+            existing = Appointment.query.filter_by(
+                store_id=store.id,
+                google_event_id=event['id']
+            ).first()
+            if existing:
+                # Only update fields that should be synced from Google
+                existing.appointment_datetime = appt_dt
+
+                # Don't update status to 'Cancelled' if it's already set to 'Completed' or 'No Show'
+                if existing.status not in ['Completed', 'No Show']:
+                    existing.status = 'Cancelled' if is_cancelled else status
+
+                # Don't overwrite services and notes if they exist locally
+                if not existing.requested_services_text and services:
+                    existing.requested_services_text = services
+                if not existing.notes and notes:
+                    existing.notes = notes_with_missing
+
+                # Only set details_needed to True if it's not already set
+                if not existing.details_needed:
+                    existing.details_needed = details_needed
+
+                # Update the dog and groomer relationships if they're not set
+                if not existing.dog_id and dog_obj:
+                    existing.dog_id = dog_obj.id
+                if not existing.groomer_id and groomer_obj:
+                    existing.groomer_id = groomer_obj.id
+
+                if user and user.id and not existing.created_by_user_id:
+                    existing.created_by_user_id = user.id
+
+                db.session.commit()
+                current_app.logger.info(f"[SYNC] Updated existing appointment for Google event {event['id']} (store {store.id})")
+            else:
+                # Only create if not already present
+                appt = Appointment(
+                    dog_id=dog_obj.id,
+                    appointment_datetime=appt_dt,
+                    requested_services_text=services,
+                    notes=notes_with_missing,
+                    status=status,
+                    created_by_user_id=user.id if user else None,
+                    groomer_id=groomer_obj.id if groomer_obj else None,
+                    store_id=store.id,
+                    google_event_id=event['id'],
+                    details_needed=details_needed
+                )
+                db.session.add(appt)
+                db.session.commit()
+                created_appointments.append(appt)
+                current_app.logger.info(f"[SYNC] Created new appointment for Google event {event['id']} (store {store.id})")
+
+        # Update cache on successful sync
+        _SYNC_CACHE[store.id] = datetime.now(timezone.utc).replace(tzinfo=None)
+        return len(created_appointments)
+    except Exception as e:
+        current_app.logger.error(f"Failed to sync Google Calendar: {e}", exc_info=True)
+        return 0
+
+@management_bp.route('/sync_google_calendar')
+@admin_required
+def sync_google_calendar():
+    store_id = session.get('store_id')
+    store = Store.query.get_or_404(store_id)
+    # Force sync when manually triggered
+    num_synced = sync_google_calendar_for_store(store, g.user, force=True)
+    if num_synced > 0:
+        flash(f'Synced {num_synced} new appointments from Google Calendar.', 'success')
+        log_activity(f'Synced {num_synced} appts from Google Calendar')
+    else:
+        flash('No new appointments to sync from Google Calendar.', 'info')
+    return redirect(url_for('management.management'))
+
+
+# --- Data Management Routes ---
+
+    # Create a temporary database file for just this store's data
+    temp_dir = tempfile.mkdtemp()
+    temp_db_path = os.path.join(temp_dir, 'store_export.db')
+
+    try:
+        # Import sqlite3 module locally
+        import sqlite3
+
+        # Connect to the new temporary database
+        new_conn = sqlite3.connect(temp_db_path)
+        new_cursor = new_conn.cursor()
+
+        # Create the schema in the new database
+        # First, get table information from the current database
+        source_engine = db.get_engine()
+        with source_engine.connect() as connection:
+            # Get all table names
+            table_names_result = connection.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"))
+            table_names = [row[0] for row in table_names_result.fetchall()]
+
+            # Also get the sqlite_sequence table (needed for auto-incrementing IDs)
+            table_names.append('sqlite_sequence')
+
+            # For each table, create it in the new database and copy data for the store
+            for table_name in table_names:
+                # Get table creation SQL (this requires raw SQL execution)
+                create_table_sql_result = connection.execute(text(f"SELECT sql FROM sqlite_master WHERE type='table' AND name='{table_name}'"))
+                create_sql = create_table_sql_result.fetchone()
+
+                if create_sql and create_sql[0]:
+                    # Create the table in the new database
+                    new_cursor.execute(create_sql[0])
+
+                    # Check if table has store_id column to filter data
+                    columns_info_result = connection.execute(text(f"PRAGMA table_info('{table_name}')"))
+                    columns_info = columns_info_result.fetchall()
+                    column_names = [col[1] for col in columns_info]
+
+                    if 'store_id' in column_names:
+                        has_store_id = True
+                        # Get data for this store only
+                        rows_result = connection.execute(text(f"SELECT * FROM {table_name} WHERE store_id = {store_id}"))
+                        rows = rows_result.fetchall()
+
+                        if rows:
+                            # Prepare insert statement with the right number of placeholders
+                            placeholders = ', '.join(['?' for _ in column_names])
+                            insert_sql = f"INSERT INTO {table_name} VALUES ({placeholders})"
+                            new_cursor.executemany(insert_sql, rows)
+                    else:
+                        # For tables without store_id, check if they are global tables that should be copied
+                        # These might include configuration tables, etc.
+                        if table_name in ['sqlite_sequence']:  # Add other global tables if needed
+                            rows_result = connection.execute(text(f"SELECT * FROM {table_name}"))
+                            rows = rows_result.fetchall()
+
+                            if rows:
+                                placeholders = ', '.join(['?' for _ in range(len(rows[0]))])
+                                insert_sql = f"INSERT INTO {table_name} VALUES ({placeholders})"
+                                new_cursor.executemany(insert_sql, rows)
+
+        # Commit changes and close the new database connection
+        new_conn.commit()
+        new_conn.close()
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        store_name_safe = secure_filename(store.name)
+        download_name = f"{store_name_safe}_database_{timestamp}.db"
+
+        # Log activity
+        log = ActivityLog(
+            action="Store Database Exported",
+            details=f"Store-specific database exported by user {g.user.username}",
+            user_id=g.user.id,
+            store_id=store_id
+        )
+        db.session.add(log)
+        db.session.commit()
+
+        @after_this_request
+        def cleanup(response):
+            try:
+                shutil.rmtree(temp_dir)
+            except Exception as e:
+                current_app.logger.error(f"Error cleaning up temp directory: {e}")
+            return response
+
+        return send_file(temp_db_path, as_attachment=True, download_name=download_name)
+
+    except Exception as e:
+        current_app.logger.error(f"Error creating store database export: {e}")
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+        flash(f"Error creating database export: {str(e)}", "error")
+        return redirect(url_for('management.data_management'))
+
+
+
+    form = DatabaseImportForm()
+
+    if form.validate_on_submit():
+        try:
+            # Get import mode (overwrite or merge)
+            import_mode = request.form.get('import_mode', 'overwrite')
+
+            # Get the current database path
+            db_path = current_app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+
+            # Create a backup of the current database
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_path = f"{db_path}.backup_{timestamp}"
+            shutil.copy2(db_path, backup_path)
+
+            # Get the uploaded file
+            uploaded_file = form.database_file.data
+
+            # Save the uploaded file to a temporary location
+            temp_dir = tempfile.mkdtemp()
+            temp_db_path = os.path.join(temp_dir, 'uploaded_database.db')
+            uploaded_file.save(temp_db_path)
+
+            # Process based on import mode
+            if import_mode == 'overwrite':
+                # Close database connections before replacing the file
+                db.session.close()
+                db.engine.dispose()
+
+                # Overwrite mode - simply replace the current database
+                shutil.copy2(temp_db_path, db_path)
+
+                action_details = "Database completely overwritten"
+                flash_message = "Database replaced successfully! The application will log you out to apply changes."
+            else:  # merge mode
+                # Merge the uploaded database with the current one
+                try:
+                    # Open connections to both databases
+                    current_conn = sqlite3.connect(db_path)
+                    current_cursor = current_conn.cursor()
+                    imported_conn = sqlite3.connect(temp_db_path)
+                    imported_cursor = imported_conn.cursor()
+
+                    # Get store ID for filtering imported data
+                    store_id = session.get('store_id')
+
+                    # Get all tables from the imported database
+                    imported_cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+                    imported_tables = [row[0] for row in imported_cursor.fetchall()]
+
+                    # For each table in the imported database
+                    tables_updated = []
+                    records_added = 0
+
+                    for table_name in imported_tables:
+                        # Check if the table exists in the current database
+                        current_cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'")
+                        if not current_cursor.fetchone():
+                            # Table doesn't exist in current database, skip it
+                            current_app.logger.warning(f"Table {table_name} not found in current database, skipping")
+                            continue
+
+                        # Get the primary key column(s) for the table
+                        current_cursor.execute(f"PRAGMA table_info('{table_name}')")
+                        columns_info = current_cursor.fetchall()
+                        primary_key_columns = [col[1] for col in columns_info if col[5] > 0]  # col[5] > 0 means primary key
+                        column_names = [col[1] for col in columns_info]
+
+                        # If no primary key, use all columns as composite key for uniqueness check
+                        if not primary_key_columns:
+                            primary_key_columns = column_names
+
+                        # Only import data related to this store if store_id is present
+                        has_store_id = 'store_id' in column_names
+
+                        # Get data from imported database
+                        if has_store_id:
+                            imported_cursor.execute(f"SELECT * FROM {table_name} WHERE store_id = {store_id}")
+                        else:
+                            # For global tables, only get them if they're in our allowlist
+                            if table_name in ['sqlite_sequence']:
+                                imported_cursor.execute(f"SELECT * FROM {table_name}")
+                            else:
+                                # Skip tables without store_id that aren't in our allowlist
+                                continue
+
+                        imported_rows = imported_cursor.fetchall()
+                        if not imported_rows:
+                            continue
+
+                        # For each imported row, check if it already exists in the current database
+                        table_updated = False
+                        for row in imported_rows:
+                            # Build a WHERE clause to check for duplicates based on primary key(s)
+                            where_conditions = []
+                            for i, col_name in enumerate(column_names):
+                                if col_name in primary_key_columns:
+                                    # Handle NULL values in the primary key
+                                    if row[i] is None:
+                                        where_conditions.append(f"{col_name} IS NULL")
+                                    else:
+                                        where_conditions.append(f"{col_name} = ?")
+
+                            # If we have where conditions, check for duplicates
+                            if where_conditions:
+                                where_clause = " AND ".join(where_conditions)
+                                where_values = [row[i] for i, col_name in enumerate(column_names)
+                                               if col_name in primary_key_columns and row[i] is not None]
+
+                                current_cursor.execute(f"SELECT COUNT(*) FROM {table_name} WHERE {where_clause}", where_values)
+                                if current_cursor.fetchone()[0] == 0:
+                                    # No duplicate found, insert the row
+                                    placeholders = ', '.join(['?' for _ in column_names])
+                                    current_cursor.execute(f"INSERT INTO {table_name} VALUES ({placeholders})", row)
+                                    records_added += 1
+                                    table_updated = True
+                            else:
+                                # No primary key to check duplicates, just insert
+                                placeholders = ', '.join(['?' for _ in column_names])
+                                current_cursor.execute(f"INSERT INTO {table_name} VALUES ({placeholders})", row)
+                                records_added += 1
+                                table_updated = True
+
+                        if table_updated:
+                            tables_updated.append(table_name)
+
+                    # Commit all changes
+                    current_conn.commit()
+
+                    action_details = f"Database merged: {records_added} records added across {len(tables_updated)} tables"
+                    flash_message = f"Database merged successfully! Added {records_added} records to {len(tables_updated)} tables. The application will log you out to apply changes."
+
+                except Exception as merge_error:
+                    current_app.logger.error(f"Error merging databases: {merge_error}")
+                    raise Exception(f"Error merging databases: {merge_error}")
+                finally:
+                    # Close connections
+                    try:
+                        current_cursor.close()
+                        current_conn.close()
+                        imported_cursor.close()
+                        imported_conn.close()
+                    except Exception as close_error:
+                        current_app.logger.error(f"Error closing database connections: {close_error}")
+
+            # Log the activity
+            try:
+                store_id = session.get('store_id')
+                log = ActivityLog(
+                    action=f"Database Imported ({import_mode})",
+                    details=f"Database import ({import_mode}) by {g.user.username}. {action_details}. Backup at {backup_path}",
+                    user_id=g.user.id,
+                    store_id=store_id
+                )
+
+                # Reopen connection for logging
+                db.session.close()
+                db.engine.dispose()
+                db.create_all()
+                db.session.add(log)
+                db.session.commit()
+            except Exception as log_error:
+                # If logging fails, continue with import but notify about the error
+                current_app.logger.error(f"Failed to log import activity: {log_error}")
+                flash(f"Database import succeeded, but could not log activity: {str(log_error)}", "warning")
+
+            # Clean up temp directory
+            try:
+                shutil.rmtree(temp_dir)
+            except Exception as cleanup_error:
+                current_app.logger.error(f"Error cleaning up temp directory: {cleanup_error}")
+
+            flash(flash_message, "success")
+            return redirect(url_for('auth.logout'))
+
+        except Exception as e:
+            current_app.logger.error(f"Error importing database: {e}")
+            flash(f"Error importing database: {str(e)}", "error")
+    else:
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f"Error in {getattr(form, field).label.text}: {error}", "error")
+
+    return redirect(url_for('management.data_management'))
+
+
+
 # ... (Rest of file unchanged, already reviewed)
 
 
