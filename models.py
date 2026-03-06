@@ -181,6 +181,11 @@ class Owner(db.Model):
     text_notifications_enabled = db.Column(db.Boolean, default=True, nullable=False)
     email_notifications_enabled = db.Column(db.Boolean, default=True, nullable=False)
 
+    # Granular notification preferences
+    notify_appointment_reminders = db.Column(db.Boolean, default=True, nullable=False)
+    notify_status_updates = db.Column(db.Boolean, default=True, nullable=False)
+    notify_marketing = db.Column(db.Boolean, default=True, nullable=False)
+
     dogs = db.relationship('Dog', backref='owner', lazy='joined', cascade="all, delete-orphan")
 
     # Composite unique constraints to ensure phone_number and email are unique PER STORE

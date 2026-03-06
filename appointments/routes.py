@@ -20,7 +20,7 @@ import os
 import base64
 import traceback
 from email.mime.text import MIMEText
-from notifications.email_utils import send_appointment_confirmation_email, send_appointment_edited_email, send_appointment_cancelled_email, send_receipt_notification
+from notifications.email_utils import send_appointment_confirmation_email, send_appointment_edited_email, send_appointment_cancelled_email, send_receipt_notification, send_status_update_notification
 import pytz
 from fpdf import FPDF
 import io
@@ -2006,3 +2006,54 @@ def api_search_appointments():
         })
 
     return jsonify(results)
+
+
+@appointments_bp.route('/api/appointments/<int:appointment_id>/status', methods=['POST'])
+@subscription_required
+def api_update_appointment_status(appointment_id):
+    if 'store_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    store_id = session['store_id']
+    appt = Appointment.query.filter_by(id=appointment_id, store_id=store_id).first()
+    if not appt:
+        return jsonify({'error': 'Appointment not found'}), 404
+
+    data = request.get_json()
+    new_status = data.get('status')
+
+    valid_statuses = ['Checked In', 'In Progress', 'Ready for Pickup']
+    if new_status not in valid_statuses:
+        return jsonify({'error': 'Invalid status'}), 400
+
+    appt.status = new_status
+    db.session.commit()
+
+    store = Store.query.get(store_id)
+    owner = appt.dog.owner
+
+    try:
+        # Sync to Google Calendar
+        if store and store.user and store.user.google_token_json and appt.google_event_id:
+            creds_data = json.loads(store.user.google_token_json)
+            creds = Credentials.from_authorized_user_info(creds_data)
+            service = get_google_service('calendar', 'v3', credentials=creds)
+
+            event = service.events().get(calendarId=store.user.google_calendar_id, eventId=appt.google_event_id).execute()
+            desc = event.get('description', '')
+            if 'Status: ' in desc:
+                desc = re.sub(r'Status: .+\n', f'Status: {new_status}\n', desc, count=1)
+            else:
+                desc = f"Status: {new_status}\n" + desc
+            event['description'] = desc
+            service.events().update(calendarId=store.user.google_calendar_id, eventId=appt.google_event_id, body=event).execute()
+    except Exception as e:
+        current_app.logger.error(f"Error syncing status update to Google Calendar: {e}")
+
+    try:
+        # Send notifications
+        send_status_update_notification(store, owner, appt.dog, new_status)
+    except Exception as e:
+        current_app.logger.error(f"Error sending status update notification: {e}")
+
+    return jsonify({'success': True, 'status': new_status})
