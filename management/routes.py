@@ -574,6 +574,17 @@ def add_user():
                 commission_percentage = float(request.form.get('commission_percentage', 100.0))
             except (ValueError, TypeError):
                 commission_percentage = 100.0
+        # New employment settings fields
+        employment_type = request.form.get('employment_type')
+        address = sanitize_text_input(request.form.get('address', '').strip())
+        deduction_type = request.form.get('deduction_type')
+        deduction_amount_str = request.form.get('deduction_amount')
+        try:
+            deduction_amount = float(deduction_amount_str) if deduction_amount_str else None
+        except ValueError:
+            deduction_amount = None
+        deduction_frequency = request.form.get('deduction_frequency')
+        other_withholdings = sanitize_text_input(request.form.get('other_withholdings', '').strip())
 
         errors = {}
         if not username: errors['username'] = "Username required."
@@ -653,6 +664,17 @@ def edit_user(user_id):
                 commission_percentage = float(request.form.get('commission_percentage', user_to_edit.commission_percentage))
             except (ValueError, TypeError):
                 pass
+        # New employment settings fields
+        employment_type = request.form.get('employment_type')
+        address = sanitize_text_input(request.form.get('address', '').strip())
+        deduction_type = request.form.get('deduction_type')
+        deduction_amount_str = request.form.get('deduction_amount')
+        try:
+            deduction_amount = float(deduction_amount_str) if deduction_amount_str else None
+        except ValueError:
+            deduction_amount = None
+        deduction_frequency = request.form.get('deduction_frequency')
+        other_withholdings = sanitize_text_input(request.form.get('other_withholdings', '').strip())
 
         errors = {}
         if not new_username: errors['username'] = "Username required."
@@ -691,6 +713,13 @@ def edit_user(user_id):
         if is_groomer:
             user_to_edit.commission_percentage = commission_percentage
         
+        user_to_edit.employment_type = employment_type
+        user_to_edit.address = address
+        user_to_edit.deduction_type = deduction_type
+        user_to_edit.deduction_amount = deduction_amount
+        user_to_edit.deduction_frequency = deduction_frequency
+        user_to_edit.other_withholdings = other_withholdings
+
         # Update security question if provided
         if security_question:
             user_to_edit.security_question = security_question
@@ -721,6 +750,317 @@ def edit_user(user_id):
     
     log_activity("Viewed Edit User page", details=f"User ID: {user_id}")
     return render_template('user_form.html', mode='edit', user_data=user_to_edit) 
+
+@management_bp.route('/manage/users/<int:user_id>/tax_report', methods=['GET'])
+@admin_required
+def user_tax_report(user_id):
+    """
+    Generates a printable HTML/PDF Tax/Earnings report for a given user and year.
+    It calculates their earnings from completed appointments and applies configured deductions.
+    """
+    # Safety import just in case global import misses or fails in an unusual environment setup
+    from decimal import Decimal, InvalidOperation
+
+    store_id = session.get('store_id')
+    user = User.query.filter_by(id=user_id, store_id=store_id).first_or_404()
+
+    if not user.employment_type:
+        flash("User does not have an employment type configured.", "warning")
+        return redirect(url_for('management.manage_users'))
+
+    year_str = request.args.get('year', datetime.now().year)
+    try:
+        year = int(year_str)
+    except ValueError:
+        year = datetime.now().year
+
+    # Define the date range for the year
+    import pytz
+    store = Store.query.get(store_id)
+    store_tz_str = getattr(store, 'timezone', None) or 'UTC'
+    try:
+        store_tz = pytz.timezone(store_tz_str)
+    except Exception:
+        store_tz = pytz.UTC
+
+    start_local = store_tz.localize(datetime(year, 1, 1, 0, 0))
+    end_local = store_tz.localize(datetime(year, 12, 31, 23, 59, 59))
+    start_utc = start_local.astimezone(pytz.UTC)
+    end_utc = end_local.astimezone(pytz.UTC)
+
+    # Query completed appointments assigned to this user in that year
+    appointments = Appointment.query.filter(
+        Appointment.store_id == store_id,
+        Appointment.groomer_id == user_id,
+        Appointment.status == 'Completed',
+        Appointment.appointment_datetime >= start_utc,
+        Appointment.appointment_datetime <= end_utc
+    ).order_by(Appointment.appointment_datetime.asc()).all()
+
+    # Calculate Earnings
+    gross_earnings = Decimal('0.0')
+    total_appointments = len(appointments)
+
+    # Simple gross calculation based on checkout total (or re-calc if needed)
+    all_services_from_db = Service.query.filter_by(store_id=store_id).all()
+    service_prices_map = {s.name: Decimal(str(s.base_price)) for s in all_services_from_db}
+
+    for appt in appointments:
+        appointment_actual_total = Decimal('0.0')
+        if appt.checkout_total_amount is not None:
+            try:
+                appointment_actual_total = Decimal(str(appt.checkout_total_amount))
+            except InvalidOperation:
+                pass
+
+        if appt.checkout_total_amount is None or appointment_actual_total == Decimal('0.0'):
+            recalculated_total = Decimal('0.0')
+            if appt.requested_services_text:
+                for service_name in [s.strip() for s in appt.requested_services_text.split(',') if s.strip()]:
+                    recalculated_total += service_prices_map.get(service_name, Decimal('0.0'))
+            appointment_actual_total = recalculated_total
+
+        gross_earnings += appointment_actual_total
+
+    # Calculate Time Worked for Deductions
+    import math
+    weeks_worked = 0
+    months_worked = 0
+
+    if total_appointments > 0:
+        first_appt_date = appointments[0].appointment_datetime
+        last_appt_date = appointments[-1].appointment_datetime
+        days_worked = (last_appt_date - first_appt_date).days + 1 # Include the first day
+        weeks_worked = math.ceil(days_worked / 7)
+        if weeks_worked == 0: weeks_worked = 1
+
+        months_worked = (last_appt_date.year - first_appt_date.year) * 12 + (last_appt_date.month - first_appt_date.month) + 1
+
+    # Calculate Deductions
+    total_deductions = Decimal('0.0')
+    deduction_details = []
+
+    if user.deduction_type and user.deduction_amount is not None and total_appointments > 0:
+        deduction_amt = Decimal(str(user.deduction_amount))
+
+        if user.deduction_frequency == 'per_appointment':
+            if user.deduction_type == 'dollar':
+                amount = deduction_amt * total_appointments
+                total_deductions += amount
+                deduction_details.append({'description': f"${user.deduction_amount} per appointment ({total_appointments} appts)", 'amount': amount})
+            elif user.deduction_type == 'percentage':
+                amount = (gross_earnings * deduction_amt) / Decimal('100.0')
+                total_deductions += amount
+                deduction_details.append({'description': f"{user.deduction_amount}% of gross earnings", 'amount': amount})
+
+        elif user.deduction_frequency == 'weekly':
+             weeks_dec = Decimal(str(weeks_worked))
+             if user.deduction_type == 'dollar':
+                 amount = deduction_amt * weeks_dec
+                 total_deductions += amount
+                 deduction_details.append({'description': f"${user.deduction_amount} weekly ({weeks_worked} weeks worked)", 'amount': amount})
+             elif user.deduction_type == 'percentage':
+                 amount = (gross_earnings * deduction_amt) / Decimal('100.0')
+                 total_deductions += amount
+                 deduction_details.append({'description': f"{user.deduction_amount}% of gross earnings (calculated per active period)", 'amount': amount})
+
+        elif user.deduction_frequency == 'bi_weekly':
+             bi_weeks = math.ceil(weeks_worked / 2)
+             if bi_weeks == 0: bi_weeks = 1
+             bi_weeks_dec = Decimal(str(bi_weeks))
+             if user.deduction_type == 'dollar':
+                 amount = deduction_amt * bi_weeks_dec
+                 total_deductions += amount
+                 deduction_details.append({'description': f"${user.deduction_amount} bi-weekly ({bi_weeks} periods worked)", 'amount': amount})
+             elif user.deduction_type == 'percentage':
+                 amount = (gross_earnings * deduction_amt) / Decimal('100.0')
+                 total_deductions += amount
+                 deduction_details.append({'description': f"{user.deduction_amount}% of gross earnings", 'amount': amount})
+
+        elif user.deduction_frequency == 'monthly':
+             months_dec = Decimal(str(months_worked))
+             if user.deduction_type == 'dollar':
+                 amount = deduction_amt * months_dec
+                 total_deductions += amount
+                 deduction_details.append({'description': f"${user.deduction_amount} monthly ({months_worked} months worked)", 'amount': amount})
+             elif user.deduction_type == 'percentage':
+                 amount = (gross_earnings * deduction_amt) / Decimal('100.0')
+                 total_deductions += amount
+                 deduction_details.append({'description': f"{user.deduction_amount}% of gross earnings", 'amount': amount})
+
+    net_earnings = gross_earnings - total_deductions
+    if net_earnings < Decimal('0.0'):
+        net_earnings = Decimal('0.0')
+
+    report_data = {
+        'user': user,
+        'store': store,
+        'year': year,
+        'gross_earnings': gross_earnings,
+        'net_earnings': net_earnings,
+        'total_deductions': total_deductions,
+        'deduction_details': deduction_details,
+        'total_appointments': total_appointments,
+        'generated_on': datetime.now(store_tz).strftime('%Y-%m-%d %H:%M:%S')
+    }
+
+    log_activity(f"Generated Tax Report for {user.username} (Year: {year})")
+
+    # Generate PDF server-side using fpdf2
+    from fpdf import FPDF
+    import io
+
+    class TaxReportPDF(FPDF):
+        def header(self):
+            self.set_font('Arial', 'B', 20)
+            self.set_text_color(59, 130, 246) # Primary blue color
+            self.cell(0, 10, f"{report_data['store'].name}", ln=True, align='C')
+
+            self.set_font('Arial', 'B', 16)
+            self.set_text_color(0, 0, 0)
+            self.cell(0, 10, f"Annual Earnings & Tax Report - {report_data['year']}", ln=True, align='C')
+
+            self.set_font('Arial', 'I', 10)
+            self.set_text_color(100, 100, 100)
+            self.cell(0, 10, f"Generated on: {report_data['generated_on']}", ln=True, align='C')
+
+            # Line break and separator
+            self.ln(5)
+            self.set_draw_color(200, 200, 200)
+            self.line(10, self.get_y(), 200, self.get_y())
+            self.ln(10)
+
+        def footer(self):
+            self.set_y(-25)
+            self.set_font('Arial', 'I', 8)
+            self.set_text_color(128, 128, 128)
+            self.multi_cell(0, 4, "This document is a summary of recorded earnings and deductions within the Pawfection app. It may not reflect external payments or manual adjustments not recorded in the system. Please consult a tax professional for official tax filing advice.", align='C')
+
+    pdf = TaxReportPDF()
+    pdf.add_page()
+
+    # Section 1: Information
+    pdf.set_font('Arial', 'B', 14)
+    pdf.set_text_color(50, 50, 50)
+    pdf.cell(0, 10, "Employee / Contractor Information", ln=True)
+    pdf.set_font('Arial', '', 12)
+    pdf.set_text_color(0, 0, 0)
+
+    # Information Grid
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(50, 8, "Name/Username:")
+    pdf.set_font('Arial', '', 12)
+    pdf.cell(140, 8, f"{report_data['user'].username}", ln=True)
+
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(50, 8, "Employment Type:")
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(140, 8, f"{str(report_data['user'].employment_type).upper()}", ln=True)
+
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(50, 8, "Email:")
+    pdf.set_font('Arial', '', 12)
+    pdf.cell(140, 8, f"{report_data['user'].email or 'N/A'}", ln=True)
+
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(50, 8, "Address:")
+    pdf.set_font('Arial', '', 12)
+    address = report_data['user'].address or 'N/A'
+    pdf.cell(140, 8, f"{address}", ln=True)
+
+    pdf.ln(10)
+
+    # State-specific processing logic
+    import re
+    state_match = re.search(r'\b([A-Z]{2})\b', address.upper())
+    state_code = state_match.group(1) if state_match else "Unknown"
+
+    pdf.set_font('Arial', 'B', 12)
+    pdf.set_text_color(50, 50, 50)
+    pdf.cell(0, 10, "Tax Jurisdiction & Filing Status", ln=True)
+
+    pdf.set_font('Arial', '', 10)
+    pdf.set_text_color(0, 0, 0)
+    if report_data['user'].employment_type == 'w2':
+        pdf.multi_cell(0, 6, f"Filing Status: W-2 Employee.\nJurisdiction: {state_code}. As a W-2 employee in {state_code}, standard federal and state tax withholdings apply to your gross earnings. The net earnings shown below reflect only the internal system deductions configured by your manager, and may not represent your final take-home pay after statutory tax withholdings are processed by payroll.", align='L')
+    elif report_data['user'].employment_type == '1099':
+        pdf.multi_cell(0, 6, f"Filing Status: 1099 Independent Contractor.\nJurisdiction: {state_code}. As a 1099 contractor in {state_code}, you are responsible for calculating and remitting your own federal, state, and self-employment taxes. The net earnings shown represent the gross amount payable to you minus any system-defined platform or service fees.", align='L')
+    else:
+        pdf.multi_cell(0, 6, f"Filing Status: Unknown.\nJurisdiction: {state_code}.", align='L')
+
+    pdf.ln(10)
+
+    # Section 2: Earnings Summary
+    pdf.set_font('Arial', 'B', 14)
+    pdf.set_text_color(50, 50, 50)
+    pdf.cell(0, 10, "Earnings Summary", ln=True)
+
+    # Table Header
+    pdf.set_fill_color(241, 245, 249) # Light gray/blue
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(140, 10, "Description", border=1, fill=True)
+    pdf.cell(50, 10, "Amount", border=1, fill=True, align='R')
+    pdf.ln()
+
+    pdf.set_font('Arial', '', 12)
+    pdf.cell(140, 10, f"Completed Appointments in {report_data['year']}", border=1)
+    pdf.cell(50, 10, f"{report_data['total_appointments']}", border=1, align='R')
+    pdf.ln()
+
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(140, 10, "Gross Earnings", border=1)
+    pdf.cell(50, 10, f"${report_data['gross_earnings']:,.2f}", border=1, align='R')
+    pdf.ln(15)
+
+    # Section 3: Deductions
+    pdf.set_font('Arial', 'B', 14)
+    pdf.set_text_color(50, 50, 50)
+    pdf.cell(0, 10, "Deductions & Withholdings", ln=True)
+
+    pdf.set_fill_color(241, 245, 249)
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(140, 10, "Description", border=1, fill=True)
+    pdf.cell(50, 10, "Amount Deducted", border=1, fill=True, align='R')
+    pdf.ln()
+
+    pdf.set_font('Arial', '', 12)
+    if not report_data['deduction_details']:
+        pdf.cell(190, 10, "No deductions applied.", border=1, align='C')
+        pdf.ln()
+    else:
+        for deduction in report_data['deduction_details']:
+            pdf.cell(140, 10, f"{deduction['description']}", border=1)
+            pdf.cell(50, 10, f"-${deduction['amount']:,.2f}", border=1, align='R')
+            pdf.ln()
+
+    if report_data['user'].other_withholdings:
+        pdf.set_font('Arial', 'B', 12)
+        pdf.cell(190, 10, "Other Withholdings Notes:", border='L R T')
+        pdf.ln()
+        pdf.set_font('Arial', '', 11)
+        pdf.multi_cell(190, 6, f"{report_data['user'].other_withholdings}", border='L R B')
+
+    pdf.set_font('Arial', 'B', 12)
+    pdf.cell(140, 10, "Total Deductions", border=1)
+    pdf.cell(50, 10, f"-${report_data['total_deductions']:,.2f}", border=1, align='R')
+    pdf.ln(15)
+
+    # Section 4: Net Earnings
+    pdf.set_fill_color(238, 242, 255) # Light primary background
+    pdf.set_font('Arial', 'B', 14)
+    pdf.cell(140, 15, f"NET EARNINGS FOR {report_data['year']}", border=1, fill=True)
+    pdf.set_text_color(5, 150, 105) # Success green
+    pdf.cell(50, 15, f"${report_data['net_earnings']:,.2f}", border=1, fill=True, align='R')
+
+    # Output to BytesIO buffer
+    # fpdf2's output() without a name returns a bytearray
+    pdf_output = pdf.output()
+    pdf_bytes = io.BytesIO(pdf_output)
+
+    # Return as an actual PDF file download
+    filename = f"Tax_Report_{report_data['user'].username}_{report_data['year']}.pdf"
+    return send_file(pdf_bytes, as_attachment=True, download_name=filename, mimetype='application/pdf')
+
 
 @management_bp.route('/manage/users/<int:user_id>/delete', methods=['POST'])
 @admin_required
@@ -1406,6 +1746,19 @@ def edit_store():
             store.default_appointment_buffer = int(request.form.get('default_appointment_buffer', store.default_appointment_buffer) or 0) or None
         except ValueError:
             errors.append('Default appointment buffer must be a number.')
+
+        store.capacity_type = request.form.get('capacity_type', store.capacity_type)
+        try:
+            store.capacity_limit = int(request.form.get('capacity_limit', store.capacity_limit) or 0) or None
+        except ValueError:
+            errors.append('Capacity limit must be a number.')
+
+        store.appointment_window_start = sanitize_text_input(request.form.get('appointment_window_start', '').strip()) or None
+        store.appointment_window_end = sanitize_text_input(request.form.get('appointment_window_end', '').strip()) or None
+
+        store.salon_style = request.form.get('salon_style', store.salon_style)
+        store.schedule_type = request.form.get('schedule_type', store.schedule_type)
+
         store.payment_settings = sanitize_text_input(request.form.get('payment_settings', store.payment_settings))
         store.is_archived = 'is_archived' in request.form
         # If errors, show them and don't commit

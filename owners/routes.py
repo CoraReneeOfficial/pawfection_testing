@@ -93,6 +93,9 @@ def add_owner():
             phone_carrier=phone_carrier or None,
             text_notifications_enabled=text_notifications_enabled,
             email_notifications_enabled=email_notifications_enabled,
+            notify_appointment_reminders=notify_appointment_reminders,
+            notify_status_updates=notify_status_updates,
+            notify_marketing=notify_marketing,
             created_by_user_id=g.user.id, 
             store_id=g.user.store_id # Assign current user's store_id to the new owner
         )
@@ -206,9 +209,7 @@ def delete_owner(owner_id):
         owner_name = owner.name
 
         # 1. Unlink AppointmentRequests associated with this owner
-        requests = AppointmentRequest.query.filter_by(owner_id=owner.id).all()
-        for req in requests:
-            req.owner_id = None
+        AppointmentRequest.query.filter_by(owner_id=owner.id).update({'owner_id': None}, synchronize_session=False)
 
         # 2. Delete Receipts associated with appointments of this owner's dogs
         # Since Receipt.appointment_id is nullable=False, we must delete them before deleting appointments

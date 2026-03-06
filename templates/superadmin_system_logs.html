@@ -390,8 +390,9 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Highlight search terms
-        if ('{{ search_term }}') {
-            highlightSearchTerm('{{ search_term }}');
+        const searchTerm = {{ search_term|tojson }};
+        if (searchTerm) {
+            highlightSearchTerm(searchTerm);
         }
     });
     

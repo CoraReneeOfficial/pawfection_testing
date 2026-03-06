@@ -195,6 +195,66 @@
             <label class="form-label" for="default_appointment_buffer">Default Appointment Buffer (minutes)</label>
             <input class="form-input" type="number" id="default_appointment_buffer" name="default_appointment_buffer" value="{{ store.default_appointment_buffer or '' }}">
         </div>
+
+        <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: var(--primary-color);">Scheduling Settings</h3>
+
+        <div class="form-group">
+            <label class="form-label" for="capacity_type" title="Choose whether to limit capacity by number of dogs or by available appointment slots.">
+                Capacity Type
+                <span style="cursor:help; color:#888;" title="Choose whether to limit capacity by number of dogs or by available appointment slots.">&#9432;</span>
+            </label>
+            <select class="form-select" id="capacity_type" name="capacity_type">
+                <option value="appointments" {% if store.capacity_type == 'appointments' %}selected{% endif %}>Appointments</option>
+                <option value="dogs" {% if store.capacity_type == 'dogs' %}selected{% endif %}>Dogs</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="capacity_limit" title="Set the maximum number of dogs or appointments per day depending on the Capacity Type selected.">
+                Capacity Limit
+                <span style="cursor:help; color:#888;" title="Set the maximum number of dogs or appointments per day depending on the Capacity Type selected.">&#9432;</span>
+            </label>
+            <input class="form-input" type="number" id="capacity_limit" name="capacity_limit" value="{{ store.capacity_limit or '' }}">
+        </div>
+
+        <div class="form-group" style="display: flex; gap: 1rem;">
+            <div style="flex: 1;">
+                <label class="form-label" for="appointment_window_start" title="The start time for the daily appointment window. If blank, store hours are used.">
+                    Appointment Window Start
+                    <span style="cursor:help; color:#888;" title="The start time for the daily appointment window. If blank, store hours are used.">&#9432;</span>
+                </label>
+                <input class="form-input" type="time" id="appointment_window_start" name="appointment_window_start" value="{{ store.appointment_window_start or '' }}">
+            </div>
+            <div style="flex: 1;">
+                <label class="form-label" for="appointment_window_end" title="The end time for the daily appointment window. If blank, store hours are used.">
+                    Appointment Window End
+                    <span style="cursor:help; color:#888;" title="The end time for the daily appointment window. If blank, store hours are used.">&#9432;</span>
+                </label>
+                <input class="form-input" type="time" id="appointment_window_end" name="appointment_window_end" value="{{ store.appointment_window_end or '' }}">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="salon_style" title="Staggered: Appointments are spaced out. Drop-off: Multiple dogs arrive at once.">
+                Salon Style
+                <span style="cursor:help; color:#888;" title="Staggered: Appointments are spaced out. Drop-off: Multiple dogs arrive at once.">&#9432;</span>
+            </label>
+            <select class="form-select" id="salon_style" name="salon_style">
+                <option value="staggered" {% if store.salon_style == 'staggered' %}selected{% endif %}>Staggered</option>
+                <option value="drop-off" {% if store.salon_style == 'drop-off' %}selected{% endif %}>Drop-off</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="schedule_type" title="System: System automatically schedules breaks. Manager: Manager manually schedules breaks.">
+                Employee Schedule Type
+                <span style="cursor:help; color:#888;" title="System: System automatically schedules breaks. Manager: Manager manually schedules breaks.">&#9432;</span>
+            </label>
+            <select class="form-select" id="schedule_type" name="schedule_type">
+                <option value="system" {% if store.schedule_type == 'system' %}selected{% endif %}>System (Auto Breaks)</option>
+                <option value="manager" {% if store.schedule_type == 'manager' %}selected{% endif %}>Manager (Manual Breaks)</option>
+            </select>
+        </div>
         <div class="form-group">
             <label class="form-label" for="payment_settings">Payment Settings (JSON or text)</label>
             <textarea class="form-input" id="payment_settings" name="payment_settings" rows="2">{{ store.payment_settings or '' }}</textarea>

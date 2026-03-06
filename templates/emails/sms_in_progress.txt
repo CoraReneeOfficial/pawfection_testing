@@ -1,0 +1,1 @@
+Hi {{ owner_name }}, {{ dog_name }}'s groom is currently in progress! We are making great time. - {{ store_name }}

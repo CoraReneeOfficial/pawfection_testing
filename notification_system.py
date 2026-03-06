@@ -185,10 +185,20 @@ def check_new():
     # We'll try to use aware datetime if possible, or fall back to naive if issues arise.
 
     # Get total unread count
-    unread_count = Notification.query.filter_by(
+    # Bolt Optimization: Fetch up to 6 notifications to determine if there are more than 5
+    # This avoids a separate COUNT() query for the majority of users who keep their unread count low
+    unread_notifications = Notification.query.filter_by(
         store_id=g.user.store_id,
         is_read=False
-    ).count()
+    ).limit(6).all()
+
+    if len(unread_notifications) < 6:
+        unread_count = len(unread_notifications)
+    else:
+        unread_count = Notification.query.filter_by(
+            store_id=g.user.store_id,
+            is_read=False
+        ).count()
 
     notifications = Notification.query.filter(
         Notification.store_id == g.user.store_id,

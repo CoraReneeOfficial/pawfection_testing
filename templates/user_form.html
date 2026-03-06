@@ -125,6 +125,50 @@
                 <small class="text-muted" style="display: block; margin-top: 0.2rem;">
                     The percentage of the appointment cost the groomer keeps. The rest goes to the store.
                 </small>
+            <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: var(--primary-color);">Employment & Deduction Settings</h3>
+
+            <div class="form-group">
+                <label for="employment_type">Employment Type</label>
+                <select id="employment_type" name="employment_type" class="form-input">
+                    <option value="">-- Select Type --</option>
+                    <option value="w2" {% if user_data.employment_type == 'w2' %}selected{% endif %}>W2 Employee</option>
+                    <option value="1099" {% if user_data.employment_type == '1099' %}selected{% endif %}>1099 Contractor</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="address">Address (State required for tax reports)</label>
+                <input type="text" id="address" name="address" class="form-input" value="{{ user_data.address or '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="deduction_type">Deduction Type</label>
+                <select id="deduction_type" name="deduction_type" class="form-input">
+                    <option value="">-- Select Type --</option>
+                    <option value="dollar" {% if user_data.deduction_type == 'dollar' %}selected{% endif %}>Dollar Amount ($)</option>
+                    <option value="percentage" {% if user_data.deduction_type == 'percentage' %}selected{% endif %}>Percentage (%)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="deduction_amount">Deduction Amount</label>
+                <input type="number" id="deduction_amount" name="deduction_amount" class="form-input" step="0.01" value="{{ user_data.deduction_amount or '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="deduction_frequency">Deduction Frequency</label>
+                <select id="deduction_frequency" name="deduction_frequency" class="form-input">
+                    <option value="">-- Select Frequency --</option>
+                    <option value="per_appointment" {% if user_data.deduction_frequency == 'per_appointment' %}selected{% endif %}>Per Appointment</option>
+                    <option value="weekly" {% if user_data.deduction_frequency == 'weekly' %}selected{% endif %}>Weekly</option>
+                    <option value="bi_weekly" {% if user_data.deduction_frequency == 'bi_weekly' %}selected{% endif %}>Bi-Weekly</option>
+                    <option value="monthly" {% if user_data.deduction_frequency == 'monthly' %}selected{% endif %}>Monthly</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="other_withholdings">Other Withholdings (Notes/Details)</label>
+                <textarea id="other_withholdings" name="other_withholdings" class="form-input" rows="3">{{ user_data.other_withholdings or '' }}</textarea>
             </div>
 
             <div class="form-group">

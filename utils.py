@@ -77,8 +77,6 @@ def log_activity(action, details=None):
     This function uses Flask's application context (current_app, g, session)
     and imports the ActivityLog model locally to prevent circular imports.
     """
-    # Import ActivityLog here, inside the function, to avoid top-level circular imports
-    # if ActivityLog itself has dependencies that lead back here (e.g., if models.py imported utils).
     from models import ActivityLog 
 
     if hasattr(g, 'user') and g.user:
