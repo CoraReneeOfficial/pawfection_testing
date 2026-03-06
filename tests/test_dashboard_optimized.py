@@ -4,9 +4,9 @@ import sys
 
 # Minimal mock setup to bypass problematic imports
 sys.modules['dotenv'] = MagicMock()
-sys.modules['bcrypt'] = MagicMock()
 
-# Setup google package mock completely
+# Do not mock bcrypt, or sqlalchemy!
+# The above logic deleted existing modules causing import errors.
 class MockGooglePackage(MagicMock):
     pass
 mock_google = MockGooglePackage()

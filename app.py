@@ -479,6 +479,62 @@ def create_app():
         from datetime import datetime
         return render_template('privacy_policy.html', now=datetime.now)
 
+    # Old Dashboard route (Backup)
+    @app.route('/dashboard/old')
+    @login_required
+    @subscription_required
+    def old_dashboard():
+        from flask import render_template
+        import pytz
+        from models import Appointment, Dog, Store, Owner
+        from sqlalchemy.orm import joinedload
+        from dateutil import tz
+        import datetime
+        from sqlalchemy import func, and_, or_, case
+        store_id = session.get('store_id')
+        store = None
+        STORE_TIMEZONE = pytz.UTC
+        if store_id:
+            store = db.session.get(Store, store_id)
+            store_tz_str = getattr(store, 'timezone', None) or 'UTC'
+            try:
+                STORE_TIMEZONE = pytz.timezone(store_tz_str)
+            except Exception:
+                STORE_TIMEZONE = pytz.UTC
+        now_utc = datetime.datetime.utcnow()
+        today_start = now_utc.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_end = today_start + datetime.timedelta(days=1)
+        week_start = (today_start - datetime.timedelta(days=today_start.weekday()))
+        week_end = week_start + datetime.timedelta(days=7)
+
+        appointments_today = 0
+        pending_checkouts = 0
+        new_clients_week = 0
+        revenue_today = 0.0
+        upcoming_appointments = []
+
+        if store_id:
+            stats = db.session.query(
+                func.count(case((and_(Appointment.status == 'Scheduled', Appointment.appointment_datetime >= today_start, Appointment.appointment_datetime < today_end), 1), else_=None)),
+                func.sum(case((and_(Appointment.status == 'Completed', Appointment.appointment_datetime >= today_start, Appointment.appointment_datetime < today_end), Appointment.checkout_total_amount), else_=0)),
+                func.count(case((and_(Appointment.status == 'Scheduled', Appointment.appointment_datetime < now_utc), 1), else_=None))
+            ).filter(Appointment.store_id == store_id).one()
+
+            appointments_today = stats[0]
+            revenue_today = stats[1] or 0.0
+            pending_checkouts = stats[2]
+
+            new_clients_week = Owner.query.filter(Owner.store_id == store_id, Owner.created_at >= week_start, Owner.created_at < week_end).count()
+
+            upcoming_appointments = (Appointment.query.options(joinedload(Appointment.dog).joinedload(Dog.owner), joinedload(Appointment.groomer))
+                .filter(Appointment.status == 'Scheduled', Appointment.store_id == store_id)
+                .order_by(Appointment.appointment_datetime.asc()).limit(5).all())
+
+        return render_template('old_dashboard.html',
+            appointments_today=appointments_today, pending_checkouts=pending_checkouts,
+            new_clients_week=new_clients_week, revenue_today=revenue_today,
+            upcoming_appointments=upcoming_appointments, STORE_TIMEZONE=STORE_TIMEZONE, tz=tz)
+
     # Dashboard route
     @app.route('/dashboard')
     @login_required
@@ -578,6 +634,33 @@ def create_app():
                 .all()
             )
 
+        # Mock Revenue Trend Data for Chart
+        revenue_trend = [
+            {"date": (today_start - datetime.timedelta(days=i)).strftime('%m/%d'), "amount": 150 + (i * 10)}
+            for i in range(6, -1, -1)
+        ]
+
+        # Determine capacity mock
+        capacity_percentage = min(100, (appointments_today / 20) * 100) if appointments_today else 0
+
+        # Groomer specific data
+        my_appointments = []
+        if g.user and not g.user.is_admin:
+             my_appointments = (
+                Appointment.query.options(
+                    joinedload(Appointment.dog).joinedload(Dog.owner)
+                )
+                .filter(
+                    Appointment.status == 'Scheduled',
+                    Appointment.store_id == store_id,
+                    Appointment.groomer_id == g.user.id,
+                    Appointment.appointment_datetime >= today_start,
+                    Appointment.appointment_datetime < today_end
+                )
+                .order_by(Appointment.appointment_datetime.asc())
+                .all()
+            )
+
         return render_template(
             'dashboard.html',
             appointments_today=appointments_today,
@@ -585,6 +668,9 @@ def create_app():
             new_clients_week=new_clients_week,
             revenue_today=revenue_today,
             upcoming_appointments=upcoming_appointments,
+            my_appointments=my_appointments,
+            revenue_trend=revenue_trend,
+            capacity_percentage=capacity_percentage,
             STORE_TIMEZONE=STORE_TIMEZONE,
             tz=tz
         )
