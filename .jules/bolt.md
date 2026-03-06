@@ -9,3 +9,7 @@
 ## 2025-03-05 - Notification Queries Database Indexing
 **Learning:** Context processors (like `inject_notifications` in `app.py`) execute on *every single page load*, and the frontend AlpineJS notification polling hits the backend *every 10 seconds per active user*. Both of these trigger queries looking for unread notifications by `store_id` and `is_read`. Without a specific index covering these two columns, the database is forced to do sequential scans on the Notification table under extreme frequency, creating a hidden, massive performance tax as the data grows.
 **Action:** Always identify queries executed inside context processors and high-frequency polling endpoints, and ensure they are covered by dedicated, highly-specific composite database indexes (e.g., `db.Index('idx_notification_store_is_read', 'store_id', 'is_read')`) to turn O(N) table scans into fast index lookups.
+
+## 2025-05-15 - Bulk Update Optimization for Record Unlinking
+**Learning:** Iterating over a collection of SQLAlchemy objects to update a single field (like unlinking an owner from appointment requests) triggers N+1 update patterns, causing excessive database round-trips and session flush overhead.
+**Action:** Use SQLAlchemy's bulk `update()` method (e.g., `Model.query.filter_by(...).update({'field': None}, synchronize_session=False)`) to perform the update in a single SQL statement. This moves the logic from the application to the database layer, significantly improving performance for large record sets.

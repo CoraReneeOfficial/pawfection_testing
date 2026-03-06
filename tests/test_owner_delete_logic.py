@@ -115,7 +115,7 @@ class TestOwnerDeleteLogic(unittest.TestCase):
 
         # 2. Verify AppointmentRequest unlink
         mock_models.AppointmentRequest.query.filter_by.assert_called_with(owner_id=101)
-        self.assertIsNone(mock_req.owner_id)
+        mock_models.AppointmentRequest.query.filter_by.return_value.update.assert_called_with({'owner_id': None}, synchronize_session=False)
 
         # 3. Verify Receipt deletion
         self.assertTrue(mock_models.Receipt.query.filter.return_value.delete.called)
