@@ -4,49 +4,203 @@
 
 {% block head %}
 <style>
+    /* Existing CSS for Dashboard Welcome Section */
     .dashboard-welcome {
-        display: flex; align-items: center; gap: 1rem;
-        margin-bottom: 1.5rem; padding-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
         border-bottom: 1px solid var(--border-color);
     }
     .dashboard-user-pic {
-        width: 60px; height: 60px; border-radius: 50%; overflow: hidden;
-        background-color: var(--secondary-light); border: 1px solid var(--border-color);
-        flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        overflow: hidden;
+        background-color: var(--secondary-light);
+        border: 1px solid var(--border-color);
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
-    .dashboard-user-pic img { width: 100%; height: 100%; object-fit: cover; }
-    .dashboard-user-pic .default-user-pic-svg { width: 36px; height: 36px; color: var(--secondary-color); }
-    .dashboard-welcome-text h1 { margin-bottom: 0.25rem; }
-    .dashboard-welcome-text p { margin-bottom: 0; }
+    .dashboard-user-pic img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .dashboard-user-pic .default-user-pic-svg {
+        width: 36px;
+        height: 36px;
+        color: var(--secondary-color);
+    }
+    .dashboard-welcome-text h1 {
+        margin-bottom: 0.25rem;
+    }
+    .dashboard-welcome-text p {
+        margin-bottom: 0;
+    }
 
-    .appointments-summary { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); }
-    .appointments-summary h2 { margin-bottom: 1rem; }
-    .appointment-summary-list { list-style: none; padding: 0; }
+    /* Existing CSS for Quick Links Grid */
+    .quick-links-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Responsive grid for quick links */
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    /* NEW CSS for Key Metrics/Stats Grid */
+    .dashboard-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); /* Responsive grid for stat cards */
+        gap: 1.5rem;
+        margin-top: 1.5rem; /* Space from welcome section */
+        margin-bottom: 2rem; /* Space before quick links */
+    }
+
+    /* NEW CSS for individual Stat Cards */
+    .stat-card {
+        background-color: var(--card-bg-color, #fff); /* Uses existing card background or default */
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        padding: 1rem 1.25rem;
+        text-align: center;
+        box-shadow: var(--shadow-sm); /* Uses existing shadow if available */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        transition: transform 0.2s ease-in-out; /* Subtle hover effect */
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px); /* Lifts the card slightly on hover */
+    }
+
+    /* Override default anchor styles for stat cards */
+    a.stat-card {
+        text-decoration: none;
+        color: inherit;
+        display: flex;
+        height: 100%;
+    }
+    a.stat-card:hover {
+        text-decoration: none;
+        color: inherit;
+        border-color: var(--primary-color);
+    }
+
+    .stat-card .stat-value {
+        font-size: 2.25rem; /* Larger font for impact */
+        font-weight: 700;
+        color: var(--primary-color); /* Uses primary brand color */
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-card .stat-label {
+        font-size: 0.9rem;
+        color: var(--text-muted); /* Muted text for labels */
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 500;
+    }
+
+    /* Existing CSS for Appointments Summary */
+    .appointments-summary {
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border-color);
+    }
+    .appointments-summary h2 {
+        margin-bottom: 1rem;
+    }
+    .appointment-summary-list {
+        list-style: none;
+        padding: 0;
+    }
     .appointment-summary-item {
-        background-color: #fff; border: 1px solid var(--border-color);
-        border-left: 4px solid var(--primary-color); border-radius: var(--border-radius);
-        margin-bottom: 0.75rem; padding: 0.75rem 1rem; font-size: 0.9rem;
-        display: flex; align-items: center; gap: 1rem; flex-wrap: nowrap;
+        background-color: #fff;
+        border: 1px solid var(--border-color);
+        border-left: 4px solid var(--primary-color);
+        border-radius: var(--border-radius);
+        margin-bottom: 0.75rem;
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: nowrap;
     }
     .appointment-dog-pic {
-        width: 40px; height: 40px; border-radius: 50%; overflow: hidden;
-        background-color: var(--secondary-light); border: 1px solid var(--border-color);
-        flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        overflow: hidden;
+        background-color: var(--secondary-light);
+        border: 1px solid var(--border-color);
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
-    .appointment-dog-pic img { width: 100%; height: 100%; object-fit: cover; }
-    .appointment-dog-pic .default-dog-pic-svg { width: 24px; height: 24px; color: var(--secondary-color); }
-     .appointment-summary-item > .appointment-details-summary { flex-grow: 1; min-width: 0; }
-    .appointment-summary-item strong { font-weight: 600; }
-    .appointment-summary-item .date-time { font-weight: 500; color: var(--primary-color); }
+    .appointment-dog-pic img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .appointment-dog-pic .default-dog-pic-svg {
+        width: 24px;
+        height: 24px;
+        color: var(--secondary-color);
+    }
+    .appointment-summary-item > .appointment-details-summary {
+        flex-grow: 1;
+        min-width: 0;
+    }
+    .appointment-summary-item strong {
+        font-weight: 600;
+    }
+    .appointment-summary-item .date-time {
+        font-weight: 500;
+        color: var(--primary-color);
+    }
     .appointment-groomer-info {
         font-size: 0.85em;
         color: var(--secondary-dark);
         margin-top: 0.2rem;
-        display: block; 
+        display: block;
     }
-    .no-upcoming-appointments { color: var(--text-muted); font-style: italic; }
-    .status-badge { display: inline-block; padding: 0.15em 0.5em; font-size: 0.75em; font-weight: 600; line-height: 1; text-align: center; white-space: nowrap; vertical-align: baseline; border-radius: 0.25rem; margin-left: 0.5em; color: #fff; flex-shrink: 0; }
-    .status-Scheduled { background-color: var(--primary-color); } .status-Completed { background-color: var(--success-color); } .status-Cancelled { background-color: var(--secondary-color); } .status-No-Show { background-color: var(--danger-color); }
+    .no-upcoming-appointments {
+        color: var(--text-muted);
+        font-style: italic;
+    }
+    .status-badge {
+        display: inline-block;
+        padding: 0.15em 0.5em;
+        font-size: 0.75em;
+        font-weight: 600;
+        line-height: 1;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;
+        border-radius: 0.25rem;
+        margin-left: 0.5em;
+        color: #fff;
+        flex-shrink: 0;
+    }
+    .status-Scheduled {
+        background-color: var(--primary-color);
+    }
+    .status-Completed {
+        background-color: var(--success-color);
+    }
+    .status-Cancelled {
+        background-color: var(--secondary-color);
+    }
+    .status-No-Show {
+        background-color: var(--danger-color);
+    }
 </style>
 {% endblock %}
 
@@ -71,16 +225,49 @@
     </div>
     <p>Select an option below or use the navigation bar to get started.</p>
 
-    <div class="quick-links-grid">
-        <a href="{{ url_for('appointments.calendar_view') }}" class="quick-link-card blue"><h3>📅 View Calendar</h3><p>Check and manage upcoming appointments.</p></a>
-        <a href="{{ url_for('owners.directory') }}" class="quick-link-card green"><h3>📂 Directory</h3><p>Manage client and pet profiles.</p></a>
-        <a href="{{ url_for('appointments.checkout') }}" class="quick-link-card yellow"><h3>🛒 Checkout</h3><p>Process appointments and payments.</p></a>
-        <a href="{{ url_for('management.view_logs') }}" class="quick-link-card gray"><h3>📜 Activity Log</h3><p>Review recent actions in the app.</p></a>
+    {# New Section: Key Metrics/Quick Stats for a quick overview #}
+    <div class="dashboard-stats-grid">
+        <a href="{{ url_for('appointments.calendar_view') }}" class="stat-card">
+            <div class="stat-value">{{ appointments_today }}</div>
+            <div class="stat-label">Appointments Today</div>
+        </a>
+        <a href="{{ url_for('appointments.checkout_start') }}" class="stat-card">
+            <div class="stat-value">{{ pending_checkouts }}</div>
+            <div class="stat-label">Pending Checkouts</div>
+        </a>
+        <a href="{{ url_for('owners.directory') }}" class="stat-card">
+            <div class="stat-value">{{ new_clients_week }}</div>
+            <div class="stat-label">New Clients (Week)</div>
+        </a>
         {% if g.user.is_admin %}
-        <a href="{{ url_for('management.management') }}" class="quick-link-card red"><h3>⚙️ Management</h3><p>Manage users, services, and reports.</p></a>
+        <a href="{{ url_for('management.view_sales_reports') }}" class="stat-card">
+            <div class="stat-value">${{ '{:,.2f}'.format(revenue_today) }}</div>
+            <div class="stat-label">Revenue Today</div>
+        </a>
+        {% else %}
+        <div class="stat-card">
+            <div class="stat-value">${{ '{:,.2f}'.format(revenue_today) }}</div>
+            <div class="stat-label">Revenue Today</div>
+        </div>
         {% endif %}
     </div>
 
+    {# Enhanced Quick Links Grid with additional common actions #}
+    <div class="quick-links-grid">
+        <a href="{{ url_for('appointments.calendar_view') }}" class="quick-link-card blue"><h3>📅 View Calendar</h3><p>Check and manage upcoming appointments.</p></a>
+        <a href="{{ url_for('owners.directory') }}" class="quick-link-card green"><h3>📂 Directory</h3><p>Manage client and pet profiles.</p></a>
+        <a href="{{ url_for('appointments.checkout_start') }}" class="quick-link-card yellow"><h3>🛒 Checkout</h3><p>Process appointments and payments.</p></a>
+        {% if g.user.is_admin %}
+        <a href="{{ url_for('management.management') }}" class="quick-link-card red"><h3>⚙️ Management</h3><p>Manage users, services, and reports.</p></a>
+        <a href="{{ url_for('management.pending_appointments') }}" class="quick-link-card pink"><h3>⏳ Pending</h3><p>View and manage pending appointment requests.</p></a>
+        {% endif %}
+        {# Added new quick action links for common tasks #}
+        <a href="{{ url_for('appointments.add_appointment') }}" class="quick-link-card purple"><h3>➕ Schedule New</h3><p>Quickly book a new appointment.</p></a>
+        <a href="{{ url_for('owners.add_owner') }}" class="quick-link-card orange"><h3>👤 Add New Client</h3><p>Register a new client and their pet.</p></a>
+        <a href="{{ url_for('appointments.receipts_management') }}" class="quick-link-card teal"><h3>🧾 Receipts</h3><p>View, search, and manage receipts.</p></a>
+    </div>
+
+    {# Existing Appointments Summary section, remains largely the same #}
     <div class="appointments-summary">
         <h2>Upcoming Appointments (Next 5 Scheduled)</h2>
         {% if upcoming_appointments %}
@@ -106,17 +293,28 @@
                             <span class="appointment-groomer-info">Groomer: {{ appt.groomer.username }}</span>
                         {% endif %}
                         {% if appt.details_needed %}
-                            <span class="status-badge" style="background-color: #dc3545; margin-left: 0.5em;">Additional Details Needed</span>
+                            <span class="status-badge" style="background-color: #dc3545; margin-left: 0.5em;">Needs Review</span>
                         {% endif %}
                     </div>
                     <span class="status-badge status-{{ appt.status }}">{{ appt.status }}</span>
+                    {% if appt.status == 'Scheduled' %}
+                        <a href="{{ url_for('appointments.checkout_start', appointment_id=appt.id) }}" class="button button-primary" style="margin-left:1em;">Checkout</a>
+                        <a href="{{ url_for('appointments.edit_appointment', appointment_id=appt.id) }}" class="button button-secondary" style="margin-left: 0.5em;">Edit</a>
+                        <a href="{{ url_for('appointments.calendar_view') }}" class="button button-danger" style="margin-left: 0.5em;">Delete</a>
+                    {% endif %}
                 </li>
                 {% endfor %}
             </ul>
             <p><a href="{{ url_for('appointments.calendar_view') }}">View Full Calendar &raquo;</a></p>
         {% else %}
-            <p class="no-upcoming-appointments">No upcoming appointments scheduled in the app.</p>
-            <p><a href="{{ url_for('appointments.add_appointment') }}" class="button button-primary" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;">Schedule an Appointment</a></p>
+            <div class="empty-state-card" style="text-align: center; padding: 3rem 1rem; border: 2px dashed var(--border-color); border-radius: var(--border-radius); background-color: var(--secondary-light); margin-top: 1rem;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">📅</div>
+                <h3 style="margin-bottom: 0.5rem; color: var(--text-dark);">No Upcoming Appointments</h3>
+                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Your schedule is clear. Ready to book a new grooming session?</p>
+                <a href="{{ url_for('appointments.add_appointment') }}" class="button button-primary">
+                    Schedule an Appointment
+                </a>
+            </div>
         {% endif %}
     </div>
 
