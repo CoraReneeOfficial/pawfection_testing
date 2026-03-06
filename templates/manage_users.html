@@ -69,10 +69,18 @@
                             {% else %}
                                 <span class="status-no">No 🚫</span>
                             {% endif %}
+
+                            {% if user_account.employment_type %}
+                                <span style="display: block; font-size: 0.8em; color: var(--text-muted);">{{ user_account.employment_type|upper }}</span>
+                            {% endif %}
                         </td>
                         <td>{{ user_account.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                         <td class="user-actions">
                             <a href="{{ url_for('management.edit_user', user_id=user_account.id) }}" class="button">Edit</a>
+
+                            {% if user_account.employment_type %}
+                                <button type="button" class="button button-primary" style="margin-left: 0.5rem;" onclick="openTaxReportModal({{ user_account.id }}, '{{ user_account.username|escape }}')">Tax Report</button>
+                            {% endif %}
                             {% if user_account.id != g.user.id %}
                                 {% set is_last_admin = False %}
                                 {% if user_account.is_admin %}
@@ -114,4 +122,56 @@
          <a href="{{ url_for('management.management') }}" class="button button-secondary">Back to Management</a>
     </div>
 </div>
+
+<!-- Tax Report Modal -->
+<div id="taxReportModal" class="modal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.4);">
+    <div class="modal-content" style="background-color:#fefefe; margin:15% auto; padding:20px; border:1px solid #888; width:80%; max-width:500px; border-radius:8px;">
+        <span class="close" onclick="closeTaxReportModal()" style="color:#aaa; float:right; font-size:28px; font-weight:bold; cursor:pointer;">&times;</span>
+        <h2 id="taxReportModalTitle">Generate Tax/Earnings Report</h2>
+        <form id="taxReportForm" method="GET" action="">
+            <div class="form-group" style="margin-top: 15px;">
+                <label for="report_year">Select Year</label>
+                <select id="report_year" name="year" class="form-select" required style="width: 100%; padding: 0.5rem; margin-top: 0.5rem;">
+                    <!-- Options populated by JS -->
+                </select>
+            </div>
+            <div class="form-actions" style="margin-top: 20px; text-align: right;">
+                <button type="button" class="button button-secondary" onclick="closeTaxReportModal()">Cancel</button>
+                <button type="submit" class="button button-primary">Generate Report</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openTaxReportModal(userId, username) {
+        document.getElementById('taxReportModalTitle').innerText = 'Generate Report: ' + username;
+        var form = document.getElementById('taxReportForm');
+        form.action = '/manage/users/' + userId + '/tax_report';
+
+        var yearSelect = document.getElementById('report_year');
+        yearSelect.innerHTML = '';
+        var currentYear = new Date().getFullYear();
+        for (var i = currentYear; i >= currentYear - 5; i--) {
+            var option = document.createElement('option');
+            option.value = i;
+            option.text = i;
+            yearSelect.appendChild(option);
+        }
+
+        document.getElementById('taxReportModal').style.display = 'block';
+    }
+
+    function closeTaxReportModal() {
+        document.getElementById('taxReportModal').style.display = 'none';
+    }
+
+    // Close modal if user clicks outside of it
+    window.onclick = function(event) {
+        var modal = document.getElementById('taxReportModal');
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+</script>
 {% endblock %}

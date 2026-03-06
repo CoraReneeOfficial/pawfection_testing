@@ -44,6 +44,7 @@ google-auth-httplib2
 pandas
 xlsxwriter
 fpdf2
+pytz
 google-genai
 markdown
 ollama
