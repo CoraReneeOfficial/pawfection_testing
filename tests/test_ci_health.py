@@ -61,6 +61,7 @@ try:
     import googleapiclient
     import google_auth_oauthlib
     import google.auth
+    import google.genai
 except ImportError:
     sys.modules['google.oauth2'] = MagicMock()
     sys.modules['google.oauth2.credentials'] = MagicMock()
@@ -72,6 +73,7 @@ except ImportError:
     sys.modules['google.auth'] = MagicMock()
     sys.modules['google.auth.transport'] = MagicMock()
     sys.modules['google.auth.transport.requests'] = MagicMock()
+    sys.modules['google.genai'] = MagicMock()
 
 try:
     import authlib
@@ -87,6 +89,8 @@ except ImportError:
     # Fix for SQLAlchemy expecting an exception class
     class MockError(Exception): pass
     sys.modules['psycopg2'].Error = MockError
+    # Also mock psycopg2.binary as it is sometimes expected
+    sys.modules['psycopg2.binary'] = MagicMock()
 
 try:
     import pandas
@@ -108,23 +112,19 @@ try:
 except ImportError:
     sys.modules['psutil'] = MagicMock()
 
-# Mock other optional dependencies
-sys.modules['fpdf'] = MagicMock()
-sys.modules['pandas'] = MagicMock()
-sys.modules['xlsxwriter'] = MagicMock()
-sys.modules['psycopg2'] = MagicMock()
+try:
+    import ollama
+except ImportError:
+    sys.modules['ollama'] = MagicMock()
+
+try:
+    import markdown
+except ImportError:
+    sys.modules['markdown'] = MagicMock()
 
 # Ensure DATABASE_URL doesn't trigger postgres connection during create_app
 if 'DATABASE_URL' in os.environ:
     del os.environ['DATABASE_URL']
-
-# Additional mocks needed for CI environment
-sys.modules['fpdf'] = MagicMock()
-sys.modules['pandas'] = MagicMock()
-sys.modules['xlsxwriter'] = MagicMock()
-sys.modules['psycopg2'] = MagicMock()
-sys.modules['psycopg2.binary'] = MagicMock()
-sys.modules['psutil'] = MagicMock()
 
 # Unset DATABASE_URL to avoid connecting to production DB during import
 # Save it to restore later if needed (though os.environ changes are process-local)
