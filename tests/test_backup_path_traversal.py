@@ -40,19 +40,17 @@ sys.modules['flask_mail'] = MagicMock()
 from app import create_app, db
 from models import User
 
-class TestSuperadminDBSecurity(unittest.TestCase):
+class TestBackupPathTraversal(unittest.TestCase):
     def setUp(self):
         self.app = create_app()
         self.app.config['TESTING'] = True
         self.app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
-        self.app.config['WTF_CSRF_ENABLED'] = False # Disable CSRF for testing
+        self.app.config['WTF_CSRF_ENABLED'] = False
         self.client = self.app.test_client()
 
         with self.app.app_context():
             db.create_all()
-            # Check if user already exists (create_app might create tables but not data)
             if not User.query.filter_by(username='admin').first():
-                # Create superadmin directly in DB
                 user = User(username='admin', role='superadmin', is_admin=True)
                 user.password_hash = b'$2b$12$hashedpassword'
                 db.session.add(user)
@@ -65,7 +63,6 @@ class TestSuperadminDBSecurity(unittest.TestCase):
 
     def login(self):
         with self.client.session_transaction() as sess:
-            # Bypass login form and set session directly
             with self.app.app_context():
                 user = User.query.filter_by(username='admin').first()
                 if user:
@@ -73,54 +70,35 @@ class TestSuperadminDBSecurity(unittest.TestCase):
                     sess['is_superadmin'] = True
                     sess['_fresh'] = True
 
-    @patch('app.csrf.protect')
-    def test_select_query_allowed(self, mock_csrf):
+    def test_download_path_traversal_simple(self):
         self.login()
-        response = self.client.post('/superadmin/database', data={
-            'action': 'run_query',
-            'query': 'SELECT * FROM user'
-        }, follow_redirects=True)
-        # Check for success message or result table
-        self.assertIn(b'Query executed successfully', response.data)
+        # Attempt path traversal with ..
+        response = self.client.get('/superadmin/backup/download/../../app.py')
+        self.assertEqual(response.status_code, 404)
 
-    @patch('app.csrf.protect')
-    def test_drop_table_blocked(self, mock_csrf):
+    def test_download_path_traversal_complex(self):
         self.login()
-        response = self.client.post('/superadmin/database', data={
-            'action': 'run_query',
-            'query': 'DROP TABLE user'
-        }, follow_redirects=True)
-        # Should fail with security message
-        self.assertIn(b'Only SELECT queries are allowed', response.data)
+        # Attempt path traversal with malicious prefix but containing ..
+        response = self.client.get('/superadmin/backup/download/db_backup_../../../etc/passwd.sqlite')
+        self.assertEqual(response.status_code, 404)
 
-    @patch('app.csrf.protect')
-    def test_update_blocked(self, mock_csrf):
+    def test_delete_path_traversal(self):
         self.login()
-        response = self.client.post('/superadmin/database', data={
-            'action': 'run_query',
-            'query': 'UPDATE user SET username="hacked"'
-        }, follow_redirects=True)
-        self.assertIn(b'Only SELECT queries are allowed', response.data)
+        # Attempt path traversal on delete route
+        response = self.client.post('/superadmin/backup/delete/../../app.py')
+        self.assertEqual(response.status_code, 404)
 
-    @patch('app.csrf.protect')
-    def test_semicolon_blocked(self, mock_csrf):
+    @patch('flask.send_from_directory')
+    @patch('os.path.exists')
+    def test_download_legitimate_file(self, mock_exists, mock_send):
         self.login()
-        response = self.client.post('/superadmin/database', data={
-            'action': 'run_query',
-            'query': 'SELECT * FROM user; DROP TABLE user'
-        }, follow_redirects=True)
-        # Check for specific semicolon error or generic security error
-        self.assertTrue(b'Multiple statements (semicolons) are not allowed' in response.data or b'Only SELECT queries are allowed' in response.data)
+        mock_exists.return_value = True
 
-    @patch('app.csrf.protect')
-    def test_sql_comment_blocked(self, mock_csrf):
-        self.login()
-        response = self.client.post('/superadmin/database', data={
-            'action': 'run_query',
-            'query': '-- SELECT\nDROP TABLE user'
-        }, follow_redirects=True)
-        # Comments are blocked
-        self.assertTrue(b'SQL comments are not allowed' in response.data or b'Only SELECT queries are allowed' in response.data)
+        filename = "db_backup_20230101_120000.sqlite"
+        mock_send.return_value = "file content"
+        response = self.client.get(f'/superadmin/backup/download/{filename}')
+        self.assertEqual(response.status_code, 200)
+        mock_send.assert_called_once()
 
 if __name__ == '__main__':
     unittest.main()

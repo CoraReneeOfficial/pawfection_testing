@@ -9,6 +9,7 @@ import re
 from sqlalchemy import text, inspect
 from sqlalchemy.orm import joinedload
 from flask import Flask, g, session, redirect, url_for, flash, send_from_directory, current_app
+from werkzeug.utils import secure_filename
 from flask.wrappers import Request
 from extensions import db, csrf
 from models import User, Store # Only import models directly needed in app.py's top level
@@ -1726,6 +1727,9 @@ def create_app():
             flash('Access denied.', 'danger')
             return redirect(url_for('superadmin_login'))
             
+        # Sanitize filename
+        filename = secure_filename(filename)
+
         # Validate filename to prevent path traversal
         if '..' in filename or filename.startswith('/'):
             abort(404)
@@ -1762,6 +1766,9 @@ def create_app():
             flash('Access denied.', 'danger')
             return redirect(url_for('superadmin_login'))
             
+        # Sanitize filename
+        filename = secure_filename(filename)
+
         # Validate filename to prevent path traversal
         if '..' in filename or filename.startswith('/'):
             abort(404)
