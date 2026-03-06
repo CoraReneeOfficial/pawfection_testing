@@ -689,8 +689,20 @@
             .bio-container { padding: 3rem 2rem; }
         }
 
+        /* Mobile visibility utilities */
+        .mobile-only { display: none !important; }
+        .desktop-only { display: flex !important; }
+
         @media (max-width: 768px) {
-            .nav-links .btn-outline { display: none; } /* Hide secondary button on mobile header to save space */
+            .desktop-only { display: none !important; }
+            .mobile-only { display: block !important; }
+            .nav-menu-container { position: relative; }
+            .nav-menu-button { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 50px; border: none; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+            .nav-dropdown-menu { position: absolute; right: 0; background: white; box-shadow: var(--shadow-md); z-index: 110; display: flex; flex-direction: column; overflow: hidden; }
+            .nav-dropdown-item { text-decoration: none; color: var(--text-dark); transition: background-color 0.2s; }
+            .nav-dropdown-item:hover { background-color: var(--primary-lighter); }
+            [x-cloak] { display: none !important; }
+
             .hero { padding: 8rem 0 5rem; }
             .hero h1 { font-size: 2.25rem; }
             .hero p { font-size: 1.1rem; }
@@ -705,14 +717,41 @@
 </head>
 <body>
     <!-- Header -->
-    <header class="header" id="header">
+    <header class="header" id="header" x-data="{ mobileMenuOpen: false }">
         <div class="container nav-container">
             <a href="/" class="logo-link">
                 <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pawfection Grooming Solutions" class="logo-img">
             </a>
-            <div class="nav-links">
+
+            <!-- Desktop Nav Links -->
+            <div class="nav-links desktop-only">
                 <a href="{{ url_for('auth.login') }}" class="btn btn-outline">Log In</a>
-                <a href="{{ url_for('store_register') }}" class="btn btn-primary">Try for 15 days for free</a>
+                <a href="{{ url_for('store_register') }}" class="btn btn-primary">Sign Up</a>
+            </div>
+
+            <!-- Mobile Menu Button -->
+            <div class="mobile-only nav-menu-container" @click.outside="mobileMenuOpen = false">
+                <button @click="mobileMenuOpen = !mobileMenuOpen" class="nav-menu-button" style="background-color: var(--primary-color); color: white; border: 1px solid var(--border-color); padding: 0.5rem; border-radius: var(--border-radius);" aria-label="Menu" :aria-expanded="mobileMenuOpen.toString()">
+                    <span class="nav-menu-text" style="margin-right: 0.25rem;">Menu</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 20px; height: 20px;" x-show="!mobileMenuOpen">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 20px; height: 20px; display: none;" x-show="mobileMenuOpen" x-cloak>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+                <div class="nav-dropdown-menu" x-show="mobileMenuOpen" x-cloak
+                     style="top: calc(100% + 1rem); right: 0; min-width: 150px; text-align: center; border: 1px solid var(--border-color); border-radius: var(--border-radius-md); position: absolute; background-color: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);"
+                     x-transition:enter="transition ease-out duration-100 transform"
+                     x-transition:enter-start="opacity-0 scale-95"
+                     x-transition:enter-end="opacity-100 scale-100"
+                     x-transition:leave="transition ease-in duration-75 transform"
+                     x-transition:leave-start="opacity-100 scale-100"
+                     x-transition:leave-end="opacity-0 scale-95">
+                    <a href="{{ url_for('auth.login') }}" class="nav-dropdown-item" style="padding: 1rem;">Log In</a>
+                    <div class="nav-dropdown-divider" style="margin: 0;"></div>
+                    <a href="{{ url_for('store_register') }}" class="nav-dropdown-item" style="padding: 1rem; color: var(--primary-color); font-weight: 600;">Sign Up</a>
+                </div>
             </div>
         </div>
     </header>
@@ -933,6 +972,7 @@
         </div>
     </footer>
 
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <!-- Simple Scroll Animation Script -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
