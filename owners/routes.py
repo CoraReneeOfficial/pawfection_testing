@@ -206,9 +206,7 @@ def delete_owner(owner_id):
         owner_name = owner.name
 
         # 1. Unlink AppointmentRequests associated with this owner
-        requests = AppointmentRequest.query.filter_by(owner_id=owner.id).all()
-        for req in requests:
-            req.owner_id = None
+        AppointmentRequest.query.filter_by(owner_id=owner.id).update({'owner_id': None}, synchronize_session=False)
 
         # 2. Delete Receipts associated with appointments of this owner's dogs
         # Since Receipt.appointment_id is nullable=False, we must delete them before deleting appointments
