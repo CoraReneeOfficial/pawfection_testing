@@ -33,6 +33,7 @@ import migrate_add_owner_notification_fields
 import migrate_add_deposit_amount
 import migrate_add_google_token_json_to_user
 import migrate_add_notification_index
+import migrate_phase2_settings
 # Removed import for datetime as it's not directly used at top level of app.py anymore
 # Removed log_activity definition as it's now in utils.py
 
@@ -281,6 +282,17 @@ def create_app():
                 migrate_add_notification_index.migrate_postgres(app.config['SQLALCHEMY_DATABASE_URI'])
         except Exception as e:
             app.logger.error(f"Failed to run notification index migration: {e}")
+
+        # Check for and apply Phase 2 Settings migrations
+        try:
+            if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
+                app.logger.info("Checking for Phase 2 Settings updates (SQLite)...")
+                migrate_phase2_settings.migrate_sqlite(DATABASE_PATH)
+            else:
+                app.logger.info("Checking for Phase 2 Settings updates (Postgres)...")
+                migrate_phase2_settings.migrate_postgres(app.config['SQLALCHEMY_DATABASE_URI'])
+        except Exception as e:
+            app.logger.error(f"Failed to run Phase 2 Settings migration: {e}")
 
     # Register blueprints for modular routes
     app.register_blueprint(auth_bp)
