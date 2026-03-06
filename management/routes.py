@@ -215,6 +215,82 @@ def get_date_range(range_type, start_date_str=None, end_date_str=None, store_tim
     return None, None, period_display
 
 # --- Management Routes ---
+
+@management_bp.route('/manage/financials')
+@admin_required
+def financials():
+    """
+    Displays the Financials page, showing revenue split between the store and groomers
+    based on their commission percentage.
+    """
+    store_id = session.get('store_id')
+    store = Store.query.get(store_id)
+
+    # Optional date filtering
+    date_range_type = request.args.get('date_range_type', 'this_month')
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+
+    store_timezone = store.timezone if store and store.timezone else 'UTC'
+    start_utc, end_utc, period_display = get_date_range(date_range_type, start_date_str, end_date_str, store_timezone)
+
+    if not start_utc or not end_utc:
+        # Fallback to this month if error
+        start_utc, end_utc, period_display = get_date_range('this_month', None, None, store_timezone)
+
+    # Get all completed appointments for the period
+    appointments = Appointment.query.filter(
+        Appointment.store_id == store_id,
+        Appointment.status == 'Completed',
+        Appointment.appointment_datetime >= start_utc,
+        Appointment.appointment_datetime <= end_utc
+    ).options(db.joinedload(Appointment.groomer)).all()
+
+    total_revenue = Decimal('0.0')
+    store_cut = Decimal('0.0')
+    groomer_payouts = {}
+
+    for appt in appointments:
+        amount = Decimal(str(appt.checkout_total_amount)) if appt.checkout_total_amount is not None else Decimal('0.0')
+        total_revenue += amount
+
+        # Calculate groomer commission vs store cut
+        if appt.groomer_id and appt.groomer:
+            groomer = appt.groomer
+            commission_pct = Decimal(str(groomer.commission_percentage)) if groomer.commission_percentage is not None else Decimal('100.0')
+
+            # Payout to groomer
+            groomer_cut = amount * (commission_pct / Decimal('100.0'))
+            store_retained = amount - groomer_cut
+
+            store_cut += store_retained
+
+            if groomer.id not in groomer_payouts:
+                groomer_payouts[groomer.id] = {
+                    'name': groomer.username,
+                    'commission_pct': float(commission_pct),
+                    'total_sales': Decimal('0.0'),
+                    'payout': Decimal('0.0')
+                }
+
+            groomer_payouts[groomer.id]['total_sales'] += amount
+            groomer_payouts[groomer.id]['payout'] += groomer_cut
+        else:
+            # Unassigned appointments go 100% to store
+            store_cut += amount
+
+    # Convert Decimals to floats for template rendering/json serialization if needed
+    for gid in groomer_payouts:
+        groomer_payouts[gid]['total_sales'] = float(groomer_payouts[gid]['total_sales'])
+        groomer_payouts[gid]['payout'] = float(groomer_payouts[gid]['payout'])
+
+    return render_template('financials.html',
+                          total_revenue=float(total_revenue),
+                          store_cut=float(store_cut),
+                          groomer_payouts=groomer_payouts,
+                          period_display=period_display,
+                          date_range_type=date_range_type)
+
 @management_bp.route('/pending_appointments')
 @admin_required
 def pending_appointments():
@@ -492,6 +568,13 @@ def add_user():
         is_admin = 'is_admin' in request.form
         is_groomer = 'is_groomer' in request.form 
         
+        commission_percentage = 100.0
+        if is_groomer:
+            try:
+                commission_percentage = float(request.form.get('commission_percentage', 100.0))
+            except (ValueError, TypeError):
+                commission_percentage = 100.0
+
         errors = {}
         if not username: errors['username'] = "Username required."
         if not password: errors['password'] = "Password required."
@@ -511,7 +594,7 @@ def add_user():
             form_data['is_groomer'] = is_groomer
             return render_template('user_form.html', mode='add', user_data=form_data), 400
         
-        new_user = User(username=username, is_admin=is_admin, is_groomer=is_groomer, store_id=store_id, security_question=security_question, email=email)  # Assign store_id and email
+        new_user = User(username=username, is_admin=is_admin, is_groomer=is_groomer, store_id=store_id, security_question=security_question, email=email, commission_percentage=commission_percentage)  # Assign store_id, email, commission
         new_user.set_password(password)
         new_user.set_security_answer(security_answer)
         
@@ -564,6 +647,13 @@ def edit_user(user_id):
         is_admin = 'is_admin' in request.form
         is_groomer = 'is_groomer' in request.form
         
+        commission_percentage = user_to_edit.commission_percentage
+        if is_groomer:
+            try:
+                commission_percentage = float(request.form.get('commission_percentage', user_to_edit.commission_percentage))
+            except (ValueError, TypeError):
+                pass
+
         errors = {}
         if not new_username: errors['username'] = "Username required."
         
@@ -598,6 +688,8 @@ def edit_user(user_id):
         if password_changed: user_to_edit.set_password(password)
         user_to_edit.is_admin = is_admin
         user_to_edit.is_groomer = is_groomer
+        if is_groomer:
+            user_to_edit.commission_percentage = commission_percentage
         
         # Update security question if provided
         if security_question:
@@ -1291,6 +1383,12 @@ def edit_store():
         store.phone = sanitize_text_input(request.form.get('phone', store.phone))
         store.email = email
         store.timezone = request.form.get('timezone', store.timezone)
+        store.salon_style = request.form.get('salon_style', store.salon_style)
+        try:
+            store.daily_capacity = int(request.form.get('daily_capacity', store.daily_capacity))
+        except (ValueError, TypeError):
+            errors.append('Daily capacity must be a valid number.')
+
         store.subscription_status = request.form.get('subscription_status', store.subscription_status)
         store.status = request.form.get('status', store.status)
         store.business_hours = sanitize_text_input(request.form.get('business_hours', store.business_hours))

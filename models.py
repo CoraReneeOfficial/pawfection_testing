@@ -78,6 +78,10 @@ class Store(SecurityMixin, db.Model):
     is_archived = db.Column(db.Boolean, default=False, nullable=False)  # Soft delete/archive flag
     tax_enabled = db.Column(db.Boolean, default=True, nullable=False)  # Enable/disable taxes for invoices/receipts
 
+    # --- Phase 3: Financials & Capacity ---
+    daily_capacity = db.Column(db.Integer, default=20, nullable=True) # Total dogs per day
+    salon_style = db.Column(db.String(50), default='appointment', nullable=True) # 'appointment' or 'kennel'
+
     # --- Stripe integration fields ---
     stripe_customer_id = db.Column(db.String(255), nullable=True)
     stripe_subscription_id = db.Column(db.String(255), nullable=True)
@@ -111,6 +115,9 @@ class User(SecurityMixin, db.Model):
 
     # Google OAuth token for system/superadmin accounts to send emails
     google_token_json = db.Column(db.Text, nullable=True)
+
+    # --- Phase 3: Financials & Commission ---
+    commission_percentage = db.Column(db.Float, default=100.0, nullable=True) # What % the groomer keeps
 
     # Stripe subscription fields
     stripe_customer_id = db.Column(db.String(255), nullable=True)

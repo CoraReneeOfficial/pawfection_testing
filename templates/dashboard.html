@@ -456,20 +456,27 @@
                 <!-- Daily Timeline -->
                 <div class="tech-card">
                     <div class="tech-card-header">
-                        <h3 class="tech-card-title">📅 My Timeline</h3>
+                        <h3 class="tech-card-title">{% if salon_style == 'kennel' %}🐕 Kennel Roster{% else %}📅 My Timeline{% endif %}</h3>
                     </div>
+                    {% if salon_style == 'kennel' %}
+                        <p style="font-size: 0.85rem; color: var(--text-light); margin-top: -0.5rem; margin-bottom: 1rem;">Dogs are kept in kennels and worked on sequentially.</p>
+                    {% endif %}
                     <div class="timeline">
                         {% for appt in my_appointments %}
                             <div class="timeline-item">
                                 {% set local_time = appt.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(STORE_TIMEZONE) if STORE_TIMEZONE else appt.appointment_datetime %}
-                                <div class="timeline-time">{{ local_time.strftime('%I:%M %p') }}</div>
+                                {% if salon_style == 'appointment' %}
+                                    <div class="timeline-time">{{ local_time.strftime('%I:%M %p') }}</div>
+                                {% else %}
+                                    <div class="timeline-time">Drop-off: {{ local_time.strftime('%I:%M %p') }}</div>
+                                {% endif %}
                                 <div class="timeline-content">
                                     <strong>{{ appt.dog.name }}</strong> ({{ appt.dog.owner.name }})<br>
                                     <span style="font-size: 0.85rem; color: var(--text-light);">{{ appt.status }}</span>
                                 </div>
                             </div>
                         {% else %}
-                            <p style="color: var(--text-light);">Timeline is empty.</p>
+                            <p style="color: var(--text-light);">{% if salon_style == 'kennel' %}Kennel list is empty.{% else %}Timeline is empty.{% endif %}</p>
                         {% endfor %}
                     </div>
                 </div>
@@ -484,9 +491,9 @@
                             <div class="capacity-bar-fill" style="width: {{ capacity_percentage }}%;"></div>
                         </div>
                         <div class="capacity-labels">
-                            <span>0%</span>
-                            <span>{{ appointments_today }} Appointments</span>
-                            <span>100% Full</span>
+                            <span>0</span>
+                            <span>{{ appointments_today }} {% if salon_style == 'kennel' %}Dogs ({{ store_capacity }} Kennels){% else %}Appointments (Goal: {{ store_capacity }}){% endif %}</span>
+                            <span>{{ store_capacity }}</span>
                         </div>
                     </div>
                 </div>
@@ -548,14 +555,13 @@
                         <strong style="font-size: 1.2rem;">{{ my_appointments|length }}</strong>
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem;">
-                        <span style="color: var(--text-light); font-weight: 500;">Est. Earnings</span>
-                        <strong style="font-size: 1.2rem; color: var(--success-color);">--</strong>
+                        <span style="color: var(--text-light); font-weight: 500;">Est. Earnings ({{ g.user.commission_percentage if g.user.commission_percentage is not none else 100.0 }}%)</span>
+                        <strong style="font-size: 1.2rem; color: var(--success-color);">${{ "{:,.2f}".format(my_earnings_today) }}</strong>
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span style="color: var(--text-light); font-weight: 500;">Tips</span>
                         <strong style="font-size: 1.2rem; color: var(--accent-color);">--</strong>
                     </div>
-                    <p style="font-size: 0.75rem; color: var(--text-muted); text-align: center; margin: 0;">(Financial tracking features coming in Phase 3)</p>
                 </div>
             </div>
 
@@ -634,9 +640,9 @@
                         <div class="capacity-bar-fill" style="width: {{ capacity_percentage }}%;"></div>
                     </div>
                     <div class="capacity-labels">
-                        <span>0%</span>
-                        <span>{{ appointments_today }} Appointments</span>
-                        <span>100% Full</span>
+                        <span>0</span>
+                        <span>{{ appointments_today }} {% if salon_style == 'kennel' %}Dogs ({{ store_capacity }} Kennels){% else %}Appointments (Goal: {{ store_capacity }}){% endif %}</span>
+                        <span>{{ store_capacity }}</span>
                     </div>
                 </div>
             </div>
@@ -747,20 +753,27 @@
             <!-- Daily Timeline -->
             <div class="tech-card">
                 <div class="tech-card-header">
-                    <h3 class="tech-card-title">📅 Today's Timeline</h3>
+                    <h3 class="tech-card-title">{% if salon_style == 'kennel' %}🐕 Kennel Roster{% else %}📅 Today's Timeline{% endif %}</h3>
                 </div>
+                {% if salon_style == 'kennel' %}
+                    <p style="font-size: 0.85rem; color: var(--text-light); margin-top: -0.5rem; margin-bottom: 1rem;">Dogs are kept in kennels and worked on sequentially.</p>
+                {% endif %}
                 <div class="timeline">
                     {% for appt in my_appointments %}
                         <div class="timeline-item">
                             {% set local_time = appt.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(STORE_TIMEZONE) if STORE_TIMEZONE else appt.appointment_datetime %}
-                            <div class="timeline-time">{{ local_time.strftime('%I:%M %p') }}</div>
+                            {% if salon_style == 'appointment' %}
+                                <div class="timeline-time">{{ local_time.strftime('%I:%M %p') }}</div>
+                            {% else %}
+                                <div class="timeline-time">Drop-off: {{ local_time.strftime('%I:%M %p') }}</div>
+                            {% endif %}
                             <div class="timeline-content">
                                 <strong>{{ appt.dog.name }}</strong> ({{ appt.dog.owner.name }})<br>
                                 <span style="font-size: 0.85rem; color: var(--text-light);">{{ appt.status }}</span>
                             </div>
                         </div>
                     {% else %}
-                        <p style="color: var(--text-light);">Timeline is empty.</p>
+                        <p style="color: var(--text-light);">{% if salon_style == 'kennel' %}Kennel list is empty.{% else %}Timeline is empty.{% endif %}</p>
                     {% endfor %}
                 </div>
             </div>
@@ -790,14 +803,13 @@
                         <strong style="font-size: 1.2rem;">{{ my_appointments|length }}</strong>
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem;">
-                        <span style="color: var(--text-light); font-weight: 500;">Est. Earnings</span>
-                        <strong style="font-size: 1.2rem; color: var(--success-color);">--</strong>
+                        <span style="color: var(--text-light); font-weight: 500;">Est. Earnings ({{ g.user.commission_percentage if g.user.commission_percentage is not none else 100.0 }}%)</span>
+                        <strong style="font-size: 1.2rem; color: var(--success-color);">${{ "{:,.2f}".format(my_earnings_today) }}</strong>
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span style="color: var(--text-light); font-weight: 500;">Tips</span>
                         <strong style="font-size: 1.2rem; color: var(--accent-color);">--</strong>
                     </div>
-                    <p style="font-size: 0.75rem; color: var(--text-muted); text-align: center; margin: 0;">(Financial tracking features coming in Phase 3)</p>
                 </div>
             </div>
 

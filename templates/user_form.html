@@ -119,6 +119,14 @@
                 A user can be an Administrator, a Groomer, or both. Roles are independent.
              </small>
 
+            <div class="form-group" id="commission_group" {% if not user_data.is_groomer and mode == 'edit' %}style="display: none;"{% endif %}>
+                <label for="commission_percentage">Groomer Commission (%)</label>
+                <input type="number" step="0.1" id="commission_percentage" name="commission_percentage" class="form-input" value="{{ user_data.commission_percentage if user_data.commission_percentage is not none else 100.0 }}" min="0" max="100">
+                <small class="text-muted" style="display: block; margin-top: 0.2rem;">
+                    The percentage of the appointment cost the groomer keeps. The rest goes to the store.
+                </small>
+            </div>
+
             <div class="form-group">
                 <label for="user_picture">Profile Picture</label>
                 <input type="file" id="user_picture" name="user_picture" class="form-input" accept="image/png, image/jpeg, image/gif, image/webp">
@@ -141,4 +149,22 @@
         </form>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const isGroomerCheckbox = document.getElementById('is_groomer');
+        const commissionGroup = document.getElementById('commission_group');
+
+        if (isGroomerCheckbox && commissionGroup) {
+            // Initial state based on checkbox if adding, otherwise server handles initial state
+            {% if mode == 'add' %}
+                commissionGroup.style.display = isGroomerCheckbox.checked ? 'block' : 'none';
+            {% endif %}
+
+            isGroomerCheckbox.addEventListener('change', function() {
+                commissionGroup.style.display = this.checked ? 'block' : 'none';
+            });
+        }
+    });
+</script>
 {% endblock %}

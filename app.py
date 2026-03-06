@@ -33,6 +33,7 @@ import migrate_add_owner_notification_fields
 import migrate_add_deposit_amount
 import migrate_add_google_token_json_to_user
 import migrate_add_notification_index
+import migrate_phase3_settings
 # Removed import for datetime as it's not directly used at top level of app.py anymore
 # Removed log_activity definition as it's now in utils.py
 
@@ -281,6 +282,18 @@ def create_app():
                 migrate_add_notification_index.migrate_postgres(app.config['SQLALCHEMY_DATABASE_URI'])
         except Exception as e:
             app.logger.error(f"Failed to run notification index migration: {e}")
+
+        # Check for and apply missing Phase 3 settings columns
+        try:
+            if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
+                app.logger.info("Checking for Phase 3 schema updates (SQLite)...")
+                migrate_phase3_settings.migrate_sqlite(DATABASE_PATH)
+            else:
+                app.logger.info("Checking for Phase 3 schema updates (Postgres)...")
+                import psycopg2 # Lazy import for postgres connection inside migration script usually, but handled by sqlalchemy
+                migrate_phase3_settings.migrate_postgres(app.config['SQLALCHEMY_DATABASE_URI'])
+        except Exception as e:
+            app.logger.error(f"Failed to run Phase 3 schema migration: {e}")
 
     # Register blueprints for modular routes
     app.register_blueprint(auth_bp)
@@ -640,12 +653,24 @@ def create_app():
             for i in range(6, -1, -1)
         ]
 
-        # Determine capacity mock
-        capacity_percentage = min(100, (appointments_today / 20) * 100) if appointments_today else 0
+        # Determine capacity
+        try:
+            store_capacity = int(store.daily_capacity) if store and store.daily_capacity else 20
+        except (ValueError, TypeError):
+            store_capacity = 20
+
+        try:
+            appointments_today_num = int(appointments_today)
+            capacity_percentage = min(100, (appointments_today_num / store_capacity) * 100) if appointments_today_num else 0
+        except (ValueError, TypeError):
+            capacity_percentage = 0
 
         # Groomer specific data
         my_appointments = []
-        if g.user and not g.user.is_admin:
+        my_earnings_today = 0.0
+
+        # Include my_appointments for ANY groomer (even if they are admin too, for the hybrid view)
+        if g.user and g.user.is_groomer:
              my_appointments = (
                 Appointment.query.options(
                     joinedload(Appointment.dog).joinedload(Dog.owner)
@@ -661,6 +686,36 @@ def create_app():
                 .all()
             )
 
+             # Calculate estimated earnings for the groomer today
+             from decimal import Decimal
+             from models import Service
+
+             # Fetch all completed or scheduled appointments for today for this groomer to calc earnings
+             all_my_todays_appts = Appointment.query.filter(
+                Appointment.store_id == store_id,
+                Appointment.groomer_id == g.user.id,
+                Appointment.appointment_datetime >= today_start,
+                Appointment.appointment_datetime < today_end,
+                Appointment.status.in_(['Scheduled', 'Completed'])
+             ).all()
+
+             all_services = Service.query.filter_by(store_id=store_id).all()
+             service_prices = {s.name: s.base_price for s in all_services}
+
+             commission_pct = g.user.commission_percentage if g.user.commission_percentage is not None else 100.0
+
+             for appt in all_my_todays_appts:
+                 appt_total = 0.0
+                 if appt.checkout_total_amount is not None:
+                     appt_total = float(appt.checkout_total_amount)
+                 elif appt.requested_services_text:
+                     # Estimate based on services
+                     services_list = [s.strip() for s in appt.requested_services_text.split(',')]
+                     for s_name in services_list:
+                         appt_total += service_prices.get(s_name, 0.0)
+
+                 my_earnings_today += appt_total * (commission_pct / 100.0)
+
         return render_template(
             'dashboard.html',
             appointments_today=appointments_today,
@@ -669,8 +724,11 @@ def create_app():
             revenue_today=revenue_today,
             upcoming_appointments=upcoming_appointments,
             my_appointments=my_appointments,
+            my_earnings_today=my_earnings_today,
             revenue_trend=revenue_trend,
             capacity_percentage=capacity_percentage,
+            store_capacity=store_capacity,
+            salon_style=store.salon_style if store else 'appointment',
             STORE_TIMEZONE=STORE_TIMEZONE,
             tz=tz
         )

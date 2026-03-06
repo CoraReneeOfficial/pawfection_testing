@@ -130,6 +130,23 @@
                 {% endfor %}
             </select>
         </div>
+
+        <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: var(--primary-color);">Store Operations</h3>
+
+        <div class="form-group">
+            <label class="form-label" for="salon_style">Salon Style</label>
+            <select class="form-select" id="salon_style" name="salon_style" required>
+                <option value="appointment" {% if store.salon_style == 'appointment' %}selected{% endif %}>Appointment Based (One-on-one)</option>
+                <option value="kennel" {% if store.salon_style == 'kennel' %}selected{% endif %}>Kennel Based (Simultaneous processing)</option>
+            </select>
+            <small style="color: #888;">Changes how your Daily Capacity and Dashboard timeline behave.</small>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="daily_capacity">Daily Capacity</label>
+            <input class="form-input" type="number" id="daily_capacity" name="daily_capacity" value="{{ store.daily_capacity or 20 }}" required min="1">
+            <small style="color: #888;">If 'Kennel Based', this is your kennel count. If 'Appointment Based', this is your target dogs per day.</small>
+        </div>
         <div class="form-group">
             <label class="form-label">Stripe Subscription</label>
             {% if store.stripe_subscription_id %}
