@@ -29,6 +29,7 @@ import stripe
 from flask import request, jsonify, render_template
 from secure_headers import init_secure_headers  # Import secure headers
 import migrate_add_remind_at_to_notification
+import migrate_add_notification_prefs
 import migrate_add_owner_notification_fields
 import migrate_add_deposit_amount
 import migrate_add_google_token_json_to_user
@@ -231,9 +232,11 @@ def create_app():
             if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
                 app.logger.info("Checking for notification schema updates (SQLite)...")
                 migrate_add_remind_at_to_notification.migrate_sqlite(DATABASE_PATH)
+                migrate_add_notification_prefs.migrate_sqlite(DATABASE_PATH)
             else:
                 app.logger.info("Checking for notification schema updates (Postgres)...")
                 migrate_add_remind_at_to_notification.migrate_postgres(app.config['SQLALCHEMY_DATABASE_URI'])
+                migrate_add_notification_prefs.migrate_postgres(app.config['SQLALCHEMY_DATABASE_URI'])
         except Exception as e:
             app.logger.error(f"Failed to run notification migration: {e}")
 
