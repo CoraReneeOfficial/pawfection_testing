@@ -93,6 +93,9 @@ def add_owner():
             phone_carrier=phone_carrier or None,
             text_notifications_enabled=text_notifications_enabled,
             email_notifications_enabled=email_notifications_enabled,
+            notify_appointment_reminders=notify_appointment_reminders,
+            notify_status_updates=notify_status_updates,
+            notify_marketing=notify_marketing,
             created_by_user_id=g.user.id, 
             store_id=g.user.store_id # Assign current user's store_id to the new owner
         )

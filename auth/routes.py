@@ -611,3 +611,59 @@ def google_store_callback():
 
     flash('Google account connected successfully!', 'success')
     return redirect(url_for('management.management'))
+
+
+@auth_bp.route('/superadmin/connect_google')
+def superadmin_connect_google():
+    if not session.get('is_superadmin') or not g.user:
+        flash('Superadmin access required.', 'danger')
+        return redirect(url_for('superadmin_login'))
+
+    redirect_uri = url_for('auth.google_superadmin_callback', _external=True)
+    # Explicitly request refresh token, consent, and gmail send scope
+    return google.authorize_redirect(
+        redirect_uri,
+        access_type='offline',
+        prompt='consent',
+        include_granted_scopes='true',
+        client_kwargs={'scope': 'openid email profile https://www.googleapis.com/auth/gmail.send'}
+    )
+
+@auth_bp.route('/google/superadmin_callback')
+def google_superadmin_callback():
+    if not session.get('is_superadmin') or not g.user:
+        flash('Superadmin access required.', 'danger')
+        return redirect(url_for('superadmin_login'))
+
+    token = google.authorize_access_token()
+    if not token:
+        flash('Failed to connect Google account.', 'danger')
+        return redirect(url_for('superadmin_tools'))
+
+    user = User.query.get(g.user.id)
+    if not user:
+        flash('Superadmin user not found.', 'danger')
+        return redirect(url_for('superadmin_tools'))
+
+    # Extract and save only the required fields
+    token_data = {
+        'token': token.get('access_token') or token.get('token'),
+        'refresh_token': token.get('refresh_token'),
+        'token_uri': token.get('token_uri', 'https://oauth2.googleapis.com/token'),
+        'client_id': token.get('client_id') or os.environ.get('GOOGLE_CLIENT_ID'),
+        'client_secret': token.get('client_secret') or os.environ.get('GOOGLE_CLIENT_SECRET'),
+        'scopes': token.get('scopes') if 'scopes' in token else token.get('scope', '').split()
+    }
+
+    # Check for required fields
+    missing_fields = [k for k in ['token', 'refresh_token', 'token_uri', 'client_id', 'client_secret'] if not token_data.get(k)]
+    if missing_fields:
+        current_app.logger.error(f"[Google OAuth] Missing required fields in token for superadmin: {missing_fields}")
+        flash('Failed to retrieve all required credentials from Google. Please try reconnecting and ensure you grant all requested permissions.', 'danger')
+        return redirect(url_for('superadmin_tools'))
+
+    user.google_token_json = json.dumps(token_data)
+    db.session.commit()
+
+    flash('Google account connected successfully for system emails!', 'success')
+    return redirect(url_for('superadmin_tools'))

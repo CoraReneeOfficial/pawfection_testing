@@ -1,320 +1,963 @@
-{% extends 'base.html' %} {# Inherits from base.html #}
+{% extends 'base.html' %}
 
-{% block title %}Dashboard{% endblock %} {# Sets the page title #}
+{% block title %}Dashboard{% endblock %}
 
 {% block head %}
+<!-- Chart.js for Revenue Chart -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
-    /* Existing CSS for Dashboard Welcome Section */
-    .dashboard-welcome {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-        padding-bottom: 1rem;
-        border-bottom: 1px solid var(--border-color);
-    }
-    .dashboard-user-pic {
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        overflow: hidden;
-        background-color: var(--secondary-light);
-        border: 1px solid var(--border-color);
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .dashboard-user-pic img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-    .dashboard-user-pic .default-user-pic-svg {
-        width: 36px;
-        height: 36px;
-        color: var(--secondary-color);
-    }
-    .dashboard-welcome-text h1 {
-        margin-bottom: 0.25rem;
-    }
-    .dashboard-welcome-text p {
-        margin-bottom: 0;
+    /* Global Dashboard Reset & High-Tech Theme overrides */
+    :root {
+        --dash-bg: #f8fafc;
+        --card-bg: #ffffff;
+        --border-subtle: #e2e8f0;
+        --text-main: #1e293b;
+        --text-light: #64748b;
+        --primary-glow: rgba(109, 40, 217, 0.15); /* Purple glow */
+        --accent-glow: rgba(236, 72, 153, 0.15); /* Pink glow */
     }
 
-    /* Existing CSS for Quick Links Grid */
-    .quick-links-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Responsive grid for quick links */
-        gap: 1.5rem;
-        margin-bottom: 2rem;
-    }
-
-    /* NEW CSS for Key Metrics/Stats Grid */
-    .dashboard-stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); /* Responsive grid for stat cards */
-        gap: 1.5rem;
-        margin-top: 1.5rem; /* Space from welcome section */
-        margin-bottom: 2rem; /* Space before quick links */
-    }
-
-    /* NEW CSS for individual Stat Cards */
-    .stat-card {
-        background-color: var(--card-bg-color, #fff); /* Uses existing card background or default */
-        border: 1px solid var(--border-color);
-        border-radius: var(--border-radius);
-        padding: 1rem 1.25rem;
-        text-align: center;
-        box-shadow: var(--shadow-sm); /* Uses existing shadow if available */
+    .dashboard-container {
         display: flex;
         flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        transition: transform 0.2s ease-in-out; /* Subtle hover effect */
+        gap: 2rem;
+        padding-bottom: 2rem;
     }
 
-    .stat-card:hover {
-        transform: translateY(-3px); /* Lifts the card slightly on hover */
-    }
-
-    /* Override default anchor styles for stat cards */
-    a.stat-card {
-        text-decoration: none;
-        color: inherit;
+    /* Modern Welcome Header */
+    .dashboard-header {
         display: flex;
-        height: 100%;
-    }
-    a.stat-card:hover {
-        text-decoration: none;
-        color: inherit;
-        border-color: var(--primary-color);
-    }
-
-    .stat-card .stat-value {
-        font-size: 2.25rem; /* Larger font for impact */
-        font-weight: 700;
-        color: var(--primary-color); /* Uses primary brand color */
-        margin-bottom: 0.25rem;
-    }
-
-    .stat-card .stat-label {
-        font-size: 0.9rem;
-        color: var(--text-muted); /* Muted text for labels */
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        font-weight: 500;
-    }
-
-    /* Existing CSS for Appointments Summary */
-    .appointments-summary {
-        margin-top: 2rem;
-        padding-top: 1.5rem;
-        border-top: 1px solid var(--border-color);
-    }
-    .appointments-summary h2 {
-        margin-bottom: 1rem;
-    }
-    .appointment-summary-list {
-        list-style: none;
-        padding: 0;
-    }
-    .appointment-summary-item {
-        background-color: #fff;
-        border: 1px solid var(--border-color);
-        border-left: 4px solid var(--primary-color);
+        justify-content: space-between;
+        align-items: center;
+        background: var(--card-bg);
+        padding: 1.5rem 2rem;
         border-radius: var(--border-radius);
-        margin-bottom: 0.75rem;
-        padding: 0.75rem 1rem;
-        font-size: 0.9rem;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border-subtle);
+    }
+
+    .user-greeting {
         display: flex;
         align-items: center;
-        gap: 1rem;
-        flex-wrap: nowrap;
+        gap: 1.5rem;
     }
-    .appointment-dog-pic {
-        width: 40px;
-        height: 40px;
+
+    .user-avatar {
+        width: 70px;
+        height: 70px;
         border-radius: 50%;
-        overflow: hidden;
-        background-color: var(--secondary-light);
-        border: 1px solid var(--border-color);
-        flex-shrink: 0;
+        object-fit: cover;
+        border: 3px solid var(--card-bg);
+        box-shadow: 0 0 0 2px var(--primary-color);
+    }
+
+    .greeting-text h1 {
+        margin: 0;
+        font-size: 1.8rem;
+        color: var(--text-main);
+        font-weight: 700;
+    }
+
+    .greeting-text p {
+        margin: 0;
+        color: var(--text-light);
+        font-size: 1rem;
+    }
+
+    .role-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        background: var(--primary-color);
+        color: white;
+    }
+
+    /* Admin View Layout */
+    .admin-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1.5rem;
+    }
+
+    @media (max-width: 992px) {
+        .admin-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* High-Tech Card Style */
+    .tech-card {
+        background: var(--card-bg);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border-subtle);
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .tech-card:hover {
+        box-shadow: 0 10px 15px -3px var(--primary-glow);
+        transform: translateY(-2px);
+    }
+
+    .tech-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid var(--border-subtle);
+        padding-bottom: 0.75rem;
+    }
+
+    .tech-card-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-main);
+        margin: 0;
         display: flex;
         align-items: center;
-        justify-content: center;
+        gap: 0.5rem;
     }
-    .appointment-dog-pic img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
+
+    /* KPIs Row */
+    .kpi-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
     }
-    .appointment-dog-pic .default-dog-pic-svg {
-        width: 24px;
-        height: 24px;
-        color: var(--secondary-color);
+
+    .kpi-card {
+        background: linear-gradient(135deg, rgba(109, 40, 217, 0.05) 0%, rgba(236, 72, 153, 0.05) 100%);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--border-radius);
+        padding: 1.25rem;
+        text-align: center;
     }
-    .appointment-summary-item > .appointment-details-summary {
-        flex-grow: 1;
-        min-width: 0;
+
+    .kpi-value {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: var(--primary-color);
+        margin: 0.5rem 0;
+        line-height: 1;
     }
-    .appointment-summary-item strong {
+
+    .kpi-label {
+        color: var(--text-light);
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
         font-weight: 600;
     }
-    .appointment-summary-item .date-time {
-        font-weight: 500;
+
+    /* Command Center */
+    .command-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .command-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem 1rem;
+        background: var(--bg-color);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--border-radius);
+        color: var(--text-main);
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.2s;
+        text-align: center;
+        gap: 0.5rem;
+    }
+
+    .command-btn i {
+        font-size: 1.5rem;
         color: var(--primary-color);
     }
-    .appointment-groomer-info {
-        font-size: 0.85em;
-        color: var(--secondary-dark);
-        margin-top: 0.2rem;
-        display: block;
+
+    .command-btn:hover {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
     }
-    .no-upcoming-appointments {
-        color: var(--text-muted);
-        font-style: italic;
+    .command-btn:hover i {
+        color: white;
     }
-    .status-badge {
-        display: inline-block;
-        padding: 0.15em 0.5em;
-        font-size: 0.75em;
-        font-weight: 600;
+
+    /* Capacity Gauge */
+    .capacity-container {
+        margin-top: 1rem;
+    }
+    .capacity-bar-bg {
+        width: 100%;
+        height: 24px;
+        background: #e2e8f0;
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative;
+    }
+    .capacity-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+        border-radius: 12px;
+        transition: width 1s ease-in-out;
+    }
+    .capacity-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 0.5rem;
+        font-size: 0.85rem;
+        color: var(--text-light);
+        font-weight: 500;
+    }
+
+    /* Weather Widget */
+    .weather-widget {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: var(--border-radius);
+        margin-bottom: 1.5rem;
+    }
+    .weather-temp {
+        font-size: 2.5rem;
+        font-weight: 700;
         line-height: 1;
-        text-align: center;
-        white-space: nowrap;
-        vertical-align: baseline;
-        border-radius: 0.25rem;
-        margin-left: 0.5em;
-        color: #fff;
-        flex-shrink: 0;
     }
-    .status-Scheduled {
-        background-color: var(--primary-color);
+    .weather-desc {
+        font-size: 1rem;
+        opacity: 0.9;
     }
-    .status-Completed {
-        background-color: var(--success-color);
+    .weather-icon {
+        font-size: 3rem;
     }
-    .status-Cancelled {
-        background-color: var(--secondary-color);
+
+    /* Groomer View specific */
+    .groomer-grid {
+        display: grid;
+        grid-template-columns: 1fr 350px;
+        gap: 1.5rem;
     }
-    .status-No-Show {
-        background-color: var(--danger-color);
+
+    @media (max-width: 992px) {
+        .groomer-grid {
+            grid-template-columns: 1fr;
+        }
     }
+
+    /* Up Next Card */
+    .up-next-card {
+        background: linear-gradient(135deg, var(--primary-color) 0%, #4c1d95 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: var(--border-radius);
+        display: flex;
+        gap: 2rem;
+        align-items: center;
+        box-shadow: 0 10px 25px -5px rgba(109, 40, 217, 0.4);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .up-next-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: rgba(255,255,255,0.2);
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 1px;
+    }
+
+    .up-next-dog-img {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        border: 4px solid rgba(255,255,255,0.3);
+        object-fit: cover;
+    }
+
+    .up-next-info h2 {
+        margin: 0 0 0.5rem 0;
+        font-size: 2rem;
+    }
+
+    .up-next-details {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin-bottom: 1.5rem;
+    }
+
+    .status-toggles {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .toggle-btn {
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+    .toggle-btn:hover, .toggle-btn.active {
+        background: white;
+        color: var(--primary-color);
+    }
+
+    /* Timeline */
+    .timeline {
+        position: relative;
+        padding-left: 1.5rem;
+    }
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--border-subtle);
+    }
+    .timeline-item {
+        position: relative;
+        padding-bottom: 1.5rem;
+    }
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -1.8rem;
+        top: 0.25rem;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--primary-color);
+        border: 2px solid white;
+    }
+    .timeline-time {
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-bottom: 0.25rem;
+    }
+    .timeline-content {
+        background: var(--bg-color);
+        padding: 1rem;
+        border-radius: var(--border-radius);
+        border: 1px solid var(--border-subtle);
+    }
+
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="content-card">
+<div class="dashboard-container">
 
-    <div class="dashboard-welcome">
-        <div class="dashboard-user-pic">
+    <!-- Global Header -->
+    <div class="dashboard-header">
+        <div class="user-greeting">
             {% if g.user.picture_filename %}
-                {# MODIFIED: Use the new route for uploaded files #}
-                <img src="{{ url_for('uploaded_persistent_file', filename=g.user.picture_filename) }}" alt="Profile picture for {{ g.user.username }}">
+                <img src="{{ url_for('uploaded_persistent_file', filename=g.user.picture_filename) }}" alt="Profile" class="user-avatar">
             {% else %}
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="default-user-pic-svg">
-                    <path fill-rule="evenodd" d="M18.685 19.097A9.723 9.723 0 0021.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 003.065 7.097A9.716 9.716 0 0012 21.75a9.716 9.716 0 006.685-2.653zm-12.54-1.285A7.486 7.486 0 0112 15a7.486 7.486 0 015.855 2.812A8.224 8.224 0 0112 20.25a8.224 8.224 0 01-5.855-2.438zM15.75 9a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" clip-rule="evenodd" />
-                </svg>
+                <div class="user-avatar" style="background:var(--secondary-light); display:flex; align-items:center; justify-content:center;">
+                    <span style="font-size:2rem;">👤</span>
+                </div>
             {% endif %}
-        </div>
-        <div class="dashboard-welcome-text">
-            <h1>Dashboard</h1>
-            <p class="highlight">Welcome back, {{ g.user.username if g.user else "User" }}!</p>
-        </div>
-    </div>
-    <p>Select an option below or use the navigation bar to get started.</p>
-
-    {# New Section: Key Metrics/Quick Stats for a quick overview #}
-    <div class="dashboard-stats-grid">
-        <a href="{{ url_for('appointments.calendar_view') }}" class="stat-card">
-            <div class="stat-value">{{ appointments_today }}</div>
-            <div class="stat-label">Appointments Today</div>
-        </a>
-        <a href="{{ url_for('appointments.checkout_start') }}" class="stat-card">
-            <div class="stat-value">{{ pending_checkouts }}</div>
-            <div class="stat-label">Pending Checkouts</div>
-        </a>
-        <a href="{{ url_for('owners.directory') }}" class="stat-card">
-            <div class="stat-value">{{ new_clients_week }}</div>
-            <div class="stat-label">New Clients (Week)</div>
-        </a>
-        {% if g.user.is_admin %}
-        <a href="{{ url_for('management.view_sales_reports') }}" class="stat-card">
-            <div class="stat-value">${{ '{:,.2f}'.format(revenue_today) }}</div>
-            <div class="stat-label">Revenue Today</div>
-        </a>
-        {% else %}
-        <div class="stat-card">
-            <div class="stat-value">${{ '{:,.2f}'.format(revenue_today) }}</div>
-            <div class="stat-label">Revenue Today</div>
-        </div>
-        {% endif %}
-    </div>
-
-    {# Enhanced Quick Links Grid with additional common actions #}
-    <div class="quick-links-grid">
-        <a href="{{ url_for('appointments.calendar_view') }}" class="quick-link-card blue"><h3>📅 View Calendar</h3><p>Check and manage upcoming appointments.</p></a>
-        <a href="{{ url_for('owners.directory') }}" class="quick-link-card green"><h3>📂 Directory</h3><p>Manage client and pet profiles.</p></a>
-        <a href="{{ url_for('appointments.checkout_start') }}" class="quick-link-card yellow"><h3>🛒 Checkout</h3><p>Process appointments and payments.</p></a>
-        {% if g.user.is_admin %}
-        <a href="{{ url_for('management.management') }}" class="quick-link-card red"><h3>⚙️ Management</h3><p>Manage users, services, and reports.</p></a>
-        <a href="{{ url_for('management.pending_appointments') }}" class="quick-link-card pink"><h3>⏳ Pending</h3><p>View and manage pending appointment requests.</p></a>
-        {% endif %}
-        {# Added new quick action links for common tasks #}
-        <a href="{{ url_for('appointments.add_appointment') }}" class="quick-link-card purple"><h3>➕ Schedule New</h3><p>Quickly book a new appointment.</p></a>
-        <a href="{{ url_for('owners.add_owner') }}" class="quick-link-card orange"><h3>👤 Add New Client</h3><p>Register a new client and their pet.</p></a>
-        <a href="{{ url_for('appointments.receipts_management') }}" class="quick-link-card teal"><h3>🧾 Receipts</h3><p>View, search, and manage receipts.</p></a>
-    </div>
-
-    {# Existing Appointments Summary section, remains largely the same #}
-    <div class="appointments-summary">
-        <h2>Upcoming Appointments (Next 5 Scheduled)</h2>
-        {% if upcoming_appointments %}
-            <ul class="appointment-summary-list">
-                {% for appt in upcoming_appointments %}
-                <li class="appointment-summary-item">
-                    <div class="appointment-dog-pic">
-                        {% if appt.dog.picture_filename %}
-                            {# MODIFIED: Use the new route for uploaded files #}
-                            <img src="{{ url_for('uploaded_persistent_file', filename=appt.dog.picture_filename) }}" alt="Pic of {{ appt.dog.name }}">
-                        {% else %}
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="default-dog-pic-svg">
-                              <path d="M11.06 1.988a.75.75 0 10-1.06-.076L10 2.012l-.06.076a.75.75 0 101.06-.076ZM8.28 3.56a.75.75 0 00-1.06 1.06l1.06-1.06zM11.72 3.56a.75.75 0 111.06 1.06l-1.06-1.06zM3.75 6.75a.75.75 0 000 1.5h12.5a.75.75 0 000-1.5H3.75zM10 17.25a8.25 8.25 0 110-16.5 8.25 8.25 0 010 16.5zM9.94 2.064a6.75 6.75 0 00-6.22 8.97l-.001.002-.002.003-.003.006a7.004 7.004 0 00.018.06 7.074 7.074 0 00.11-.318l.04.106.048.124.05.116.058.124.06.115.063.111.067.108.068.102.07.098.07.092.074.088.074.082.076.078.077.073.08.069.08.064.083.06.084.055.086.05.087.046.09.041.09.037.093.032.094.028.096.024.097.02.1.015.1.011.103.007.103.003h.002a6.73 6.73 0 0011.96 0h.002l.103-.003.103-.007.1-.011.1-.015.097-.02.096-.024.094-.028.093-.032.09-.037.09-.041.087-.046.086-.05.084-.055.083-.06.08-.064.08-.069.077-.073.076-.078.074-.082.074-.088.07-.092.07-.098.068-.102.067-.108.063-.111.06-.115.058-.124.05-.116.048-.124.04-.106a6.95 6.95 0 00.11-.318 7.004 7.004 0 00.018-.06l-.003-.006-.002-.003-.001-.002a6.75 6.75 0 00-6.22-8.97z"/>
-                            </svg>
-                        {% endif %}
-                    </div>
-                    <div class="appointment-details-summary">
-                        {% set local_appt_time = appt.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(STORE_TIMEZONE) if STORE_TIMEZONE else appt.appointment_datetime %}
-                        <span class="date-time">{{ local_appt_time.strftime('%a, %b %d @ %I:%M %p') }}</span> -
-                        <strong>{{ appt.dog.name }}</strong> ({{ appt.dog.owner.name }})
-                        {% if appt.requested_services_text %} - {{ appt.requested_services_text|service_names_from_ids }}{% endif %}
-                        {% if appt.groomer %}
-                            <span class="appointment-groomer-info">Groomer: {{ appt.groomer.username }}</span>
-                        {% endif %}
-                        {% if appt.details_needed %}
-                            <span class="status-badge" style="background-color: #dc3545; margin-left: 0.5em;">Needs Review</span>
-                        {% endif %}
-                    </div>
-                    <span class="status-badge status-{{ appt.status }}">{{ appt.status }}</span>
-                    {% if appt.status == 'Scheduled' %}
-                                        <a href="{{ url_for('appointments.checkout_start', appointment_id=appt.id) }}" class="button button-primary" style="margin-left:1em;">Checkout</a>
-                    {% endif %}
-                </li>
-                {% endfor %}
-            </ul>
-            <p><a href="{{ url_for('appointments.calendar_view') }}">View Full Calendar &raquo;</a></p>
-        {% else %}
-            <div class="empty-state-card" style="text-align: center; padding: 3rem 1rem; border: 2px dashed var(--border-color); border-radius: var(--border-radius); background-color: var(--secondary-light); margin-top: 1rem;">
-                <div style="font-size: 3rem; margin-bottom: 1rem;">📅</div>
-                <h3 style="margin-bottom: 0.5rem; color: var(--text-dark);">No Upcoming Appointments</h3>
-                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Your schedule is clear. Ready to book a new grooming session?</p>
-                <a href="{{ url_for('appointments.add_appointment') }}" class="button button-primary">
-                    Schedule an Appointment
-                </a>
+            <div class="greeting-text">
+                <h1>Welcome back, {{ g.user.username }}!</h1>
+                <p>{{ "Here's what's happening at your store today." if g.user.is_admin else "Ready for a great day of grooming?" }}</p>
             </div>
-        {% endif %}
+        </div>
+        <div>
+            <span class="role-badge">{{ 'Admin / Manager' if g.user.is_admin else 'Groomer' }}</span>
+        </div>
     </div>
+
+
+    {% if g.user.is_admin and g.user.is_groomer %}
+    <!-- ==================== HYBRID VIEW (Admin + Groomer) ==================== -->
+
+    <!-- Top KPIs -->
+    <div class="kpi-row">
+        <div class="kpi-card">
+            <div class="kpi-label">Revenue Today</div>
+            <div class="kpi-value">${{ '{:,.2f}'.format(revenue_today) }}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Appointments Today</div>
+            <div class="kpi-value">{{ appointments_today }}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Pending Checkouts</div>
+            <div class="kpi-value" style="color: var(--accent-color);">{{ pending_checkouts }}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">My Dogs Today</div>
+            <div class="kpi-value">{{ my_appointments|length }}</div>
+        </div>
+    </div>
+
+    <div class="admin-grid">
+        <!-- Left Column (Main Content) -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+            {% if my_appointments %}
+            {% set next_appt = my_appointments[0] %}
+            <!-- Up Next Card -->
+            <div class="up-next-card">
+                <div class="up-next-badge">UP NEXT</div>
+                {% if next_appt.dog.picture_filename %}
+                    <img src="{{ url_for('uploaded_persistent_file', filename=next_appt.dog.picture_filename) }}" alt="Dog" class="up-next-dog-img">
+                {% else %}
+                    <div class="up-next-dog-img" style="background:#e5e7eb; display:flex; align-items:center; justify-content:center; color:#9ca3af; font-size:3rem;">🐾</div>
+                {% endif %}
+
+                <div class="up-next-info">
+                    <h2>{{ next_appt.dog.name }}</h2>
+                    <div class="up-next-details">
+                        {% set local_time = next_appt.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(STORE_TIMEZONE) if STORE_TIMEZONE else next_appt.appointment_datetime %}
+                        <strong>Time:</strong> {{ local_time.strftime('%I:%M %p') }} <br>
+                        <strong>Owner:</strong> {{ next_appt.dog.owner.name }} <br>
+                        <strong>Service:</strong> {{ next_appt.requested_services_text|service_names_from_ids if next_appt.requested_services_text else 'Standard Groom' }}
+                    </div>
+
+                    <div class="status-toggles" data-appointment-id="{{ next_appt.id }}">
+                        <button class="toggle-btn check-in {{ 'active' if next_appt.status == 'Checked In' else '' }}" data-status="Checked In">Checked In</button>
+                        <button class="toggle-btn in-progress {{ 'active' if next_appt.status == 'In Progress' else '' }}" data-status="In Progress">In Progress</button>
+                        <button class="toggle-btn ready {{ 'active' if next_appt.status == 'Ready for Pickup' else '' }}" data-status="Ready for Pickup">Ready for Pickup</button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Daily Timeline & Capacity Overview Row -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+
+                <!-- Daily Timeline -->
+                <div class="tech-card">
+                    <div class="tech-card-header">
+                        <h3 class="tech-card-title">📅 My Timeline</h3>
+                    </div>
+                    <div class="timeline">
+                        {% for appt in my_appointments %}
+                            <div class="timeline-item">
+                                {% set local_time = appt.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(STORE_TIMEZONE) if STORE_TIMEZONE else appt.appointment_datetime %}
+                                <div class="timeline-time">{{ local_time.strftime('%I:%M %p') }}</div>
+                                <div class="timeline-content">
+                                    <strong>{{ appt.dog.name }}</strong> ({{ appt.dog.owner.name }})<br>
+                                    <span style="font-size: 0.85rem; color: var(--text-light);">{{ appt.status }}</span>
+                                </div>
+                            </div>
+                        {% else %}
+                            <p style="color: var(--text-light);">Timeline is empty.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Capacity Overview -->
+                <div class="tech-card">
+                    <div class="tech-card-header">
+                        <h3 class="tech-card-title">📊 Daily Capacity</h3>
+                    </div>
+                    <div class="capacity-container">
+                        <div class="capacity-bar-bg">
+                            <div class="capacity-bar-fill" style="width: {{ capacity_percentage }}%;"></div>
+                        </div>
+                        <div class="capacity-labels">
+                            <span>0%</span>
+                            <span>{{ appointments_today }} Appointments</span>
+                            <span>100% Full</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Revenue Trend Chart -->
+            <div class="tech-card">
+                <div class="tech-card-header">
+                    <h3 class="tech-card-title">📈 7-Day Revenue Trend</h3>
+                </div>
+                <div style="height: 250px; width: 100%;">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column (Sidebar) -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+            <!-- Weather Widget (JS populates this) -->
+            <div class="weather-widget" id="weatherWidget">
+                <div>
+                    <div class="weather-temp" id="w-temp">--°</div>
+                    <div class="weather-desc" id="w-desc">Loading...</div>
+                </div>
+                <div class="weather-icon" id="w-icon">☁️</div>
+            </div>
+
+            <!-- Command Center -->
+            <div class="tech-card">
+                <div class="tech-card-header">
+                    <h3 class="tech-card-title">⚡ Command Center</h3>
+                </div>
+                <div class="command-grid">
+                    <a href="{{ url_for('appointments.add_appointment') }}" class="command-btn">
+                        <span>➕</span> Schedule
+                    </a>
+                    <a href="{{ url_for('appointments.checkout_start') }}" class="command-btn">
+                        <span>🛒</span> Checkout
+                    </a>
+                    <a href="{{ url_for('management.management') }}" class="command-btn">
+                        <span>⚙️</span> Settings
+                    </a>
+                    <a href="{{ url_for('management.view_sales_reports') }}" class="command-btn">
+                        <span>📄</span> Reports
+                    </a>
+                </div>
+            </div>
+
+            <!-- Personal Stats -->
+            <div class="tech-card">
+                <div class="tech-card-header">
+                    <h3 class="tech-card-title">🏆 My Stats (Today)</h3>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-light); font-weight: 500;">Dogs Assigned</span>
+                        <strong style="font-size: 1.2rem;">{{ my_appointments|length }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-light); font-weight: 500;">Est. Earnings</span>
+                        <strong style="font-size: 1.2rem; color: var(--success-color);">--</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: var(--text-light); font-weight: 500;">Tips</span>
+                        <strong style="font-size: 1.2rem; color: var(--accent-color);">--</strong>
+                    </div>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); text-align: center; margin: 0;">(Financial tracking features coming in Phase 3)</p>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="tech-card">
+                <div class="tech-card-header">
+                    <h3 class="tech-card-title">🕒 Recent & Upcoming</h3>
+                </div>
+                <div style="font-size: 0.9rem;">
+                    {% if upcoming_appointments %}
+                        {% for appt in upcoming_appointments[:3] %}
+                            <div style="padding: 0.75rem 0; border-bottom: 1px solid var(--border-subtle);">
+                                {% set local_time = appt.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(STORE_TIMEZONE) if STORE_TIMEZONE else appt.appointment_datetime %}
+                                <strong>{{ appt.dog.name }}</strong> ({{ appt.dog.owner.name }})<br>
+                                <span style="color: var(--text-light);">{{ local_time.strftime('%I:%M %p') }} - {{ appt.status }}</span>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p style="color: var(--text-light);">No recent activity.</p>
+                    {% endif %}
+                    <div style="margin-top: 1rem; text-align: center;">
+                        <a href="{{ url_for('appointments.calendar_view') }}" style="font-size: 0.85rem; font-weight: 600;">View Calendar &rarr;</a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+    {% elif g.user.is_admin %}
+    <!-- ==================== ADMIN VIEW (Non-Groomer) ==================== -->
+
+    <!-- Top KPIs -->
+    <div class="kpi-row">
+        <div class="kpi-card">
+            <div class="kpi-label">Revenue Today</div>
+            <div class="kpi-value">${{ '{:,.2f}'.format(revenue_today) }}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Appointments Today</div>
+            <div class="kpi-value">{{ appointments_today }}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Pending Checkouts</div>
+            <div class="kpi-value" style="color: var(--accent-color);">{{ pending_checkouts }}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">New Clients (Week)</div>
+            <div class="kpi-value">{{ new_clients_week }}</div>
+        </div>
+    </div>
+
+    <div class="admin-grid">
+        <!-- Left Column (Main Content) -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+            <!-- Revenue Trend Chart -->
+            <div class="tech-card">
+                <div class="tech-card-header">
+                    <h3 class="tech-card-title">📈 7-Day Revenue Trend</h3>
+                </div>
+                <div style="height: 300px; width: 100%;">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Capacity Overview -->
+            <div class="tech-card">
+                <div class="tech-card-header">
+                    <h3 class="tech-card-title">📊 Daily Capacity</h3>
+                    <span style="font-size: 0.85rem; color: var(--text-light);">(Based on Store Settings)</span>
+                </div>
+                <div class="capacity-container">
+                    <div class="capacity-bar-bg">
+                        <div class="capacity-bar-fill" style="width: {{ capacity_percentage }}%;"></div>
+                    </div>
+                    <div class="capacity-labels">
+                        <span>0%</span>
+                        <span>{{ appointments_today }} Appointments</span>
+                        <span>100% Full</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column (Sidebar) -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+            <!-- Weather Widget (JS populates this) -->
+            <div class="weather-widget" id="weatherWidget">
+                <div>
+                    <div class="weather-temp" id="w-temp">--°</div>
+                    <div class="weather-desc" id="w-desc">Loading...</div>
+                </div>
+                <div class="weather-icon" id="w-icon">☁️</div>
+            </div>
+
+            <!-- Command Center -->
+            <div class="tech-card">
+                <div class="tech-card-header">
+                    <h3 class="tech-card-title">⚡ Command Center</h3>
+                </div>
+                <div class="command-grid">
+                    <a href="{{ url_for('appointments.add_appointment') }}" class="command-btn">
+                        <span>➕</span> Schedule
+                    </a>
+                    <a href="{{ url_for('appointments.checkout_start') }}" class="command-btn">
+                        <span>🛒</span> Checkout
+                    </a>
+                    <a href="{{ url_for('management.management') }}" class="command-btn">
+                        <span>⚙️</span> Settings
+                    </a>
+                    <a href="{{ url_for('management.view_sales_reports') }}" class="command-btn">
+                        <span>📄</span> Reports
+                    </a>
+                </div>
+            </div>
+
+            <!-- Recent Activity (Using Upcoming Appointments as a proxy for now) -->
+            <div class="tech-card">
+                <div class="tech-card-header">
+                    <h3 class="tech-card-title">🕒 Recent & Upcoming</h3>
+                </div>
+                <div style="font-size: 0.9rem;">
+                    {% if upcoming_appointments %}
+                        {% for appt in upcoming_appointments[:3] %}
+                            <div style="padding: 0.75rem 0; border-bottom: 1px solid var(--border-subtle);">
+                                {% set local_time = appt.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(STORE_TIMEZONE) if STORE_TIMEZONE else appt.appointment_datetime %}
+                                <strong>{{ appt.dog.name }}</strong> ({{ appt.dog.owner.name }})<br>
+                                <span style="color: var(--text-light);">{{ local_time.strftime('%I:%M %p') }} - {{ appt.status }}</span>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p style="color: var(--text-light);">No recent activity.</p>
+                    {% endif %}
+                    <div style="margin-top: 1rem; text-align: center;">
+                        <a href="{{ url_for('appointments.calendar_view') }}" style="font-size: 0.85rem; font-weight: 600;">View Calendar &rarr;</a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+    {% else %}
+    <!-- ==================== GROOMER VIEW ==================== -->
+
+    <div class="groomer-grid">
+        <!-- Main Column -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+            {% if my_appointments %}
+            {% set next_appt = my_appointments[0] %}
+            <!-- Up Next Card -->
+            <div class="up-next-card">
+                <div class="up-next-badge">UP NEXT</div>
+                {% if next_appt.dog.picture_filename %}
+                    <img src="{{ url_for('uploaded_persistent_file', filename=next_appt.dog.picture_filename) }}" alt="Dog" class="up-next-dog-img">
+                {% else %}
+                    <div class="up-next-dog-img" style="background:#e5e7eb; display:flex; align-items:center; justify-content:center; color:#9ca3af; font-size:3rem;">🐾</div>
+                {% endif %}
+
+                <div class="up-next-info">
+                    <h2>{{ next_appt.dog.name }}</h2>
+                    <div class="up-next-details">
+                        {% set local_time = next_appt.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(STORE_TIMEZONE) if STORE_TIMEZONE else next_appt.appointment_datetime %}
+                        <strong>Time:</strong> {{ local_time.strftime('%I:%M %p') }} <br>
+                        <strong>Owner:</strong> {{ next_appt.dog.owner.name }} <br>
+                        <strong>Service:</strong> {{ next_appt.requested_services_text|service_names_from_ids if next_appt.requested_services_text else 'Standard Groom' }}
+                    </div>
+
+                    <div class="status-toggles" data-appointment-id="{{ next_appt.id }}">
+                        <button class="toggle-btn check-in {{ 'active' if next_appt.status == 'Checked In' else '' }}" data-status="Checked In">Checked In</button>
+                        <button class="toggle-btn in-progress {{ 'active' if next_appt.status == 'In Progress' else '' }}" data-status="In Progress">In Progress</button>
+                        <button class="toggle-btn ready {{ 'active' if next_appt.status == 'Ready for Pickup' else '' }}" data-status="Ready for Pickup">Ready for Pickup</button>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="tech-card" style="text-align: center; padding: 3rem 1rem;">
+                <h2 style="color: var(--text-light);">No appointments assigned today!</h2>
+                <p>Enjoy the free time or check with the admin.</p>
+            </div>
+            {% endif %}
+
+            <!-- Daily Timeline -->
+            <div class="tech-card">
+                <div class="tech-card-header">
+                    <h3 class="tech-card-title">📅 Today's Timeline</h3>
+                </div>
+                <div class="timeline">
+                    {% for appt in my_appointments %}
+                        <div class="timeline-item">
+                            {% set local_time = appt.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(STORE_TIMEZONE) if STORE_TIMEZONE else appt.appointment_datetime %}
+                            <div class="timeline-time">{{ local_time.strftime('%I:%M %p') }}</div>
+                            <div class="timeline-content">
+                                <strong>{{ appt.dog.name }}</strong> ({{ appt.dog.owner.name }})<br>
+                                <span style="font-size: 0.85rem; color: var(--text-light);">{{ appt.status }}</span>
+                            </div>
+                        </div>
+                    {% else %}
+                        <p style="color: var(--text-light);">Timeline is empty.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Sidebar -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+            <!-- Weather Widget -->
+            <div class="weather-widget" id="weatherWidget">
+                <div>
+                    <div class="weather-temp" id="w-temp">--°</div>
+                    <div class="weather-desc" id="w-desc">Loading...</div>
+                </div>
+                <div class="weather-icon" id="w-icon">☁️</div>
+            </div>
+
+            <!-- Personal Stats -->
+            <div class="tech-card">
+                <div class="tech-card-header">
+                    <h3 class="tech-card-title">🏆 My Stats (Today)</h3>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-light); font-weight: 500;">Dogs Assigned</span>
+                        <strong style="font-size: 1.2rem;">{{ my_appointments|length }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem;">
+                        <span style="color: var(--text-light); font-weight: 500;">Est. Earnings</span>
+                        <strong style="font-size: 1.2rem; color: var(--success-color);">--</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: var(--text-light); font-weight: 500;">Tips</span>
+                        <strong style="font-size: 1.2rem; color: var(--accent-color);">--</strong>
+                    </div>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); text-align: center; margin: 0;">(Financial tracking features coming in Phase 3)</p>
+                </div>
+            </div>
+
+            <a href="{{ url_for('appointments.calendar_view') }}" class="command-btn" style="flex-direction: row; justify-content: center; padding: 1rem;">
+                <span>📅</span> View Full Calendar
+            </a>
+
+        </div>
+    </div>
+    {% endif %}
 
 </div>
+
+<!-- Scripts for Dashboard Features -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+
+        // --- 1. Weather Widget Logic (Open-Meteo API - Free, no key required) ---
+        // Uses Geolocation API to get local weather, falls back to a default if denied.
+        function fetchWeather(lat, lon) {
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=fahrenheit`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const temp = Math.round(data.current_weather.temperature);
+                    const code = data.current_weather.weathercode;
+
+                    document.getElementById('w-temp').innerText = temp + '°F';
+
+                    // Basic WMO Weather code mapping
+                    let desc = "Clear";
+                    let icon = "☀️";
+                    if(code > 0 && code <= 3) { desc = "Partly Cloudy"; icon = "⛅"; }
+                    else if(code >= 45 && code <= 48) { desc = "Foggy"; icon = "🌫️"; }
+                    else if(code >= 51 && code <= 67) { desc = "Rain"; icon = "🌧️"; }
+                    else if(code >= 71 && code <= 77) { desc = "Snow"; icon = "❄️"; }
+                    else if(code >= 80 && code <= 82) { desc = "Showers"; icon = "🌦️"; }
+                    else if(code >= 95) { desc = "Thunderstorm"; icon = "⛈️"; }
+
+                    document.getElementById('w-desc').innerText = desc;
+                    document.getElementById('w-icon').innerText = icon;
+                })
+                .catch(err => console.error("Weather fetch failed", err));
+        }
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
+                (err) => fetchWeather(40.71, -74.00) // Fallback to NYC if denied
+            );
+        } else {
+            fetchWeather(40.71, -74.00);
+        }
+
+        {% if g.user.is_admin %}
+        // --- 2. Chart.js Revenue Trend Logic (Admin Only) ---
+        const ctx = document.getElementById('revenueChart');
+        if (ctx) {
+            // Parse injected data from Flask
+            const rawData = {{ revenue_trend | tojson | safe }};
+            const labels = rawData.map(d => d.date);
+            const values = rawData.map(d => d.amount);
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Revenue ($)',
+                        data: values,
+                        borderColor: '#6D28D9', // Primary purple
+                        backgroundColor: 'rgba(109, 40, 217, 0.1)',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#EC4899', // Accent pink
+                        pointBorderColor: '#fff',
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        fill: true,
+                        tension: 0.4 // Smooth curves
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return '$' + context.parsed.y.toFixed(2);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                borderDash: [5, 5],
+                                color: '#e2e8f0'
+                            }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+        {% endif %}
+
+        // --- 3. Status Toggle Buttons (Groomer View - Visual Only Phase 1) ---
+        const toggles = document.querySelectorAll('.toggle-btn');
+        toggles.forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const parent = this.parentElement;
+                const appointmentId = parent.getAttribute('data-appointment-id');
+                const newStatus = this.getAttribute('data-status');
+
+                // Save original text for restoring later
+                const originalText = this.innerText;
+
+                // Loading state
+                const allBtns = parent.querySelectorAll('.toggle-btn');
+                allBtns.forEach(b => b.disabled = true);
+                this.innerText = 'Updating...';
+
+                try {
+                    const response = await fetch(`/api/appointments/${appointmentId}/status`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ status: newStatus })
+                    });
+
+                    if (response.ok) {
+                        // Remove active from siblings
+                        allBtns.forEach(b => b.classList.remove('active'));
+                        // Add active to clicked
+                        this.classList.add('active');
+                        // Show success alert
+                        alert(`Status successfully updated to: ${newStatus} and notifications sent!`);
+                    } else {
+                        console.error('Failed to update status');
+                        alert('Failed to update status. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Error updating status:', error);
+                    alert('Error updating status. Please try again.');
+                } finally {
+                    // Restore original text and enable buttons
+                    this.innerText = originalText;
+                    allBtns.forEach(b => b.disabled = false);
+                }
+            });
+        });
+
+    });
+</script>
 {% endblock %}

@@ -1,35 +1,227 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Subscribe</title>
-    <script src="https://js.stripe.com/v3/"></script>
-</head>
-<body>
-    <h2>Subscribe to Unlock Full Access</h2>
-    <p>Click below to subscribe and unlock all features.</p>
-    <button id="checkout-button">Subscribe</button>
-    <div id="error-message" style="color:red;"></div>
-    <script>
-        var stripe = Stripe("{{ stripe_publishable_key }}");
-        document.getElementById("checkout-button").addEventListener("click", function () {
-            fetch("/create-checkout-session", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                credentials: "include" // Ensure cookies/session are sent
-            })
-            .then(function (response) { return response.json(); })
-            .then(function (session) {
-                if(session.sessionId) {
-                    return stripe.redirectToCheckout({ sessionId: session.sessionId });
-                } else {
-                    document.getElementById("error-message").textContent = session.error || "An error occurred.";
-                }
-            })
-            .catch(function (error) {
-                document.getElementById("error-message").textContent = error.toString();
-            });
+{% extends 'base.html' %}
+
+{% block title %}Subscribe - Pawfection Grooming Solutions{% endblock %}
+
+{% block head %}
+<script src="https://js.stripe.com/v3/"></script>
+<style>
+    .subscription-container {
+        max-width: 900px;
+        margin: 4rem auto;
+        padding: 2.5rem;
+        background: var(--card-bg);
+        border-radius: var(--border-radius-lg);
+        box-shadow: var(--shadow-md);
+        text-align: center;
+    }
+
+    .subscription-header h1 {
+        font-size: 2.5rem;
+        color: var(--text-color);
+        margin-bottom: 1rem;
+    }
+
+    .subscription-header p {
+        font-size: 1.1rem;
+        color: var(--text-muted);
+        margin-bottom: 2rem;
+    }
+
+    .pricing-card {
+        background: var(--bg-color);
+        border: 2px solid var(--primary-color);
+        border-radius: var(--border-radius-lg);
+        padding: 3rem 2rem;
+        margin-top: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .pricing-badge {
+        position: absolute;
+        top: 0;
+        right: 0;
+        background: var(--primary-color);
+        color: white;
+        padding: 0.5rem 2rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        border-bottom-left-radius: var(--border-radius-lg);
+    }
+
+    .price-amount {
+        font-size: 4rem;
+        font-weight: 800;
+        color: var(--text-color);
+        line-height: 1;
+        margin-bottom: 0.5rem;
+        display: flex;
+        justify-content: center;
+        align-items: baseline;
+    }
+
+    .price-currency {
+        font-size: 1.5rem;
+        font-weight: 600;
+        vertical-align: super;
+        margin-right: 0.25rem;
+    }
+
+    .price-period {
+        font-size: 1.25rem;
+        color: var(--text-muted);
+        font-weight: 500;
+        margin-left: 0.25rem;
+    }
+
+    .features-list {
+        list-style: none;
+        padding: 0;
+        margin: 2.5rem auto;
+        text-align: left;
+        max-width: 400px;
+    }
+
+    .features-list li {
+        margin-bottom: 1rem;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        color: var(--text-color);
+    }
+
+    .features-list li svg {
+        width: 1.5rem;
+        height: 1.5rem;
+        color: var(--success-color);
+        margin-right: 1rem;
+        flex-shrink: 0;
+    }
+
+    .subscribe-btn {
+        font-size: 1.25rem;
+        padding: 1rem 3rem;
+        width: 100%;
+        max-width: 400px;
+        border-radius: var(--border-radius-full);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 700;
+        box-shadow: var(--shadow-sm);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .subscribe-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="subscription-container">
+    <div class="subscription-header">
+        <h1>Unlock Full Potential</h1>
+        <p>Your 15-day free trial has expired, or you're ready to upgrade early. Subscribe now to continue using all of Pawfection's powerful tools to manage and grow your grooming business.</p>
+    </div>
+
+    <div class="pricing-card" style="padding: 2rem;">
+        <div class="pricing-badge">ALL INCLUSIVE</div>
+        <div class="price-amount">
+            <span class="price-currency">$</span>79<span class="price-period">/mo</span>
+        </div>
+        <p style="color: var(--text-muted); margin-top: 0.5rem; font-weight: 500;">Cancel anytime. No hidden fees.</p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; text-align: left; margin: 2.5rem 0;">
+            <!-- Core Management -->
+            <div>
+                <h3 style="color: var(--primary-color); margin-bottom: 1rem; border-bottom: 2px solid var(--primary-color); padding-bottom: 0.5rem; display: inline-block;">Operations & Growth</h3>
+                <ul class="features-list" style="margin: 0; max-width: 100%;">
+                    <li>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd" /></svg>
+                        <span><strong>Smart AI Assistant:</strong> Automates scheduling, answers client queries 24/7, and manages routine administrative tasks so you can focus on grooming.</span>
+                    </li>
+                    <li>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd" /></svg>
+                        <span><strong>Comprehensive CRM:</strong> Detailed dog profiles (allergies, behavior, coat type) and owner management to provide personalized care every time.</span>
+                    </li>
+                    <li>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd" /></svg>
+                        <span><strong>Client Public Page:</strong> A custom-branded storefront where clients can submit appointment requests directly into your dashboard.</span>
+                    </li>
+                    <li>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd" /></svg>
+                        <span><strong>Unlimited Multi-User Access:</strong> Add all your groomers and receptionists with customizable permissions and secure logins.</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Automation & Finance -->
+            <div>
+                <h3 style="color: var(--primary-color); margin-bottom: 1rem; border-bottom: 2px solid var(--primary-color); padding-bottom: 0.5rem; display: inline-block;">Automations & Financials</h3>
+                <ul class="features-list" style="margin: 0; max-width: 100%;">
+                    <li>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd" /></svg>
+                        <span><strong>Zero No-Shows:</strong> Automated, branded SMS and Email reminders sent directly to clients at the perfect time.</span>
+                    </li>
+                    <li>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd" /></svg>
+                        <span><strong>Integrated POS Checkout:</strong> Seamlessly handle payments, capture client tips with an elegant UI, and email digital receipts instantly.</span>
+                    </li>
+                    <li>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd" /></svg>
+                        <span><strong>2-Way Google Calendar Sync:</strong> Your business schedule and your personal calendar are always perfectly aligned in real-time.</span>
+                    </li>
+                    <li>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd" /></svg>
+                        <span><strong>Financial Dashboard:</strong> Track revenue, pending checkouts, and service popularity with a glance.</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div style="background-color: rgba(16, 185, 129, 0.1); border: 1px solid var(--success-color); border-radius: var(--border-radius-lg); padding: 1rem; margin-bottom: 2rem;">
+            <p style="margin: 0; color: var(--text-color); font-weight: 500;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width: 1.2rem; height: 1.2rem; color: var(--success-color); vertical-align: middle; margin-right: 0.5rem; display: inline-block;"><path fill-rule="evenodd" d="M9 4.5a.75.75 0 01.721.544l.813 2.846a3.75 3.75 0 002.576 2.576l2.846.813a.75.75 0 010 1.442l-2.846.813a3.75 3.75 0 00-2.576 2.576l-.813 2.846a.75.75 0 01-1.442 0l-.813-2.846a3.75 3.75 0 00-2.576-2.576l-2.846-.813a.75.75 0 010-1.442l2.846-.813A3.75 3.75 0 007.466 7.89l.813-2.846A.75.75 0 019 4.5zM18 1.5a.75.75 0 01.728.568l.258 1.036c.236.94.97 1.674 1.91 1.906l1.036.258a.75.75 0 010 1.45l-1.037.258c-.94.234-1.674.968-1.91 1.906l-.258 1.036a.75.75 0 01-1.45 0l-.258-1.036a2.625 2.625 0 00-1.91-1.906l-1.036-.258a.75.75 0 010-1.45l1.036-.258a2.625 2.625 0 001.91-1.906l.258-1.036A.75.75 0 0118 1.5z" clip-rule="evenodd" /></svg>
+                Everything you need to replace 3-4 separate apps, consolidated into one beautifully simple platform. Let Pawfection handle the administration while you focus on the grooming.
+            </p>
+        </div>
+
+        <button id="checkout-button" class="button button-primary subscribe-btn">Subscribe Now</button>
+        <div id="error-message" style="color: var(--danger-color); margin-top: 1rem; font-weight: 500;"></div>
+    </div>
+</div>
+
+<script>
+    var stripe = Stripe("{{ stripe_publishable_key }}");
+    var checkoutButton = document.getElementById("checkout-button");
+    var errorMessage = document.getElementById("error-message");
+
+    checkoutButton.addEventListener("click", function () {
+        checkoutButton.disabled = true;
+        checkoutButton.textContent = "Processing...";
+        errorMessage.textContent = "";
+
+        fetch("{{ url_for('create_checkout_session') }}", {
+            method: "POST",
+            headers: {"Content-Type": "application/json", "X-CSRFToken": "{{ csrf_token() }}"},
+            credentials: "include" // Ensure cookies/session are sent
+        })
+        .then(function (response) { return response.json(); })
+        .then(function (session) {
+            if(session.sessionId) {
+                return stripe.redirectToCheckout({ sessionId: session.sessionId });
+            } else {
+                checkoutButton.disabled = false;
+                checkoutButton.textContent = "Subscribe Now";
+                errorMessage.textContent = session.error || "An error occurred while connecting to Stripe.";
+            }
+        })
+        .catch(function (error) {
+            checkoutButton.disabled = false;
+            checkoutButton.textContent = "Subscribe Now";
+            errorMessage.textContent = error.toString();
         });
-    </script>
-</body>
-</html>
+    });
+</script>
+{% endblock %}

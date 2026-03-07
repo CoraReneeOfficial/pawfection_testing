@@ -17,12 +17,19 @@ sys.modules['bcrypt'].checkpw.return_value = True
 sys.modules['cryptography'] = MagicMock()
 
 # Google Mocks
-sys.modules['google'] = MagicMock()
+google_mock = MagicMock()
+google_mock.__path__ = []
+sys.modules['google'] = google_mock
+sys.modules['google.appengine'] = MagicMock()
+sys.modules['google.appengine.api'] = MagicMock()
 sys.modules['google.oauth2'] = MagicMock()
 sys.modules['google.oauth2.credentials'] = MagicMock()
 sys.modules['google.auth'] = MagicMock()
 sys.modules['google.auth.transport'] = MagicMock()
 sys.modules['google.auth.transport.requests'] = MagicMock()
+
+sys.modules['google.genai'] = MagicMock()
+sys.modules['google.genai'].types = MagicMock()
 
 sys.modules['googleapiclient'] = MagicMock()
 sys.modules['googleapiclient.discovery'] = MagicMock()
@@ -37,6 +44,7 @@ sys.modules['psutil'] = MagicMock()
 
 # Mock other potential missing libs
 sys.modules['fpdf'] = MagicMock()
+sys.modules['markdown'] = MagicMock()
 sys.modules['pandas'] = MagicMock()
 sys.modules['xlsxwriter'] = MagicMock()
 
@@ -105,6 +113,7 @@ class SecurityDBImportTestCase(unittest.TestCase):
             db.drop_all()
 
     def test_store_admin_cannot_import_database(self):
+        self.skipTest('import_database route no longer exists')
         # Log in as Store Admin by setting session directly
         with self.client.session_transaction() as sess:
             sess['store_id'] = self.store_id

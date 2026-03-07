@@ -315,11 +315,11 @@
                         </div>
                         <div class="info-item">
                             <div class="info-label">Database Size</div>
-                            <div class="info-value">{{ "%.2f"|format(db_file_size) }} MB</div>
+                            <div class="info-value">{{ "%.2f"|format(db_file_size) if db_file_size is not none else "Unknown" }} MB</div>
                         </div>
                         <div class="info-item">
                             <div class="info-label">Last Modified</div>
-                            <div class="info-value">{{ db_modified_time.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+                            <div class="info-value">{{ db_modified_time.strftime('%Y-%m-%d %H:%M:%S') if db_modified_time is not none else 'Unknown' }}</div>
                         </div>
                     </div>
                     

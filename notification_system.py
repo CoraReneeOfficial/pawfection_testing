@@ -7,6 +7,7 @@ from flask_login import login_required
 from datetime import datetime, timezone
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
+from extensions import csrf
 
 bp = Blueprint('notification_system', __name__, url_prefix='/notifications')
 
@@ -28,10 +29,11 @@ def view_all():
     
     return render_template('notifications/all.html', notifications=notifications)
 
-@bp.route('/mark_read/<int:id>', methods=['POST', 'GET'])
+@bp.route('/mark_read/<int:id>', methods=['POST'])
 @login_required
 def mark_read(id):
     """Mark a notification as read."""
+    csrf.protect()
     notification = Notification.query.get_or_404(id)
     
     # Make sure the notification belongs to the user's store
@@ -44,10 +46,11 @@ def mark_read(id):
     # Redirect back to referring page
     return redirect(request.referrer or url_for('notification_system.view_all'))
 
-@bp.route('/mark_all_read', methods=['POST', 'GET'])
+@bp.route('/mark_all_read', methods=['POST'])
 @login_required
 def mark_all_read():
     """Mark all notifications as read for the current user's store."""
+    csrf.protect()
     # Get all unread notifications for this user's store
     notifications = Notification.query.filter_by(
         store_id=g.user.store_id,
@@ -108,21 +111,22 @@ def create_notification(store_id, notification_type, content, reference_id=None,
 # Check for items that need attention and create notifications
 def check_for_notifications(store_id):
     """Check for items that need attention and create notifications if needed."""
-    # Check for pending appointment requests
-    pending_requests = AppointmentRequest.query.filter_by(
+    # Check if we already have a notification for pending requests
+    # Early return/skip logic: if we already have an unread notification, skip counting
+    existing_request_notif = Notification.query.filter_by(
         store_id=store_id,
-        status='pending'
-    ).count()
+        type='appointment_request',
+        is_read=False
+    ).first()
     
-    if pending_requests > 0:
-        # Check if we already have a notification for this
-        existing = Notification.query.filter_by(
+    if not existing_request_notif:
+        # Only perform the count query if we need to create a notification
+        pending_requests = AppointmentRequest.query.filter_by(
             store_id=store_id,
-            type='appointment_request',
-            is_read=False
-        ).first()
+            status='pending'
+        ).count()
         
-        if not existing:
+        if pending_requests > 0:
             create_notification(
                 store_id=store_id,
                 notification_type='appointment_request',
@@ -229,6 +233,7 @@ def check_new():
 @login_required
 def mark_popup_shown(id):
     """Mark notification as shown in popup."""
+    csrf.protect()
     notification = Notification.query.get_or_404(id)
     if notification.store_id != g.user.store_id:
         abort(403)
@@ -253,6 +258,7 @@ def mark_popup_shown(id):
 @login_required
 def set_reminder(id):
     """Set a reminder for a notification."""
+    csrf.protect()
     notification = Notification.query.get_or_404(id)
     if notification.store_id != g.user.store_id:
         abort(403)

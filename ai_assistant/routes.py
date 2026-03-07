@@ -1,3 +1,4 @@
+from typing import Union
 from flask import Blueprint, request, jsonify, render_template, current_app, session, g
 from ai_assistant.feature_flag import is_ai_enabled
 from google import genai
@@ -8,7 +9,7 @@ import markdown
 import datetime
 from datetime import timezone
 from functools import wraps
-from models import Service, Dog, Owner, Appointment, User, Store
+from models import Service, Dog, Owner, Appointment, User, Store, Receipt
 from extensions import db
 from notifications.email_utils import send_appointment_confirmation_email
 from dateutil import tz
@@ -50,25 +51,42 @@ def chat():
         # Construct System Prompt with Context
         store_id = session.get('store_id')
         context_data = ""
-
         if store_id:
             # Fetch minimal context for better answers (e.g. Service list)
             try:
                 services = Service.query.filter_by(store_id=store_id).all()
                 service_list = ", ".join([f"{s.name} (${s.base_price})" for s in services])
-                context_data += f"\nAvailable Services: {service_list}"
+                context_data += "\nAvailable Services: " + service_list
             except Exception as e:
-                current_app.logger.warning(f"AI Context Error (Services): {e}")
+                current_app.logger.warning("AI Context Error (Services): " + str(e))
+
+            try:
+                import datetime
+                import pytz
+                from datetime import timezone
+                store_obj = Store.query.get(store_id)
+                store_tz_str = getattr(store_obj, 'timezone', None) or 'America/New_York'
+                try:
+                    store_tz = pytz.timezone(store_tz_str)
+                except pytz.UnknownTimeZoneError:
+                    store_tz = pytz.timezone('America/New_York')
+
+                now_utc = datetime.datetime.now(timezone.utc)
+                now_local = now_utc.astimezone(store_tz)
+                time_str = now_local.strftime('%A, %Y-%m-%d %I:%M %p %Z')
+                context_data += "\nCurrent Date and Time: " + time_str
+            except Exception as e:
+                current_app.logger.warning("AI Context Error (Timezone): " + str(e))
 
         def get_dogs(name: str = "") -> list[str]:
             """
-            Fetches a list of dogs in the store. Optionally filters by name.
+            Fetches a list of dogs in the store to find their IDs and details. Always use this to look up a dog's ID before performing actions like booking an appointment or editing a dog, unless you already know the exact ID.
 
             Args:
-                name: Optional dog name to filter by.
+                name: Optional string. The name of the dog to search for. Leave empty to get a general list.
 
             Returns:
-                A list of strings containing dog details (name, breed, dog_id).
+                A list of strings. Each string contains the dog's ID, Name, Breed, and their Owner's ID. Example: "Dog ID: 1, Name: Fido, Breed: Poodle, Owner ID: 5"
             """
             current_app.logger.info(f"[AI Tool Call] get_dogs called with name='{name}'")
             query = Dog.query.filter_by(store_id=store_id)
@@ -84,13 +102,13 @@ def chat():
 
         def get_owners(name: str = "") -> list[str]:
             """
-            Fetches a list of owners in the store. Optionally filters by name.
+            Fetches a list of owners in the store to find their IDs and contact information. Always use this to look up an owner's ID before editing or deleting them, unless you already know the exact ID.
 
             Args:
-                name: Optional owner name to filter by.
+                name: Optional string. The name of the owner to search for. Leave empty to get a general list.
 
             Returns:
-                A list of strings containing owner details (name, phone, owner_id).
+                A list of strings. Each string contains the owner's ID, Name, and Phone Number. Example: "Owner ID: 5, Name: Jane Doe, Phone: 555-1234"
             """
             current_app.logger.info(f"[AI Tool Call] get_owners called with name='{name}'")
             query = Owner.query.filter_by(store_id=store_id)
@@ -104,31 +122,59 @@ def chat():
             current_app.logger.info(f"[AI Tool Call] get_owners returning {len(owners)} owners.")
             return result
 
-        def add_appointment(dog_id: int, date: str, time: str, groomer_id: int, services: list[str], notes: str = "") -> str:
+        def add_appointment(dog_id: Union[int, str], date: str, time: str, groomer_id: Union[int, str], services: list[str], notes: str = "") -> str:
             """
-            Creates a new appointment for a dog, fully configured with groomer and services.
-            Sends notifications and syncs with Google Calendar.
+            Books a brand new appointment for a specific dog. You must gather all required information before calling this tool.
 
             Args:
-                dog_id: The ID of the dog.
-                date: The date of the appointment in YYYY-MM-DD format.
-                time: The time of the appointment in HH:MM format (24-hour).
-                groomer_id: The ID of the selected groomer.
-                services: A list of service names or service IDs to attach to the appointment.
-                notes: Optional notes for the appointment.
+                dog_id: Required. The integer ID of the dog, OR the dog's name as a string. Using the name is highly encouraged! It will fuzzy match the database.
+                date: Required string. The date for the appointment, strictly in YYYY-MM-DD format (e.g., "2024-10-31").
+                time: Required string. The time for the appointment, strictly in 24-hour HH:MM format (e.g., "14:30" for 2:30 PM).
+                groomer_id: Required. The integer ID of the groomer, OR the groomer's name as a string. Using the name is encouraged!
+                services: Required list of strings. A list containing the names or IDs of the services to be performed (e.g., ["Bath", "Nail Trim"]).
+                notes: Optional string. Any special instructions or notes for the appointment.
 
             Returns:
-                A string indicating success or failure.
+                A string indicating whether the appointment booking was successful or if an error occurred.
             """
             current_app.logger.info(f"[AI Tool Call] add_appointment called with dog_id={dog_id}, groomer_id={groomer_id}, date='{date}', time='{time}', services='{services}', notes='{notes}'")
             try:
-                dog = Dog.query.options(db.joinedload(Dog.owner)).filter_by(id=dog_id, store_id=store_id).first()
-                if not dog:
-                    return f"Error: Dog with ID {dog_id} not found."
+                # Handle dog_id as int or string name
+                dog = None
+                if isinstance(dog_id, int) or (isinstance(dog_id, str) and dog_id.isdigit()):
+                    dog = Dog.query.options(db.joinedload(Dog.owner)).filter_by(id=int(dog_id), store_id=store_id).first()
+                else:
+                    # Try exact match first
+                    dogs = Dog.query.options(db.joinedload(Dog.owner)).filter(Dog.name.ilike(dog_id), Dog.store_id == store_id).all()
+                    if not dogs:
+                        # Fallback to fuzzy match
+                        dogs = Dog.query.options(db.joinedload(Dog.owner)).filter(Dog.name.ilike(f"%{dog_id}%"), Dog.store_id == store_id).all()
+                    if len(dogs) == 1:
+                        dog = dogs[0]
+                    elif len(dogs) > 1:
+                        # Just take the first one if there are multiple matches to be helpful instead of failing
+                        dog = dogs[0]
 
-                groomer = User.query.filter_by(id=groomer_id, store_id=store_id, is_groomer=True).first()
+                if not dog:
+                    return f"Error: Dog '{dog_id}' not found. Please ask the user to clarify or provide more details."
+
+                # Handle groomer_id as int or string name
+                groomer = None
+                if isinstance(groomer_id, int) or (isinstance(groomer_id, str) and groomer_id.isdigit()):
+                    groomer = User.query.filter_by(id=int(groomer_id), store_id=store_id, is_groomer=True).first()
+                else:
+                    # Try exact match first
+                    groomers = User.query.filter(User.username.ilike(groomer_id), User.store_id == store_id, User.is_groomer == True).all()
+                    if not groomers:
+                        # Fallback to fuzzy match
+                        groomers = User.query.filter(User.username.ilike(f"%{groomer_id}%"), User.store_id == store_id, User.is_groomer == True).all()
+                    if len(groomers) == 1:
+                        groomer = groomers[0]
+                    elif len(groomers) > 1:
+                         groomer = groomers[0]
+
                 if not groomer:
-                    return f"Error: Groomer with ID {groomer_id} not found or is not a valid groomer."
+                    return f"Error: Groomer '{groomer_id}' not found. Please ask the user to clarify."
 
                 try:
                     naive_dt = datetime.datetime.strptime(f"{date} {time}", "%Y-%m-%d %H:%M")
@@ -174,9 +220,30 @@ def chat():
                 # Post-appointment tasks (Sync and Notify)
                 try:
                     store_obj = Store.query.get(store_id)
-                    from management.routes import sync_google_calendar_for_store
-                    if store_obj and store_obj.google_token_json and store_obj.google_calendar_id:
-                        sync_google_calendar_for_store(store_id)
+
+                    # 1. Sync Google Calendar
+                    try:
+                        from utils import get_google_service
+                        if store_obj and store_obj.google_token_json:
+                            service = get_google_service('calendar', 'v3', store=store_obj)
+                            if service:
+                                status_str = 'Scheduled'
+                                event = {
+                                    'summary': f"[{status_str.upper()}] ({dog.name}) Appointment",
+                                    'description': f"Owner: {dog.owner.name if dog and dog.owner else ''}\n" +
+                                                   f"Groomer: {groomer.username if groomer else ''}\n" +
+                                                   f"Services: {services_text if services_text else ''}\n" +
+                                                   f"Notes: {notes if notes else ''}\n" +
+                                                   f"Status: {status_str}",
+                                    'start': {'dateTime': appt_datetime.isoformat(), 'timeZone': 'UTC'},
+                                    'end': {'dateTime': (appt_datetime + datetime.timedelta(hours=1)).isoformat(), 'timeZone': 'UTC'},
+                                }
+                                calendar_id = store_obj.google_calendar_id if store_obj.google_calendar_id else 'primary'
+                                created_event = service.events().insert(calendarId=calendar_id, body=event).execute()
+                                appt.google_event_id = created_event.get('id')
+                                db.session.commit()
+                    except Exception as e:
+                        current_app.logger.error(f"[AI Tool Call] Google Calendar sync failed: {e}")
 
                     # Reload appointment with relationships
                     new_appt = Appointment.query.options(
@@ -184,13 +251,36 @@ def chat():
                         db.joinedload(Appointment.groomer)
                     ).filter_by(id=appt.id).first()
 
+                    # 2. Send Notifications (Email/Text) based on settings
                     if dog.owner:
-                        send_appointment_confirmation_email(store_obj, dog.owner, dog, new_appt, groomer=groomer, services_text=services_text)
+                        import json
+                        import os
+
+                        notification_settings_path = os.path.join(current_app.root_path, 'notification_settings.json')
+                        try:
+                            with open(notification_settings_path, 'r') as f:
+                                notification_settings = json.load(f)
+                        except Exception as e:
+                            notification_settings = {}
+                            current_app.logger.error(f"[AI Tool Call] Could not load notification settings: {e}")
+
+                        if notification_settings.get('send_confirmation_email', False):
+                            try:
+                                from notifications.email_utils import send_appointment_confirmation_email
+                                send_appointment_confirmation_email(store_obj, dog.owner, dog, new_appt, groomer=groomer, services_text=services_text)
+                            except Exception as e:
+                                current_app.logger.error(f"[AI Tool Call] Failed to send email/text notification: {e}")
+
                 except Exception as e:
                     current_app.logger.error(f"[AI Tool Call] Background task error (Sync/Email) for AI appointment: {e}", exc_info=True)
                     # Don't fail the tool call if background tasks fail
 
-                msg = f"Successfully booked appointment for {dog.name} with {groomer.username} on {appt_datetime.astimezone(store_tz).strftime('%Y-%m-%d at %I:%M %p')}. Services added: {services_text or 'None'}."
+                # URL link
+                # Appointments go to either calendar or checkout but checkout is specific.
+                # Better to link to the daily calendar view for that date
+                calendar_link = f"/calendar?date={date}"
+
+                msg = f"Successfully booked appointment for {dog.name} with {groomer.username} on {appt_datetime.astimezone(store_tz).strftime('%Y-%m-%d at %I:%M %p')}. Services added: {services_text or 'None'}. [View Calendar]({calendar_link})"
                 current_app.logger.info(f"[AI Tool Call] add_appointment succeeded: {msg}")
                 return msg
 
@@ -203,13 +293,13 @@ def chat():
 
         def get_groomers(name: str = "") -> list[str]:
             """
-            Fetches a list of available groomers in the store. Optionally filters by name.
+            Fetches a list of available groomers (employees) in the store to find their IDs. Use this when you need a groomer's ID to book an appointment.
 
             Args:
-                name: Optional groomer name to filter by.
+                name: Optional string. The name of the groomer to search for. Leave empty to get a general list.
 
             Returns:
-                A list of strings containing groomer details (name, user_id).
+                A list of strings. Each string contains the groomer's ID and Name. Example: "Groomer ID: 2, Name: Alice"
             """
             query = User.query.filter_by(store_id=store_id, is_groomer=True)
             if name:
@@ -221,13 +311,13 @@ def chat():
 
         def get_services(name: str = "") -> list[str]:
             """
-            Fetches a list of available services in the store. Optionally filters by name.
+            Fetches a list of available services in the store to find their IDs and prices.
 
             Args:
-                name: Optional service name to filter by.
+                name: Optional string. The name of the service to search for.
 
             Returns:
-                A list of strings containing service details (name, service_id, base_price).
+                A list of strings. Each string contains the service's ID, Name, and Base Price. Example: "Service ID: 10, Name: Full Groom, Price: $50.0"
             """
             query = Service.query.filter_by(store_id=store_id)
             if name:
@@ -239,39 +329,49 @@ def chat():
 
         def add_owner(name: str, phone: str = "", email: str = "") -> str:
             """
-            Adds a new owner to the store.
+            Creates a new owner (client) record in the directory.
 
             Args:
-                name: The full name of the owner.
-                phone: Optional phone number.
-                email: Optional email address.
+                name: Required string. The full name of the new owner.
+                phone: Optional string. The phone number of the owner. Highly recommended.
+                email: Optional string. The email address of the owner.
 
             Returns:
-                A string indicating success or failure.
+                A string confirming the creation and providing the new Owner ID, or an error message.
             """
             try:
                 owner = Owner(name=name, phone_number=phone, email=email, store_id=store_id)
                 db.session.add(owner)
                 db.session.commit()
-                return f"Successfully added owner '{name}' with ID {owner.id}."
+                link = f"/owners/{owner.id}"
+                return f"Successfully added owner '{name}' with ID {owner.id}. [View Owner Profile]({link})"
             except Exception as e:
                 db.session.rollback()
                 return f"Error adding owner: {str(e)}"
 
-        def delete_owner(owner_id: int) -> str:
+        def delete_owner(owner_id: Union[int, str]) -> str:
             """
-            Deletes an existing owner from the store. This will also delete all associated dogs and appointments.
+            Permanently deletes an owner and ALL of their associated dogs and appointments. Ask for confirmation before using this.
 
             Args:
-                owner_id: The ID of the owner to delete.
+                owner_id: Required. The integer ID of the owner to delete, OR their exact name as a string.
 
             Returns:
-                A string indicating success or failure.
+                A string indicating success or failure of the deletion.
             """
             try:
-                owner = Owner.query.filter_by(id=owner_id, store_id=store_id).first()
+                owner = None
+                if isinstance(owner_id, int) or (isinstance(owner_id, str) and owner_id.isdigit()):
+                    owner = Owner.query.filter_by(id=int(owner_id), store_id=store_id).first()
+                else:
+                    owners = Owner.query.filter(Owner.name.ilike(f"%{owner_id}%"), Owner.store_id == store_id).all()
+                    if len(owners) == 1:
+                        owner = owners[0]
+                    elif len(owners) > 1:
+                        return f"Error: Multiple owners found matching '{owner_id}'. Please use get_owners to find the specific ID."
+
                 if not owner:
-                    return f"Error: Owner with ID {owner_id} not found."
+                    return f"Error: Owner '{owner_id}' not found."
 
                 db.session.delete(owner)
                 db.session.commit()
@@ -280,23 +380,36 @@ def chat():
                 db.session.rollback()
                 return f"Error deleting owner: {str(e)}"
 
-        def edit_owner(owner_id: int, name: str = "", phone: str = "", email: str = "") -> str:
+        def edit_owner(owner_id: Union[int, str], name: str = "", phone: str = "", email: str = "") -> str:
             """
-            Edits an existing owner in the store. Provide only the fields you want to change.
+            Updates the details of an existing owner. Only provide the arguments for the fields that need to change.
 
             Args:
-                owner_id: The ID of the owner to edit.
-                name: The new full name of the owner.
-                phone: The new phone number.
-                email: The new email address.
+                owner_id: Required. The integer ID of the owner to edit, OR their name as a string. Using the name is highly encouraged! It will fuzzy match.
+                name: Optional string. The new name to set.
+                phone: Optional string. The new phone number to set.
+                email: Optional string. The new email address to set.
 
             Returns:
-                A string indicating success or failure.
+                A string indicating success or failure of the update.
             """
             try:
-                owner = Owner.query.filter_by(id=owner_id, store_id=store_id).first()
+                owner = None
+                if isinstance(owner_id, int) or (isinstance(owner_id, str) and owner_id.isdigit()):
+                    owner = Owner.query.filter_by(id=int(owner_id), store_id=store_id).first()
+                else:
+                    # Try exact match first
+                    owners = Owner.query.filter(Owner.name.ilike(owner_id), Owner.store_id == store_id).all()
+                    if not owners:
+                        # Fallback to fuzzy match
+                        owners = Owner.query.filter(Owner.name.ilike(f"%{owner_id}%"), Owner.store_id == store_id).all()
+                    if len(owners) == 1:
+                        owner = owners[0]
+                    elif len(owners) > 1:
+                        owner = owners[0]
+
                 if not owner:
-                    return f"Error: Owner with ID {owner_id} not found."
+                    return f"Error: Owner '{owner_id}' not found."
                 if name:
                     owner.name = name
                 if phone:
@@ -309,47 +422,74 @@ def chat():
                 db.session.rollback()
                 return f"Error editing owner: {str(e)}"
 
-        def add_dog(owner_id: int, name: str, breed: str = "") -> str:
+        def add_dog(owner_id: Union[int, str], name: str, breed: str = "") -> str:
             """
-            Adds a new dog to an existing owner's profile.
+            Adds a new dog and attaches it to an existing owner.
 
             Args:
-                owner_id: The ID of the dog's owner.
-                name: The name of the dog.
-                breed: Optional breed of the dog.
+                owner_id: Required. The integer ID of the owner who owns this dog, OR the owner's name as a string. Using the name is highly encouraged!
+                name: Required string. The name of the new dog.
+                breed: Optional string. The breed of the dog.
 
             Returns:
-                A string indicating success or failure.
+                A string confirming the creation and providing the new Dog ID, or an error message.
             """
             try:
-                owner = Owner.query.filter_by(id=owner_id, store_id=store_id).first()
+                owner = None
+                if isinstance(owner_id, int) or (isinstance(owner_id, str) and owner_id.isdigit()):
+                    owner = Owner.query.filter_by(id=int(owner_id), store_id=store_id).first()
+                else:
+                    # Try exact match first
+                    owners = Owner.query.filter(Owner.name.ilike(owner_id), Owner.store_id == store_id).all()
+                    if not owners:
+                        # Fallback to fuzzy match
+                        owners = Owner.query.filter(Owner.name.ilike(f"%{owner_id}%"), Owner.store_id == store_id).all()
+                    if len(owners) == 1:
+                        owner = owners[0]
+                    elif len(owners) > 1:
+                        owner = owners[0]
+
                 if not owner:
-                    return f"Error: Owner with ID {owner_id} not found."
+                    return f"Error: Owner '{owner_id}' not found."
 
                 dog = Dog(name=name, breed=breed, owner_id=owner.id, store_id=store_id)
                 db.session.add(dog)
                 db.session.commit()
-                return f"Successfully added dog '{name}' to owner '{owner.name}'. Dog ID: {dog.id}."
+                link = f"/dogs/{dog.id}"
+                return f"Successfully added dog '{name}' to owner '{owner.name}'. Dog ID: {dog.id}. [View Dog Profile]({link})"
             except Exception as e:
                 db.session.rollback()
                 return f"Error adding dog: {str(e)}"
 
-        def edit_dog(dog_id: int, name: str = "", breed: str = "") -> str:
+        def edit_dog(dog_id: Union[int, str], name: str = "", breed: str = "") -> str:
             """
-            Edits an existing dog in the store. Provide only the fields you want to change.
+            Updates the details of an existing dog. Only provide the arguments for the fields that need to change.
 
             Args:
-                dog_id: The ID of the dog to edit.
-                name: The new name of the dog.
-                breed: The new breed of the dog.
+                dog_id: Required. The integer ID of the dog to edit, OR their name as a string. Using the name is highly encouraged! It will fuzzy match.
+                name: Optional string. The new name to set.
+                breed: Optional string. The new breed to set.
 
             Returns:
-                A string indicating success or failure.
+                A string indicating success or failure of the update.
             """
             try:
-                dog = Dog.query.filter_by(id=dog_id, store_id=store_id).first()
+                dog = None
+                if isinstance(dog_id, int) or (isinstance(dog_id, str) and dog_id.isdigit()):
+                    dog = Dog.query.filter_by(id=int(dog_id), store_id=store_id).first()
+                else:
+                    # Try exact match first
+                    dogs = Dog.query.filter(Dog.name.ilike(dog_id), Dog.store_id == store_id).all()
+                    if not dogs:
+                        # Fallback to fuzzy match
+                        dogs = Dog.query.filter(Dog.name.ilike(f"%{dog_id}%"), Dog.store_id == store_id).all()
+                    if len(dogs) == 1:
+                        dog = dogs[0]
+                    elif len(dogs) > 1:
+                        dog = dogs[0]
+
                 if not dog:
-                    return f"Error: Dog with ID {dog_id} not found."
+                    return f"Error: Dog '{dog_id}' not found."
 
                 if name:
                     dog.name = name
@@ -361,20 +501,33 @@ def chat():
                 db.session.rollback()
                 return f"Error editing dog: {str(e)}"
 
-        def delete_dog(dog_id: int) -> str:
+        def delete_dog(dog_id: Union[int, str]) -> str:
             """
-            Deletes an existing dog from the store. This will also delete all associated appointments.
+            Permanently deletes a dog and ALL of their associated appointments. Ask for confirmation before using this.
 
             Args:
-                dog_id: The ID of the dog to delete.
+                dog_id: Required. The integer ID of the dog to delete, OR their name as a string. Using the name is highly encouraged!
 
             Returns:
-                A string indicating success or failure.
+                A string indicating success or failure of the deletion.
             """
             try:
-                dog = Dog.query.filter_by(id=dog_id, store_id=store_id).first()
+                dog = None
+                if isinstance(dog_id, int) or (isinstance(dog_id, str) and dog_id.isdigit()):
+                    dog = Dog.query.filter_by(id=int(dog_id), store_id=store_id).first()
+                else:
+                    # Try exact match first
+                    dogs = Dog.query.filter(Dog.name.ilike(dog_id), Dog.store_id == store_id).all()
+                    if not dogs:
+                        # Fallback to fuzzy match
+                        dogs = Dog.query.filter(Dog.name.ilike(f"%{dog_id}%"), Dog.store_id == store_id).all()
+                    if len(dogs) == 1:
+                        dog = dogs[0]
+                    elif len(dogs) > 1:
+                        dog = dogs[0]
+
                 if not dog:
-                    return f"Error: Dog with ID {dog_id} not found."
+                    return f"Error: Dog '{dog_id}' not found."
 
                 db.session.delete(dog)
                 db.session.commit()
@@ -383,28 +536,50 @@ def chat():
                 db.session.rollback()
                 return f"Error deleting dog: {str(e)}"
 
-        def edit_appointment(appointment_id: int, date: str = "", time: str = "", groomer_id: int = None, services: list[str] = None, notes: str = "") -> str:
+        def edit_appointment(appointment_id: Union[int, str], date: str = "", time: str = "", groomer_id: Union[int, str] = None, services: list[str] = None, notes: str = "") -> str:
             """
-            Edits an existing appointment. Sends notifications and syncs with Google Calendar. Provide only the fields you want to change.
+            Modifies an existing appointment. Only provide the arguments for the fields that need to change.
 
             Args:
-                appointment_id: The ID of the appointment to edit.
-                date: The new date of the appointment in YYYY-MM-DD format.
-                time: The new time of the appointment in HH:MM format (24-hour).
-                groomer_id: The ID of the new groomer.
-                services: A list of new service names or service IDs to attach to the appointment.
-                notes: The new notes for the appointment.
+                appointment_id: Required. The integer ID of the appointment to edit, OR the dog's name to find their appointment. Using the name is highly encouraged!
+                date: Optional string. The new date, strictly in YYYY-MM-DD format. If changing datetime, MUST provide BOTH date and time.
+                time: Optional string. The new time, strictly in 24-hour HH:MM format. If changing datetime, MUST provide BOTH date and time.
+                groomer_id: Optional. The integer ID of the new groomer, OR the groomer's name as a string. Using the name is highly encouraged!
+                services: Optional list of strings. The new list of services (names or IDs) to replace the old ones.
+                notes: Optional string. The new notes to set.
 
             Returns:
-                A string indicating success or failure.
+                A string indicating success or failure of the update.
             """
             try:
-                appt = Appointment.query.options(
-                    db.joinedload(Appointment.dog).joinedload(Dog.owner)
-                ).filter_by(id=appointment_id, store_id=store_id).first()
+                appt = None
+                if isinstance(appointment_id, int) or (isinstance(appointment_id, str) and appointment_id.isdigit()):
+                    appt = Appointment.query.options(
+                        db.joinedload(Appointment.dog).joinedload(Dog.owner)
+                    ).filter_by(id=int(appointment_id), store_id=store_id).first()
+                else:
+                    # Try exact match first
+                    appts = Appointment.query.options(
+                        db.joinedload(Appointment.dog).joinedload(Dog.owner)
+                    ).join(Dog).filter(
+                        Dog.name.ilike(appointment_id),
+                        Appointment.store_id == store_id
+                    ).all()
+                    if not appts:
+                        # Fallback to fuzzy match
+                        appts = Appointment.query.options(
+                            db.joinedload(Appointment.dog).joinedload(Dog.owner)
+                        ).join(Dog).filter(
+                            Dog.name.ilike(f"%{appointment_id}%"),
+                            Appointment.store_id == store_id
+                        ).all()
+                    if len(appts) == 1:
+                        appt = appts[0]
+                    elif len(appts) > 1:
+                        appt = appts[0]
 
-                if not appt:
-                    return f"Error: Appointment {appointment_id} not found."
+                if appt is None:
+                    return f"Error: Appointment '{appointment_id}' not found."
 
                 store_obj = Store.query.get(store_id)
                 store_tz_str = getattr(store_obj, 'timezone', None) or 'America/New_York'
@@ -424,9 +599,22 @@ def chat():
                     return "Error: Both date and time must be provided to update the appointment datetime."
 
                 if groomer_id is not None:
-                    groomer = User.query.filter_by(id=groomer_id, store_id=store_id, is_groomer=True).first()
+                    groomer = None
+                    if isinstance(groomer_id, int) or (isinstance(groomer_id, str) and groomer_id.isdigit()):
+                        groomer = User.query.filter_by(id=int(groomer_id), store_id=store_id, is_groomer=True).first()
+                    else:
+                        # Try exact match first
+                        groomers = User.query.filter(User.username.ilike(groomer_id), User.store_id == store_id, User.is_groomer == True).all()
+                        if not groomers:
+                            # Fallback to fuzzy match
+                            groomers = User.query.filter(User.username.ilike(f"%{groomer_id}%"), User.store_id == store_id, User.is_groomer == True).all()
+                        if len(groomers) == 1:
+                            groomer = groomers[0]
+                        elif len(groomers) > 1:
+                            groomer = groomers[0]
+
                     if not groomer:
-                        return f"Error: Groomer with ID {groomer_id} not found or is not a valid groomer."
+                        return f"Error: Groomer '{groomer_id}' not found."
                     appt.groomer_id = groomer.id
 
                 services_text = appt.requested_services_text
@@ -465,24 +653,256 @@ def chat():
                 db.session.rollback()
                 return f"Error editing appointment: {str(e)}"
 
-        def delete_appointment(appointment_id: int, send_notification: bool = True) -> str:
+        def get_current_time() -> str:
             """
-            Cancels/deletes an existing appointment.
-
-            Args:
-                appointment_id: The ID of the appointment to delete.
-                send_notification: Whether to send a cancellation email/text to the owner.
+            Retrieves the current date and time in the store's local timezone. Use this to orient yourself when the user uses relative terms like "today", "tomorrow", "next Tuesday", or "at 5pm".
 
             Returns:
-                A string indicating success or failure.
+                A string containing the current date and time. Example: "Current Date and Time: 2024-10-25 10:30 AM EDT"
+            """
+            import datetime
+            import pytz
+            from datetime import timezone
+
+            store_obj = Store.query.get(store_id)
+            store_tz_str = getattr(store_obj, 'timezone', None) or 'America/New_York'
+            try:
+                store_tz = pytz.timezone(store_tz_str)
+            except pytz.UnknownTimeZoneError:
+                store_tz = pytz.timezone('America/New_York')
+
+            now_utc = datetime.datetime.now(timezone.utc)
+            now_local = now_utc.astimezone(store_tz)
+            time_str = now_local.strftime('%Y-%m-%d %I:%M %p %Z')
+            return f"Current Date and Time: {time_str}"
+
+        def get_daily_appointment_count(date: str = "") -> str:
+            """
+            Counts the total number of appointments scheduled for a specific date. Useful when the user asks "How many appointments do I have today?" or "How busy is tomorrow?".
+
+            Args:
+                date: Optional string. The date to check, strictly in YYYY-MM-DD format (e.g., "2024-10-31"). If left empty, it will default to the current date (today).
+
+            Returns:
+                A string stating the number of appointments. Example: "There are 5 appointments scheduled for 2024-10-31."
+            """
+            import datetime
+            import pytz
+            from datetime import timezone
+
+            store_obj = Store.query.get(store_id)
+            store_tz_str = getattr(store_obj, 'timezone', None) or 'America/New_York'
+            try:
+                store_tz = pytz.timezone(store_tz_str)
+            except pytz.UnknownTimeZoneError:
+                store_tz = pytz.timezone('America/New_York')
+
+            if not date:
+                now_utc = datetime.datetime.now(timezone.utc)
+                now_local = now_utc.astimezone(store_tz)
+                target_date = now_local.date()
+            else:
+                try:
+                    target_date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
+                except ValueError:
+                    return "Error: Invalid date format. Expected YYYY-MM-DD."
+
+            naive_start = datetime.datetime.combine(target_date, datetime.time.min)
+            naive_end = datetime.datetime.combine(target_date, datetime.time.max)
+
+            local_start = store_tz.localize(naive_start)
+            local_end = store_tz.localize(naive_end)
+
+            utc_start = local_start.astimezone(timezone.utc)
+            utc_end = local_end.astimezone(timezone.utc)
+
+            count = Appointment.query.filter(
+                Appointment.store_id == store_id,
+                Appointment.appointment_datetime >= utc_start,
+                Appointment.appointment_datetime <= utc_end
+            ).count()
+
+            time_str = target_date.strftime('%Y-%m-%d')
+            return f"There are {count} appointments scheduled for {time_str}."
+
+        def get_store_info() -> str:
+            """
+            Retrieves the general business information for the store, such as its name, address, phone number, and operating hours.
+
+            Returns:
+                A multi-line string containing the store's details.
+            """
+            store_obj = Store.query.get(store_id)
+            if not store_obj:
+                return "Error: Store not found."
+
+            info = []
+            info.append(f"Store Name: {store_obj.name}")
+            info.append(f"Address: {store_obj.address}")
+            info.append(f"Phone: {store_obj.phone}")
+            info.append(f"Email: {store_obj.email}")
+            info.append(f"Description: {store_obj.description}")
+            info.append(f"Business Hours: {store_obj.business_hours}")
+            info.append(f"Website: {store_obj.website_url}")
+            return "\n".join(info)
+
+        def update_store_info(name: str = None, description: str = None, business_hours: str = None, address: str = None, phone: str = None, email: str = None, website_url: str = None) -> str:
+            """
+            Updates the store's general business information. Requires the user to have admin privileges. Only provide arguments for the fields being changed.
+
+            Args:
+                name: Optional string. New store name.
+                description: Optional string. New description.
+                business_hours: Optional string. New operating hours.
+                address: Optional string. New physical address.
+                phone: Optional string. New contact phone number.
+                email: Optional string. New contact email.
+                website_url: Optional string. New website URL.
+
+            Returns:
+                A string indicating success or failure of the update.
+            """
+            if not g.user.is_admin and g.user.role != 'superadmin':
+                return "Error: Only admins can update store information."
+
+            try:
+                store_obj = Store.query.get(store_id)
+                if not store_obj:
+                    return "Error: Store not found."
+
+                if name is not None: store_obj.name = name
+                if description is not None: store_obj.description = description
+                if business_hours is not None: store_obj.business_hours = business_hours
+                if address is not None: store_obj.address = address
+                if phone is not None: store_obj.phone = phone
+                if email is not None: store_obj.email = email
+                if website_url is not None: store_obj.website_url = website_url
+
+                db.session.commit()
+                return "Successfully updated store information."
+            except Exception as e:
+                db.session.rollback()
+                return f"Error updating store info: {str(e)}"
+
+        def get_revenue(period: str = "today") -> str:
+            """
+            Calculates the total revenue earned during a specific time period based on completed appointments. Requires the user to have admin privileges.
+
+            Args:
+                period: Optional string. The time frame to calculate. Must be exactly one of: "today", "week", "month", or "year". Defaults to "today".
+
+            Returns:
+                A string stating the revenue amount. Example: "Revenue for today: $150.00"
+            """
+            if not g.user.is_admin and g.user.role != 'superadmin':
+                return "Error: Only admins can view revenue information."
+
+            import datetime
+            import pytz
+            from sqlalchemy import func
+
+            store_obj = Store.query.get(store_id)
+            store_tz_str = getattr(store_obj, 'timezone', None) or 'UTC'
+            try:
+                store_tz = pytz.timezone(store_tz_str)
+            except:
+                store_tz = pytz.UTC
+
+            now_utc = datetime.datetime.now(timezone.utc)
+            now_local = now_utc.astimezone(store_tz)
+
+            start_date = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_date = start_date + datetime.timedelta(days=1)
+
+            if period == "week":
+                start_date = start_date - datetime.timedelta(days=start_date.weekday())
+            elif period == "month":
+                start_date = start_date.replace(day=1)
+            elif period == "year":
+                start_date = start_date.replace(month=1, day=1)
+
+            start_utc = start_date.astimezone(timezone.utc)
+            end_utc = end_date.astimezone(timezone.utc)
+
+            revenue = db.session.query(func.sum(Appointment.checkout_total_amount)).filter(
+                Appointment.store_id == store_id,
+                Appointment.status == 'Completed',
+                Appointment.appointment_datetime >= start_utc,
+                Appointment.appointment_datetime < end_utc
+            ).scalar() or 0.0
+
+            return f"Revenue for {period}: ${revenue:.2f}"
+
+        def add_service(name: str, base_price: float, description: str = "") -> str:
+            """
+            Creates a new service offering for the store. Requires the user to have admin privileges.
+
+            Args:
+                name: Required string. The name of the new service (e.g., "Teeth Brushing").
+                base_price: Required float. The base cost of the service (e.g., 15.0).
+                description: Optional string. Details about what the service includes.
+
+            Returns:
+                A string indicating success or failure of the creation.
+            """
+            if not g.user.is_admin and g.user.role != 'superadmin':
+                return "Error: Only admins can add services."
+
+            try:
+                service = Service(
+                    name=name,
+                    base_price=base_price,
+                    description=description,
+                    store_id=store_id,
+                    created_by_user_id=g.user.id
+                )
+                db.session.add(service)
+                db.session.commit()
+                return f"Successfully added service '{name}' with base price ${base_price:.2f}."
+            except Exception as e:
+                db.session.rollback()
+                return f"Error adding service: {str(e)}"
+
+        def delete_appointment(appointment_id: Union[int, str], send_notification: bool = True) -> str:
+            """
+            Cancels and permanently deletes an existing appointment.
+
+            Args:
+                appointment_id: Required. The integer ID of the appointment to delete, OR the dog's name to find their appointment. Using the name is highly encouraged!
+                send_notification: Optional boolean. Whether to send a cancellation email to the owner. Defaults to True.
+
+            Returns:
+                A string indicating success or failure of the cancellation.
             """
             try:
-                appt = Appointment.query.options(
-                    db.joinedload(Appointment.dog).joinedload(Dog.owner)
-                ).filter_by(id=appointment_id, store_id=store_id).first()
+                appt = None
+                if isinstance(appointment_id, int) or (isinstance(appointment_id, str) and appointment_id.isdigit()):
+                    appt = Appointment.query.options(
+                        db.joinedload(Appointment.dog).joinedload(Dog.owner)
+                    ).filter_by(id=int(appointment_id), store_id=store_id).first()
+                else:
+                    # Try exact match first
+                    appts = Appointment.query.options(
+                        db.joinedload(Appointment.dog).joinedload(Dog.owner)
+                    ).join(Dog).filter(
+                        Dog.name.ilike(appointment_id),
+                        Appointment.store_id == store_id
+                    ).all()
+                    if not appts:
+                        # Fallback to fuzzy match
+                        appts = Appointment.query.options(
+                            db.joinedload(Appointment.dog).joinedload(Dog.owner)
+                        ).join(Dog).filter(
+                            Dog.name.ilike(f"%{appointment_id}%"),
+                            Appointment.store_id == store_id
+                        ).all()
+                    if len(appts) == 1:
+                        appt = appts[0]
+                    elif len(appts) > 1:
+                        appt = appts[0]
 
-                if not appt:
-                    return f"Error: Appointment {appointment_id} not found."
+                if appt is None:
+                    return f"Error: Appointment '{appointment_id}' not found."
 
                 store_obj = Store.query.get(store_id)
                 store_tz_str = getattr(store_obj, 'timezone', None) or 'America/New_York'
@@ -497,15 +917,20 @@ def chat():
 
                 # Background tasks
                 try:
-                    from management.routes import sync_google_calendar_for_store
-                    if store_obj and store_obj.google_token_json and store_obj.google_calendar_id:
-                        sync_google_calendar_for_store(store_id)
+                    from utils import get_google_service
+                    if store_obj and store_obj.google_token_json and appt.google_event_id:
+                        service = get_google_service('calendar', 'v3', store=store_obj)
+                        if service:
+                            calendar_id = store_obj.google_calendar_id if store_obj.google_calendar_id else 'primary'
+                            service.events().delete(calendarId=calendar_id, eventId=appt.google_event_id).execute()
 
                     if send_notification and owner:
                         from notifications.email_utils import send_appointment_cancelled_email
                         send_appointment_cancelled_email(store_obj, owner, dog, appt)
                 except Exception as e:
                     current_app.logger.error(f"[AI Tool Call] Background task error on delete: {e}")
+
+                Receipt.query.filter_by(appointment_id=appt.id).delete(synchronize_session=False)
 
                 db.session.delete(appt)
                 db.session.commit()
@@ -515,37 +940,130 @@ def chat():
                 db.session.rollback()
                 return f"Error deleting appointment: {str(e)}"
 
-        system_prompt = f"""
-        You are 'Pawfection AI', a helpful assistant for a dog grooming business app.
-        Your goal is to help staff manage appointments, owners, and dogs.
+        def get_appointments(date: str = "", dog_name: str = "", owner_name: str = "") -> list[str]:
+            """
+            Retrieves a list of scheduled appointments. Can be filtered by date, dog name, or owner name. If no filters are provided, it returns a list of all upcoming appointments. Use this when the user asks "What's my schedule like?" or "When is Fido's next appointment?".
 
-        The app has the following main features and routes:
-        - Dashboard: /dashboard
-        - Calendar: /calendar
-        - Add Appointment: /add_appointment (Params: dog_id, date, time, groomer_id, services, notes)
-        - Add Owner: /add_owner
-        - Add Dog: /add_dog
-        - Directory: /directory (List of owners/dogs)
+            Args:
+                date: Optional string. Filter by a specific date, strictly in YYYY-MM-DD format.
+                dog_name: Optional string. Filter by a specific dog's name.
+                owner_name: Optional string. Filter by a specific owner's name.
+
+            Returns:
+                A list of strings. Each string contains the Appointment ID, Date, Time, Dog Name, Owner Name, Groomer Name, and Services. Example: "Appointment ID: 42, Date: 2024-10-31, Time: 02:30 PM, Dog: Rex, Owner: John Smith, Groomer: Alice, Services: Bath, Trim"
+            """
+            current_app.logger.info(f"[AI Tool Call] get_appointments called with date='{date}', dog_name='{dog_name}', owner_name='{owner_name}'")
+
+            store_obj = Store.query.get(store_id)
+            store_tz_str = getattr(store_obj, 'timezone', None) or 'America/New_York'
+            try:
+                store_tz = pytz.timezone(store_tz_str)
+            except pytz.UnknownTimeZoneError:
+                store_tz = pytz.timezone('America/New_York')
+
+            query = Appointment.query.options(
+                db.joinedload(Appointment.dog).joinedload(Dog.owner),
+                db.joinedload(Appointment.groomer)
+            ).filter(Appointment.store_id == store_id)
+
+            if date:
+                try:
+                    # Filter by the entire day in the store's timezone
+                    naive_start = datetime.datetime.strptime(f"{date} 00:00", "%Y-%m-%d %H:%M")
+                    naive_end = datetime.datetime.strptime(f"{date} 23:59", "%Y-%m-%d %H:%M")
+                    local_start = store_tz.localize(naive_start)
+                    local_end = store_tz.localize(naive_end)
+                    utc_start = local_start.astimezone(timezone.utc)
+                    utc_end = local_end.astimezone(timezone.utc)
+                    query = query.filter(Appointment.appointment_datetime >= utc_start, Appointment.appointment_datetime <= utc_end)
+                except ValueError:
+                    return ["Error: Invalid date format. Expected YYYY-MM-DD."]
+            else:
+                # Default to upcoming appointments if no date given
+                now_utc = datetime.datetime.now(timezone.utc)
+                query = query.filter(Appointment.appointment_datetime >= now_utc)
+
+            if dog_name:
+                query = query.join(Dog).filter(Dog.name.ilike(f"%{dog_name}%"))
+            if owner_name:
+                # If we didn't already join dog, join it
+                if not dog_name:
+                    query = query.join(Dog)
+                query = query.join(Owner).filter(Owner.name.ilike(f"%{owner_name}%"))
+
+            appts = query.order_by(Appointment.appointment_datetime.asc()).limit(15).all()
+
+            if not appts:
+                current_app.logger.info(f"[AI Tool Call] get_appointments returning 'No appointments found.'")
+                return ["No appointments found matching those criteria."]
+
+            result = []
+            for a in appts:
+                local_dt = a.appointment_datetime.astimezone(store_tz)
+                date_str = local_dt.strftime('%Y-%m-%d')
+                time_str = local_dt.strftime('%I:%M %p')
+                dog_n = a.dog.name if a.dog else "Unknown"
+                owner_n = a.dog.owner.name if a.dog and a.dog.owner else "Unknown"
+                groomer_n = a.groomer.username if a.groomer else "Unknown"
+                services = a.requested_services_text or "None"
+
+                result.append(f"Appointment ID: {a.id}, Date: {date_str}, Time: {time_str}, Dog: {dog_n}, Owner: {owner_n}, Groomer: {groomer_n}, Services: {services}")
+
+            current_app.logger.info(f"[AI Tool Call] get_appointments returning {len(result)} appointments.")
+            return result
+
+        system_prompt = f"""
+        Role: You are the "Pawfection Business Agent." You are a highly efficient, professional administrative assistant for pet grooming businesses.
+
+        Core Objective: Help the user manage their Client & Pet Directory and Schedule New Appointments with 100% accuracy and structured data. You are using `qwen2.5-coder:14b`.
 
         CONTEXT:
         Current User Role: {g.user.role if hasattr(g, 'user') else 'Unknown'}
         Current User ID: {g.user.id if hasattr(g, 'user') else 'Unknown'}
         {context_data}
 
-        INSTRUCTIONS:
-        1. Be concise, friendly, and professional.
-        2. You now have tools to look up groomers, services, dogs, owners, and to create/edit/delete appointments, owners, and dogs directly!
-        3. ALWAYS OFFER A CHOICE FOR BOOKING: When a user wants to book an appointment, ask if they want you to "book it automatically in the background" or "provide a link to the booking page with the details filled out".
-           - If they choose automatic: You MUST gather all required details (dog, date, time, groomer, and services) before calling the `add_appointment` tool. Use your lookup tools to find the correct IDs for groomer and dog, and the correct names/IDs for services.
-           - If they choose the link: Generate a SMART LINK to `/add_appointment` with the parameters pre-filled (e.g., `[Book for Rex](/add_appointment?dog_id=1&date=2023-10-10&time=14:00&groomer_id=2&services=Bath,Nails)`).
-        4. When calling a tool, wait for its output and confirm the result with the user.
-        5. If you need to perform an action without a tool, generate a SMART LINK.
-        6. When editing profiles (owner or dog), prompt the user what part of the profile they'd like to edit.
-        7. Use Markdown for formatting (bold, lists, links).
+        Task Execution Protocol:
+
+        1. Identify Intent: Determine if the user wants to ADD, EDIT, DELETE, or VIEW a record (Owner, Dog, Appointment, Service, Store Info, Revenue). Note: Ensure you account for relative dates/times provided by the user using the Current Date and Time context provided to you. For example, if today is Tuesday, and the user asks for "next Wednesday", you must calculate what date next Wednesday is based on the Current Date and Time context before making tool calls.
+
+        2. Verification: Check the provided information against ALL required fields. You MUST NOT proceed without ALL of these:
+           - Add Appointment: Needs a Dog Name, Date (YYYY-MM-DD), Time (HH:MM), Groomer Name, and at least one Service. Note that if the user did not specify the Date, but mentioned "today" or "tomorrow", you should infer the date using the Current Date and Time. Also, infer times like "5pm".
+           - Edit Appointment: Needs Appointment ID or Dog Name.
+           - Delete Appointment: Needs Appointment ID or Dog Name.
+           - Add Owner: Needs a Name and Phone Number.
+           - Edit Owner: Needs Owner Name or ID.
+           - Delete Owner: Needs Owner Name or ID.
+           - Add Dog: Needs a Name, Breed, and Owner Name.
+           - Edit Dog: Needs Dog Name or ID.
+           - Delete Dog: Needs Dog Name or ID.
+           - Add Service: Needs Name and Base Price.
+
+        3. The "Clarification" Loop: If a request is missing ANY required information (e.g., "Book a dog"), you MUST reply by asking for exactly what is missing: "I can help with that! To complete the booking, I just need the dog's name, the date/time, the service type, and the groomer's name." Do not try to guess or hallucinate missing information.
+
+        4. Lookups & Names: You do not need to ask the user for ID numbers (like dog_id, owner_id, groomer_id, appointment_id). You can and should use exact names for these parameters in the tools. If a tool fails because a name is not unique, THEN use `get_dogs`, `get_owners`, `get_groomers`, or `get_appointments` to find the exact ID.
+
+        5. Safety Check: Always confirm before performing a DELETE action.
+
+        6. Output Formatting:
+           - Provide a polite, concise confirmation to the user.
+           - To perform actions, use the provided tools. DO NOT generate raw JSON strings in your conversational response. DO NOT output code blocks or markdown code syntax containing tool calls. Use the native tool calling framework. If you MUST output JSON, format it exactly like this on its own line: {{"name": "tool_name", "arguments": {{"arg1": "value1"}}}}
+           - Use a helpful, organized tone—break down multi-step processes into bulleted lists for clarity.
+           - Never output JSON or any other code in the chat for users to see.
+
+        ADDITIONAL INSTRUCTIONS:
+        - DO NOT OFFER CHOICES OR WALKTHROUGHS. When a user wants to perform an action, you MUST gather all required details and call the relevant tool immediately to perform the action in the background. DO NOT offer a "smart link" or ask them to fill out a form themselves. You handle everything fully.
+        - When calling a tool, wait for its output and confirm the result with the user. DO NOT use made-up tool names.
+        - You can manage the business: use `get_revenue` to check earnings, `get_store_info` to see settings, and `update_store_info` / `add_service` to change them (these require admin privileges).
+        - To get appointment details, use `get_appointments`. Do not make the user look up IDs. You can also use `get_daily_appointment_count` to find out how many appointments exist on a particular date.
+        - Only use the tools provided to you. If a task cannot be fully completed by a tool, inform the user.
+        - Use Markdown for formatting (bold, lists, links).
         """
 
 
-        tools = [get_dogs, get_owners, add_appointment, get_groomers, get_services, add_owner, edit_owner, delete_owner, add_dog, edit_dog, delete_dog, edit_appointment, delete_appointment]
+
+
+
+        tools = [get_dogs, get_owners, add_appointment, get_groomers, get_services, add_owner, edit_owner, delete_owner, add_dog, edit_dog, delete_dog, edit_appointment, delete_appointment, get_store_info, update_store_info, get_revenue, add_service, get_appointments, get_current_time, get_daily_appointment_count]
 
         formatted_history = [{"role": "system", "content": system_prompt}]
         for msg in history:
@@ -566,8 +1084,12 @@ def chat():
         response_text = ""
         try:
             # 1. Primary AI: Ollama
-            ollama_url = os.environ.get('OLLAMA_URL', 'https://erlene-nonadaptational-elden.ngrok-free.dev')
-            ollama_model = os.environ.get('OLLAMA_MODEL', 'llama3.1:8b')
+            ollama_url = os.environ.get('OLLAMA_URL')
+            ollama_model = os.environ.get('OLLAMA_MODEL')
+
+            if not ollama_url or not ollama_model:
+                raise ValueError("OLLAMA_URL and OLLAMA_MODEL must be explicitly set in environment variables.")
+
             current_app.logger.info(f"[AI Chat Request] Attempting Ollama ({ollama_model}) at {ollama_url}")
 
             ollama_client = ollama.Client(host=ollama_url)
@@ -577,39 +1099,127 @@ def chat():
                 tools=tools
             )
 
-            # Process tool calls in a loop
-            while response.message.tool_calls:
-                formatted_history.append(response.message)
-                for tool_call in response.message.tool_calls:
-                    function_name = tool_call.function.name
-                    arguments = tool_call.function.arguments
+            import json
 
-                    current_app.logger.info(f"[Ollama Tool Call] {function_name} with args: {arguments}")
+            def extract_json_from_text(text):
+                import re
 
-                    if function_name in available_tools:
-                        try:
-                            function_to_call = available_tools[function_name]
-                            function_response = function_to_call(**arguments)
-                        except Exception as e:
-                            function_response = f"Error executing tool {function_name}: {e}"
+                # First try code blocks
+                code_blocks = re.findall(r'```(?:json)?\s*(.*?)\s*```', text, re.DOTALL)
+                for block in code_blocks:
+                    try:
+                        return json.loads(block)
+                    except json.JSONDecodeError:
+                        pass
+
+                # Then try to find raw JSON objects in the text that have "name" and "arguments"
+                match = re.search(r'\{\s*"name"\s*:\s*"[^"]+"\s*,\s*"arguments"\s*:\s*\{.*?\}\s*\}', text, re.DOTALL)
+                if match:
+                    try:
+                        return json.loads(match.group(0))
+                    except json.JSONDecodeError:
+                        pass
+
+                return None
+
+            # Process tool calls in a loop (handle both native and fallback)
+            max_loops = 5
+            loop_count = 0
+
+            while loop_count < max_loops:
+                loop_count += 1
+
+                # Native Tool Calling
+                if response.message.tool_calls:
+                    formatted_history.append(response.message)
+                    for tool_call in response.message.tool_calls:
+                        function_name = tool_call.function.name
+                        arguments = tool_call.function.arguments
+
+                        current_app.logger.info(f"[Ollama Tool Call] {function_name} with args: {arguments}")
+
+                        if function_name in available_tools:
+                            try:
+                                function_to_call = available_tools[function_name]
+                                function_response = function_to_call(**arguments)
+                            except Exception as e:
+                                function_response = f"Error executing tool {function_name}: {e}"
+                        else:
+                            function_response = f"Tool {function_name} not found."
+
+                        current_app.logger.info(f"[Ollama Tool Response] {function_response}")
+
+                        formatted_history.append({
+                            'role': 'tool',
+                            'content': str(function_response),
+                        })
+
+                    # Send the tool responses back to Ollama to get the final answer
+                    response = ollama_client.chat(
+                        model=ollama_model,
+                        messages=formatted_history,
+                        tools=tools
+                    )
+
+                # Fallback: Manual JSON Parsing
+                elif response.message.content:
+                    extracted_json = extract_json_from_text(response.message.content)
+                    if extracted_json and 'name' in extracted_json and 'arguments' in extracted_json:
+                        function_name = extracted_json['name']
+                        arguments = extracted_json['arguments']
+
+                        current_app.logger.info(f"[Ollama Fallback Tool Call] {function_name} with args: {arguments}")
+
+                        # Add assistant message with the thought process but strip the JSON for the final output
+                        clean_content = response.message.content
+                        if extracted_json:
+                            # Try to strip the json representation
+                            try:
+                                json_str = json.dumps(extracted_json)
+                                clean_content = clean_content.replace(json_str, "")
+                            except:
+                                pass
+
+                            # Strip code blocks
+                            clean_content = re.sub(r'```(?:json)?\s*.*?\s*```', '', clean_content, flags=re.DOTALL)
+                            # Strip raw tool calls
+                            clean_content = re.sub(r'\{\s*"name"\s*:\s*"[^"]+"\s*,\s*"arguments"\s*:\s*\{.*?\}\s*\}', '', clean_content, flags=re.DOTALL)
+
+                        formatted_history.append({'role': 'assistant', 'content': clean_content})
+
+                        if function_name in available_tools:
+                            try:
+                                function_to_call = available_tools[function_name]
+                                function_response = function_to_call(**arguments)
+                            except Exception as e:
+                                function_response = f"Error executing tool {function_name}: {e}"
+                        else:
+                            function_response = f"Tool {function_name} not found."
+
+                        current_app.logger.info(f"[Ollama Fallback Tool Response] {function_response}")
+
+                        formatted_history.append({
+                            'role': 'tool',
+                            'content': str(function_response),
+                        })
+
+                        # Send the tool responses back to Ollama to get the final answer
+                        response = ollama_client.chat(
+                            model=ollama_model,
+                            messages=formatted_history,
+                            tools=tools
+                        )
                     else:
-                        function_response = f"Tool {function_name} not found."
-
-                    current_app.logger.info(f"[Ollama Tool Response] {function_response}")
-
-                    formatted_history.append({
-                        'role': 'tool',
-                        'content': str(function_response),
-                    })
-
-                # Send the tool responses back to Ollama to get the final answer
-                response = ollama_client.chat(
-                    model=ollama_model,
-                    messages=formatted_history,
-                    tools=tools
-                )
+                        break # No native tools, no fallback tools found. Break loop.
+                else:
+                    break # No content and no tool calls. Break loop.
 
             response_text = response.message.content
+            # Make absolutely sure we strip out JSON from the final response text
+            if response_text:
+                import re
+                response_text = re.sub(r'```(?:json)?\s*.*?\s*```', '', response_text, flags=re.DOTALL)
+                response_text = re.sub(r'\{\s*"name"\s*:\s*"[^"]+"\s*,\s*"arguments"\s*:\s*\{.*?\}\s*\}', '', response_text, flags=re.DOTALL)
             current_app.logger.info(f"[Ollama Response] Result text: '{response_text}'")
 
         except Exception as ollama_error:

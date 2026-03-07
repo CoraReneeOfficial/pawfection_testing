@@ -109,6 +109,9 @@ class User(SecurityMixin, db.Model):
     google_sub = db.Column(db.String(255), unique=True, nullable=True)  # Google unique user ID
     email = db.Column(db.String(255), unique=True, nullable=True)  # Email address
 
+    # Google OAuth token for system/superadmin accounts to send emails
+    google_token_json = db.Column(db.Text, nullable=True)
+
     # Stripe subscription fields
     stripe_customer_id = db.Column(db.String(255), nullable=True)
     stripe_subscription_id = db.Column(db.String(255), nullable=True)
@@ -161,6 +164,11 @@ class Owner(db.Model):
     phone_carrier = db.Column(db.String(50), nullable=True)
     text_notifications_enabled = db.Column(db.Boolean, default=True, nullable=False)
     email_notifications_enabled = db.Column(db.Boolean, default=True, nullable=False)
+
+    # Granular notification preferences
+    notify_appointment_reminders = db.Column(db.Boolean, default=True, nullable=False)
+    notify_status_updates = db.Column(db.Boolean, default=True, nullable=False)
+    notify_marketing = db.Column(db.Boolean, default=True, nullable=False)
 
     dogs = db.relationship('Dog', backref='owner', lazy='joined', cascade="all, delete-orphan")
 
@@ -329,6 +337,11 @@ class Notification(db.Model):
     store = db.relationship('Store', backref='notifications')
     user = db.relationship('User', backref='notifications')
     
+    # Indexes to optimize polling and context processor queries
+    __table_args__ = (
+        db.Index('idx_notification_store_is_read', 'store_id', 'is_read'),
+    )
+
     def __repr__(self):
         return f"<Notification ID: {self.id}, Type: {self.type}, Read: {self.is_read}, Store: {self.store_id}>"
 

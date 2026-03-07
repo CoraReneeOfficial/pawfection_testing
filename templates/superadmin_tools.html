@@ -169,6 +169,31 @@
                             </form>
                         </div>
                     </div>
+
+                    <!-- Google Services Card -->
+                    <div class="tool-card" style="background-color: #fefce8; border-color: #fde047;">
+                        <div class="tool-header">
+                            <div class="tool-icon" style="color: #ca8a04;"><i class="fab fa-google"></i></div>
+                            <h3 class="tool-title" style="color: #ca8a04;">Google Services</h3>
+                        </div>
+                        <p class="tool-description" style="color: #854d0e;">Connect your Google Account to authorize sending feedback emails directly from the system.</p>
+
+                        <div style="margin-bottom: 1rem; font-size: 0.9em;">
+                            <span style="color: {% if is_google_connected %}#16a34a{% else %}#dc2626{% endif %};">
+                                <strong>System Email (Gmail):</strong> {% if is_google_connected %}✅ Authorized{% else %}❌ Not Authorized{% endif %}
+                            </span>
+                        </div>
+
+                        <div class="tool-actions">
+                            <form action="{{ url_for('auth.superadmin_connect_google') }}" method="get">
+                                {% if is_google_connected %}
+                                <button type="submit" class="button button-secondary">Re-authorize Account</button>
+                                {% else %}
+                                <button type="submit" class="button button-primary">Connect Google Account</button>
+                                {% endif %}
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
             

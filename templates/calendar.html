@@ -138,15 +138,12 @@
                          </div>
                     </div>
                      <div class="appointment-actions">
-                         <a href="{{ url_for('dogs.view_dog', dog_id=appointment.dog.id) }}" class="button" title="View Dog Profile">Details</a>
-                         <a href="{{ url_for('appointments.edit_appointment', appointment_id=appointment.id) }}" class="button">Edit</a>
+                         <a href="{{ url_for('dogs.view_dog', dog_id=appointment.dog.id) }}" class="button" title="View Dog Profile" aria-label="View details for {{ appointment.dog.name }}'s appointment">Details</a>
+                         <a href="{{ url_for('appointments.edit_appointment', appointment_id=appointment.id) }}" class="button" aria-label="Edit appointment for {{ appointment.dog.name }}">Edit</a>
+                         <a href="{{ url_for('appointments.checkout_start', appointment_id=appointment.id) }}" class="button button-primary" aria-label="Checkout appointment for {{ appointment.dog.name }}">Checkout</a>
                          <form method="POST" action="{{ url_for('appointments.delete_appointment', appointment_id=appointment.id) }}"
                                onsubmit="return confirm('Are you sure you want to delete this appointment for {{ appointment.dog.name }} on {{ local_appt_time.strftime('%b %d') }}?');">
-                            <select name="delete_action" style="margin-right: 0.5em;">
-                                <option value="cancel" selected>Mark as Cancelled (keep in history)</option>
-                                <option value="delete">Delete from app & Google Calendar</option>
-                            </select>
-                            <button type="submit" class="button button-danger">Delete</button>
+                            <button type="submit" class="button button-danger" aria-label="Delete appointment for {{ appointment.dog.name }}">Delete</button>
                         </form>
                      </div>
                 </li>

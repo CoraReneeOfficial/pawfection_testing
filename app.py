@@ -29,8 +29,11 @@ import stripe
 from flask import request, jsonify, render_template
 from secure_headers import init_secure_headers  # Import secure headers
 import migrate_add_remind_at_to_notification
+import migrate_add_notification_prefs
 import migrate_add_owner_notification_fields
 import migrate_add_deposit_amount
+import migrate_add_google_token_json_to_user
+import migrate_add_notification_index
 # Removed import for datetime as it's not directly used at top level of app.py anymore
 # Removed log_activity definition as it's now in utils.py
 
@@ -229,9 +232,11 @@ def create_app():
             if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
                 app.logger.info("Checking for notification schema updates (SQLite)...")
                 migrate_add_remind_at_to_notification.migrate_sqlite(DATABASE_PATH)
+                migrate_add_notification_prefs.migrate_sqlite(DATABASE_PATH)
             else:
                 app.logger.info("Checking for notification schema updates (Postgres)...")
                 migrate_add_remind_at_to_notification.migrate_postgres(app.config['SQLALCHEMY_DATABASE_URI'])
+                migrate_add_notification_prefs.migrate_postgres(app.config['SQLALCHEMY_DATABASE_URI'])
         except Exception as e:
             app.logger.error(f"Failed to run notification migration: {e}")
 
@@ -246,6 +251,18 @@ def create_app():
         except Exception as e:
             app.logger.error(f"Failed to run owner migration: {e}")
 
+
+        # Check for and apply missing google_token_json column in user table
+        try:
+            if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
+                app.logger.info("Checking for user schema updates (SQLite)...")
+                migrate_add_google_token_json_to_user.migrate_sqlite(DATABASE_PATH)
+            else:
+                app.logger.info("Checking for user schema updates (Postgres)...")
+                migrate_add_google_token_json_to_user.migrate_postgres(app.config['SQLALCHEMY_DATABASE_URI'])
+        except Exception as e:
+            app.logger.error(f"Failed to run user migration: {e}")
+
         # Check for and apply missing deposit_amount column in appointment table
         try:
             if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
@@ -256,6 +273,17 @@ def create_app():
                 migrate_add_deposit_amount.migrate_postgres(app.config['SQLALCHEMY_DATABASE_URI'])
         except Exception as e:
             app.logger.error(f"Failed to run appointment migration: {e}")
+
+        # Check for and apply missing notification index
+        try:
+            if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
+                app.logger.info("Checking for notification index updates (SQLite)...")
+                migrate_add_notification_index.migrate_sqlite(DATABASE_PATH)
+            else:
+                app.logger.info("Checking for notification index updates (Postgres)...")
+                migrate_add_notification_index.migrate_postgres(app.config['SQLALCHEMY_DATABASE_URI'])
+        except Exception as e:
+            app.logger.error(f"Failed to run notification index migration: {e}")
 
     # Register blueprints for modular routes
     app.register_blueprint(auth_bp)
@@ -288,17 +316,24 @@ def create_app():
         if not hasattr(g, 'user') or g.user is None or not hasattr(g, 'user') or not g.user.store_id:
             return {'notifications': [], 'unread_notifications_count': 0}
         
-        # Get the latest 5 unread notifications
+        # Bolt Optimization: Fetch up to 6 notifications to determine if there are more than 5
+        # This avoids a separate COUNT() query for the majority of users who keep their unread count low
         notifications = Notification.query.filter_by(
             store_id=g.user.store_id,
             is_read=False
-        ).order_by(Notification.created_at.desc()).limit(5).all()
+        ).order_by(Notification.created_at.desc()).limit(6).all()
         
-        # Get the total count of unread notifications
-        unread_count = Notification.query.filter_by(
-            store_id=g.user.store_id,
-            is_read=False
-        ).count()
+        if len(notifications) < 6:
+            unread_count = len(notifications)
+        else:
+            # Only perform the count query if we have more than 5 notifications
+            unread_count = Notification.query.filter_by(
+                store_id=g.user.store_id,
+                is_read=False
+            ).count()
+
+        # Keep only 5 for the UI dropdown
+        notifications = notifications[:5]
         
         # Import the function to generate notification links
         from notification_system import get_notification_link
@@ -447,6 +482,62 @@ def create_app():
         from datetime import datetime
         return render_template('privacy_policy.html', now=datetime.now)
 
+    # Old Dashboard route (Backup)
+    @app.route('/dashboard/old')
+    @login_required
+    @subscription_required
+    def old_dashboard():
+        from flask import render_template
+        import pytz
+        from models import Appointment, Dog, Store, Owner
+        from sqlalchemy.orm import joinedload
+        from dateutil import tz
+        import datetime
+        from sqlalchemy import func, and_, or_, case
+        store_id = session.get('store_id')
+        store = None
+        STORE_TIMEZONE = pytz.UTC
+        if store_id:
+            store = db.session.get(Store, store_id)
+            store_tz_str = getattr(store, 'timezone', None) or 'UTC'
+            try:
+                STORE_TIMEZONE = pytz.timezone(store_tz_str)
+            except Exception:
+                STORE_TIMEZONE = pytz.UTC
+        now_utc = datetime.datetime.utcnow()
+        today_start = now_utc.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_end = today_start + datetime.timedelta(days=1)
+        week_start = (today_start - datetime.timedelta(days=today_start.weekday()))
+        week_end = week_start + datetime.timedelta(days=7)
+
+        appointments_today = 0
+        pending_checkouts = 0
+        new_clients_week = 0
+        revenue_today = 0.0
+        upcoming_appointments = []
+
+        if store_id:
+            stats = db.session.query(
+                func.count(case((and_(Appointment.status == 'Scheduled', Appointment.appointment_datetime >= today_start, Appointment.appointment_datetime < today_end), 1), else_=None)),
+                func.sum(case((and_(Appointment.status == 'Completed', Appointment.appointment_datetime >= today_start, Appointment.appointment_datetime < today_end), Appointment.checkout_total_amount), else_=0)),
+                func.count(case((and_(Appointment.status == 'Scheduled', Appointment.appointment_datetime < now_utc), 1), else_=None))
+            ).filter(Appointment.store_id == store_id).one()
+
+            appointments_today = stats[0]
+            revenue_today = stats[1] or 0.0
+            pending_checkouts = stats[2]
+
+            new_clients_week = Owner.query.filter(Owner.store_id == store_id, Owner.created_at >= week_start, Owner.created_at < week_end).count()
+
+            upcoming_appointments = (Appointment.query.options(joinedload(Appointment.dog).joinedload(Dog.owner), joinedload(Appointment.groomer))
+                .filter(Appointment.status == 'Scheduled', Appointment.store_id == store_id)
+                .order_by(Appointment.appointment_datetime.asc()).limit(5).all())
+
+        return render_template('old_dashboard.html',
+            appointments_today=appointments_today, pending_checkouts=pending_checkouts,
+            new_clients_week=new_clients_week, revenue_today=revenue_today,
+            upcoming_appointments=upcoming_appointments, STORE_TIMEZONE=STORE_TIMEZONE, tz=tz)
+
     # Dashboard route
     @app.route('/dashboard')
     @login_required
@@ -544,7 +635,34 @@ def create_app():
                 .order_by(Appointment.appointment_datetime.asc())
                 .limit(5)
                 .all()
-)
+            )
+
+        # Mock Revenue Trend Data for Chart
+        revenue_trend = [
+            {"date": (today_start - datetime.timedelta(days=i)).strftime('%m/%d'), "amount": 150 + (i * 10)}
+            for i in range(6, -1, -1)
+        ]
+
+        # Determine capacity mock
+        capacity_percentage = min(100, (appointments_today / 20) * 100) if appointments_today else 0
+
+        # Groomer specific data
+        my_appointments = []
+        if g.user and not g.user.is_admin:
+             my_appointments = (
+                Appointment.query.options(
+                    joinedload(Appointment.dog).joinedload(Dog.owner)
+                )
+                .filter(
+                    Appointment.status == 'Scheduled',
+                    Appointment.store_id == store_id,
+                    Appointment.groomer_id == g.user.id,
+                    Appointment.appointment_datetime >= today_start,
+                    Appointment.appointment_datetime < today_end
+                )
+                .order_by(Appointment.appointment_datetime.asc())
+                .all()
+            )
 
         return render_template(
             'dashboard.html',
@@ -553,6 +671,9 @@ def create_app():
             new_clients_week=new_clients_week,
             revenue_today=revenue_today,
             upcoming_appointments=upcoming_appointments,
+            my_appointments=my_appointments,
+            revenue_trend=revenue_trend,
+            capacity_percentage=capacity_percentage,
             STORE_TIMEZONE=STORE_TIMEZONE,
             tz=tz
         )
@@ -620,6 +741,8 @@ def create_app():
             security_answer = request.form.get('security_answer')
             admin_username = request.form.get('admin_username')
             admin_password = request.form.get('admin_password')
+            agree_user_agreement = request.form.get('agree_user_agreement')
+            agree_privacy_policy = request.form.get('agree_privacy_policy')
             
             errors = []
             if not store_name: errors.append('Store Name is required.')
@@ -630,6 +753,8 @@ def create_app():
             if not security_answer: errors.append('Security Answer is required.')
             if not admin_username: errors.append('Admin Username is required.')
             if not admin_password: errors.append('Admin Password is required.')
+            if not agree_user_agreement: errors.append('You must agree to the User Agreement.')
+            if not agree_privacy_policy: errors.append('You must agree to the Privacy Policy.')
 
             if len(store_password) < 8: errors.append('Store password must be at least 8 characters.')
             if len(admin_password) < 8: errors.append('Admin password must be at least 8 characters.')
@@ -645,7 +770,17 @@ def create_app():
                 return render_template('store_register.html'), 400
             
             try:
-                store = Store(name=store_name, username=store_username, email=store_email, security_question=security_question)
+                import datetime
+                from datetime import timezone
+                trial_ends_at = datetime.datetime.now(timezone.utc) + datetime.timedelta(days=15)
+                store = Store(
+                    name=store_name,
+                    username=store_username,
+                    email=store_email,
+                    security_question=security_question,
+                    subscription_status='trial',
+                    subscription_ends_at=trial_ends_at
+                )
                 store.set_password(store_password)
                 store.set_security_answer(security_answer)
                 db.session.add(store)
@@ -714,11 +849,15 @@ def create_app():
         Displays superadmin tools page.
         """
         from flask import render_template
-        if not session.get('is_superadmin'):
+        if not session.get('is_superadmin') or not g.user:
             flash('Access denied.', 'danger')
             return redirect(url_for('superadmin_login'))
+
+        user = User.query.get(g.user.id)
+        is_google_connected = user and user.google_token_json is not None
+
         app.logger.info("Superadmin viewed tools page.")
-        return render_template('superadmin_tools.html')
+        return render_template('superadmin_tools.html', is_google_connected=is_google_connected)
     
     # Superadmin System Health route
     @app.route('/superadmin/system-health')
@@ -1325,179 +1464,6 @@ def create_app():
                               level_counts=level_counts)
                               
     # Superadmin Email Test route
-    @app.route('/superadmin/email-test', methods=['GET', 'POST'])
-    def superadmin_email_test():
-        """
-        Allows superadmins to test email functionality.
-        """
-        from flask import render_template, request, flash, redirect, url_for
-        import smtplib
-        from email.mime.multipart import MIMEMultipart
-        from email.mime.text import MIMEText
-        import os
-        import json
-        import time
-        
-        if not session.get('is_superadmin'):
-            flash('Access denied.', 'danger')
-            return redirect(url_for('superadmin_login'))
-        
-        # Path to email config file
-        config_dir = os.path.join(os.path.dirname(__file__), 'config')
-        email_config_path = os.path.join(config_dir, 'email_config.json')
-        os.makedirs(config_dir, exist_ok=True)
-        
-        # Default email configuration
-        default_email_config = {
-            "smtp_server": "smtp.example.com",
-            "smtp_port": 587,
-            "smtp_username": "your-email@example.com",
-            "smtp_password": "",
-            "use_tls": True,
-            "from_email": "info@pawfection.com",
-            "from_name": "Pawfection Grooming Solutions"
-        }
-        
-        # Load current email configuration or create default if not exists
-        email_config = default_email_config
-        try:
-            if os.path.exists(email_config_path):
-                with open(email_config_path, 'r') as file:
-                    email_config = json.load(file)
-        except Exception as e:
-            app.logger.error(f"Error loading email configuration: {str(e)}")
-            flash('Error loading email configuration.', 'danger')
-        
-        # Initialize test result variables
-        test_result = None
-        test_message = None
-        test_time = None
-        
-        # Process form submission
-        if request.method == 'POST':
-            csrf.protect()
-            action = request.form.get('action', '')
-            
-            if action == 'test_email':
-                # Test email functionality
-                recipient = request.form.get('test_recipient', '')
-                subject = request.form.get('test_subject', 'Email Test from Pawfection')
-                body = request.form.get('test_body', 'This is a test email from Pawfection Grooming Solutions.')
-                
-                if not recipient:
-                    flash('Recipient email is required.', 'danger')
-                    return redirect(url_for('superadmin_email_test'))
-                
-                try:
-                    # Start timing
-                    start_time = time.time()
-                    
-                    # Create message
-                    msg = MIMEMultipart()
-                    msg['From'] = f"{email_config['from_name']} <{email_config['from_email']}>"
-                    msg['To'] = recipient
-                    msg['Subject'] = subject
-                    
-                    # Add HTML body
-                    html = f"""<html>
-                    <body>
-                        <div style="font-family: Arial, sans-serif; padding: 20px;">
-                            <h2 style="color: #4c6ef5;">Email Test from Pawfection</h2>
-                            <p>{body}</p>
-                            <hr>
-                            <p style="color: #6c757d; font-size: 0.8rem;">This is a test email sent from the Pawfection Grooming Solutions admin panel.</p>
-                        </div>
-                    </body>
-                    </html>
-                    """
-                    msg.attach(MIMEText(html, 'html'))
-                    
-                    # Connect to SMTP server and send email
-                    with smtplib.SMTP(email_config['smtp_server'], email_config['smtp_port']) as server:
-                        if email_config['use_tls']:
-                            server.starttls()
-                        
-                        if email_config['smtp_username'] and email_config['smtp_password']:
-                            server.login(email_config['smtp_username'], email_config['smtp_password'])
-                        
-                        server.send_message(msg)
-                    
-                    # End timing
-                    test_time = round(time.time() - start_time, 2)
-                    
-                    test_result = 'success'
-                    test_message = f"Email successfully sent to {recipient} in {test_time} seconds."
-                    flash(test_message, 'success')
-                    app.logger.info(f"Superadmin sent test email to {recipient}.")
-                    
-                except Exception as e:
-                    test_result = 'error'
-                    test_message = f"Error sending email: {str(e)}"
-                    flash(test_message, 'danger')
-                    app.logger.error(f"Error sending test email: {str(e)}")
-            
-            elif action == 'save_config':
-                # Update email configuration
-                try:
-                    updated_config = {
-                        "smtp_server": request.form.get('smtp_server', ''),
-                        "smtp_port": int(request.form.get('smtp_port', 587)),
-                        "smtp_username": request.form.get('smtp_username', ''),
-                        "smtp_password": request.form.get('smtp_password', ''),
-                        "use_tls": 'use_tls' in request.form,
-                        "from_email": request.form.get('from_email', ''),
-                        "from_name": request.form.get('from_name', '')
-                    }
-                    
-                    # Preserve password if not changed
-                    if not updated_config['smtp_password'] and email_config['smtp_password']:
-                        updated_config['smtp_password'] = email_config['smtp_password']
-                    
-                    # Save updated configuration
-                    with open(email_config_path, 'w') as file:
-                        json.dump(updated_config, file, indent=2)
-                    
-                    email_config = updated_config
-                    flash('Email configuration saved successfully.', 'success')
-                    app.logger.info("Superadmin updated email configuration.")
-                    
-                except Exception as e:
-                    flash(f'Error saving email configuration: {str(e)}', 'danger')
-                    app.logger.error(f"Error saving email configuration: {str(e)}")
-        
-        # Sample email templates for testing
-        email_templates = [
-            {
-                'name': 'Welcome Email',
-                'subject': 'Welcome to Pawfection Grooming Solutions',
-                'body': 'Thank you for choosing Pawfection Grooming Solutions for your pet grooming needs. We look forward to serving you and your furry friend!'
-            },
-            {
-                'name': 'Appointment Confirmation',
-                'subject': 'Your Appointment is Confirmed',
-                'body': 'This email confirms your appointment with Pawfection Grooming Solutions on [DATE] at [TIME].'
-            },
-            {
-                'name': 'Appointment Reminder',
-                'subject': 'Reminder: Upcoming Appointment',
-                'body': 'This is a friendly reminder about your upcoming appointment with Pawfection Grooming Solutions tomorrow at [TIME].'
-            },
-            {
-                'name': 'Custom Test',
-                'subject': 'Email Test from Pawfection',
-                'body': 'This is a custom test email from Pawfection Grooming Solutions admin panel.'
-            }
-        ]
-        
-        # Render the email test page
-        app.logger.info("Superadmin viewed email test page.")
-        return render_template('superadmin_email_test.html',
-                              email_config=email_config,
-                              email_templates=email_templates,
-                              test_result=test_result,
-                              test_message=test_message,
-                              test_time=test_time)
-                              
     # Superadmin Database Management route
     @app.route('/superadmin/database', methods=['GET', 'POST'])
     def superadmin_database():
@@ -2389,6 +2355,7 @@ def create_app():
         # Handle API requests
         if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             action = request.json.get('action')
+            csrf.protect()
             
             try:
                 if action == 'get_user_details':
@@ -3338,6 +3305,7 @@ def create_app():
     @app.route('/create-checkout-session', methods=['POST'])
     @login_required
     def create_checkout_session():
+        csrf.protect()
         from flask_login import current_user
         from models import Store
         domain_url = request.host_url.rstrip('/')
@@ -3401,6 +3369,40 @@ def create_app():
 
 
     # --- Stripe Webhook ---
+    @app.route('/feedback', methods=['GET', 'POST'])
+    def feedback_route():
+        """Route for submitting feedback and reports."""
+        if not g.user:
+            return redirect(url_for('auth.login'))
+
+        if request.method == 'POST':
+            csrf.protect()
+            from notifications.feedback_email import send_feedback_email
+
+            category = request.form.get('category')
+            message = request.form.get('message')
+            browser_info = request.user_agent.string if request.user_agent else "Unknown Browser"
+
+            if not category or not message:
+                flash('Please fill out all fields.', 'danger')
+                return render_template('feedback.html')
+
+            success = send_feedback_email(
+                sender_email=g.user.email or "unknown@email.com",
+                sender_name=g.user.username,
+                category=category,
+                message_body=message,
+                browser_info=browser_info
+            )
+
+            if success:
+                flash('Thank you! Your feedback has been sent to the developer.', 'success')
+                return redirect(url_for('dashboard'))
+            else:
+                flash('There was an error sending your feedback. This may be because the system email is not configured.', 'danger')
+
+        return render_template('feedback.html')
+
     @app.route('/stripe_webhook', methods=['POST'])
     def stripe_webhook():
         payload = request.data

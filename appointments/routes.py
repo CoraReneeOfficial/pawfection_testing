@@ -20,7 +20,7 @@ import os
 import base64
 import traceback
 from email.mime.text import MIMEText
-from notifications.email_utils import send_appointment_confirmation_email, send_appointment_edited_email, send_appointment_cancelled_email, send_receipt_notification
+from notifications.email_utils import send_appointment_confirmation_email, send_appointment_edited_email, send_appointment_cancelled_email, send_receipt_notification, send_status_update_notification
 import pytz
 from fpdf import FPDF
 import io
@@ -31,9 +31,8 @@ BUSINESS_TIMEZONE_NAME = 'America/New_York'
 BUSINESS_TIMEZONE = tz.gettz(BUSINESS_TIMEZONE_NAME)
 
 SCOPES = [
-    "https://www.googleapis.com/auth/calendar",
+    "https://www.googleapis.com/auth/calendar.calendars",
     "https://www.googleapis.com/auth/calendar.events",
-    "https://www.googleapis.com/auth/calendar.readonly",
     "https://www.googleapis.com/auth/gmail.send",
     "openid",
     "https://www.googleapis.com/auth/userinfo.email",
@@ -636,7 +635,7 @@ def delete_appointment(appointment_id):
     """
     Handles deleting an appointment.
     Ensures that only appointments from the current store can be deleted.
-    Provides a choice: delete from both app and Google Calendar, or just mark as Cancelled (and update Google Calendar event status).
+    Deletes the appointment from the app and Google Calendar unconditionally.
     """
     store_id = session.get('store_id')
     appt = Appointment.query.options(db.joinedload(Appointment.dog)).filter_by(
@@ -657,88 +656,49 @@ def delete_appointment(appointment_id):
         local_time = appt.appointment_datetime.astimezone(store_timezone)
     time_str = local_time.strftime('%Y-%m-%d %I:%M %p %Z')
 
-    action = request.form.get('delete_action', 'cancel')
     google_event_id = appt.google_event_id
     store = db.session.get(Store, store_id)
     google_calendar_deleted = False
-    google_calendar_cancelled = False
     try:
-        if action == 'delete':
-            # ... (rest of delete logic is fine)
-            if store and store.google_token_json and google_event_id:
-                try:
-                    # Build credentials and Google Calendar service
-                    service = get_google_service('calendar', 'v3', store=store)
-                    if not service:
-                        raise Exception("Failed to build Google Calendar service")
+        # Build credentials and Google Calendar service
+        if store and store.google_token_json and google_event_id:
+            try:
+                service = get_google_service('calendar', 'v3', store=store)
+                if not service:
+                    raise Exception("Failed to build Google Calendar service")
 
-                    calendar_id = store.google_calendar_id if store.google_calendar_id else 'primary'
+                calendar_id = store.google_calendar_id if store.google_calendar_id else 'primary'
 
-                    # Delete the event from Google Calendar
-                    service.events().delete(calendarId=calendar_id, eventId=google_event_id).execute()
-                    google_calendar_deleted = True
-                except Exception as e:
-                    current_app.logger.error(f"Failed to delete Google Calendar event: {e}", exc_info=True)
+                # Delete the event from Google Calendar
+                service.events().delete(calendarId=calendar_id, eventId=google_event_id).execute()
+                google_calendar_deleted = True
+            except Exception as e:
+                current_app.logger.error(f"Failed to delete Google Calendar event: {e}", exc_info=True)
 
-            # Delete any associated notifications
-            Notification.query.filter_by(
-                reference_id=appt.id,
-                reference_type='appointment'
-            ).delete(synchronize_session=False)
+        # Delete any associated notifications
+        Notification.query.filter_by(
+            reference_id=appt.id,
+            reference_type='appointment'
+        ).delete(synchronize_session=False)
 
-            db.session.delete(appt)
-            db.session.commit()
-            log_activity("Deleted Local Appt", details=f"Appt ID: {appointment_id}, Dog: {dog_name}")
-            msg = f"Appt for {dog_name} on {time_str} deleted!"
-            if google_calendar_deleted:
-                msg += " (Google Calendar event deleted)"
-            # Send cancellation email to owner
-            if appt.dog is not None and appt.dog.owner is not None:
-                owner = appt.dog.owner
-                groomer = appt.groomer if hasattr(appt, 'groomer') else None
-                services_text = appt.requested_services_text
-                send_appointment_cancelled_email(store, owner, appt.dog, appt, groomer, services_text)
-            else:
-                current_app.logger.warning(f"[CANCEL EMAIL] Skipping email: appt.dog or appt.dog.owner missing for appt ID {appointment_id}")
-            flash(msg, "success")
+        # Delete associated receipt if any
+        Receipt.query.filter_by(appointment_id=appt.id).delete(synchronize_session=False)
+
+        db.session.delete(appt)
+        db.session.commit()
+        log_activity("Deleted Local Appt", details=f"Appt ID: {appointment_id}, Dog: {dog_name}")
+        msg = f"Appt for {dog_name} on {time_str} deleted!"
+        if google_calendar_deleted:
+            msg += " (Google Calendar event deleted)"
+        # Send cancellation email to owner
+        if appt.dog is not None and appt.dog.owner is not None:
+            owner = appt.dog.owner
+            groomer = appt.groomer if hasattr(appt, 'groomer') else None
+            services_text = appt.requested_services_text
+            send_appointment_cancelled_email(store, owner, appt.dog, appt, groomer, services_text)
         else:
-            # Mark as Cancelled in app
-            appt.status = 'Cancelled'
-            db.session.commit()
-            db.session.refresh(appt) # <<< FIX: Refresh the object to get the latest state from the DB.
-
-            # Update Google Calendar event if possible
-            if store and store.google_token_json and google_event_id:
-                try:
-                    # Build credentials and Google Calendar service
-                    service = get_google_service('calendar', 'v3', store=store)
-                    if not service:
-                        raise Exception("Failed to build Google Calendar service")
-
-                    calendar_id = store.google_calendar_id if store.google_calendar_id else 'primary'
-
-                    # Mark the event as cancelled in Google Calendar (soft delete so history remains)
-                    service.events().patch(
-                        calendarId=calendar_id,
-                        eventId=google_event_id,
-                        body={"status": "cancelled", "summary": f"[CANCELLED] ({appt.dog.name}) Appointment"}
-                    ).execute()
-                    google_calendar_cancelled = True
-                except Exception as e:
-                    current_app.logger.error(f"Failed to cancel Google Calendar event: {e}", exc_info=True)
-            log_activity("Cancelled Local Appt", details=f"Appt ID: {appointment_id}, Dog: {dog_name}")
-            msg = f"Appt for {dog_name} on {time_str} marked as Cancelled."
-            if google_calendar_cancelled:
-                msg += " (Google Calendar event cancelled)"
-            # Send cancellation email to owner
-            if appt.dog is not None and appt.dog.owner is not None:
-                owner = appt.dog.owner
-                groomer = appt.groomer if hasattr(appt, 'groomer') else None
-                services_text = appt.requested_services_text
-                send_appointment_cancelled_email(store, owner, appt.dog, appt, groomer, services_text)
-            else:
-                current_app.logger.warning(f"[CANCEL EMAIL] Skipping email: appt.dog or appt.dog.owner missing for appt ID {appointment_id}")
-            flash(msg, "success")
+            current_app.logger.warning(f"[CANCEL EMAIL] Skipping email: appt.dog or appt.dog.owner missing for appt ID {appointment_id}")
+        flash(msg, "success")
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error deleting/cancelling appt {appointment_id}: {e}", exc_info=True)
@@ -1122,13 +1082,13 @@ def walk_in_appointment():
         requested_services = sanitize_text_input(request.form.get('requested_services', ''))
         
         # Check if owner exists by phone number
-        owner = Owner.query.filter_by(phone=phone_number, store_id=store_id).first()
+        owner = Owner.query.filter_by(phone_number=phone_number, store_id=store_id).first()
         
         # Create new owner if not exists
         if not owner:
             owner = Owner(
                 name=customer_name,
-                phone=phone_number,
+                phone_number=phone_number,
                 email=email,
                 store_id=store_id
             )
@@ -1252,13 +1212,13 @@ def deposit_payment():
             # Check if owner exists
             owner = None
             if phone:
-                owner = Owner.query.filter_by(phone=phone, store_id=store_id).first()
+                owner = Owner.query.filter_by(phone_number=phone, store_id=store_id).first()
                 
             if not owner and customer_name:
                 # Create a new owner
                 owner = Owner(
                     name=customer_name,
-                    phone=phone,
+                    phone_number=phone,
                     store_id=store_id
                 )
                 db.session.add(owner)
@@ -1703,7 +1663,7 @@ def email_receipt_by_id(receipt_id):
             'email/receipt_email.html',
             store_name=data.get('store_name', store.name if store else ''),
             store_email=data.get('store_email', getattr(store, 'email', '')),
-            store_phone=data.get('store_phone', getattr(store, 'phone_number', '')),
+            store_phone=data.get('store_phone', getattr(store, 'phone', '')),
             date=data.get('date', ''),
             customer_name=data.get('customer_name', ''),
             pet_name=data.get('pet_name', ''),
@@ -1961,12 +1921,23 @@ def appointments_needs_review():
         flash("You must be logged in to view this page.", "danger")
         return redirect(url_for('auth.login'))
     store_id = g.user.store_id
-    needs_review_appts = Appointment.query.filter(
+
+    # BOLT OPTIMIZATION: Eagerly load dog and owner relationships to prevent N+1 queries
+    # when rendering the appointments_needs_review.html template which accesses appt.dog.name
+    # and appt.dog.owner.name in a loop.
+    needs_review_appts = Appointment.query.options(
+        db.joinedload(Appointment.dog).joinedload(Dog.owner)
+    ).filter(
         Appointment.store_id == store_id,
         Appointment.details_needed == True,
         ~Appointment.status.in_(['Completed', 'Cancelled', 'No Show'])
     ).order_by(Appointment.appointment_datetime.desc()).all()
-    return render_template('appointments_needs_review.html', appointments=needs_review_appts)
+
+    store = db.session.get(Store, store_id)
+    store_timezone_name = getattr(store, 'timezone', None) or 'America/New_York'
+    store_timezone = tz.gettz(store_timezone_name) or tz.gettz('America/New_York')
+
+    return render_template('appointments_needs_review.html', appointments=needs_review_appts, STORE_TIMEZONE=store_timezone, tz=tz)
 
 @appointments_bp.route('/appointments/appointments_needing_details')
 @subscription_required
@@ -1987,3 +1958,102 @@ def appointments_needing_details():
         Appointment.details_needed == True
     ).order_by(Appointment.appointment_datetime.asc()).all()
     return render_template('appointments_needing_details.html', appointments=appointments)
+
+@appointments_bp.route('/api/appointments/search', methods=['GET'])
+@subscription_required
+def api_search_appointments():
+    """API endpoint to search for appointments by customer name, phone, email, or pet name."""
+    if 'store_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    store_id = session['store_id']
+    query = request.args.get('q', '').strip().lower()
+
+    if not query:
+        return jsonify([])
+
+    now = datetime.datetime.now(timezone.utc)
+
+    appointments = Appointment.query.join(Dog).join(Owner).filter(
+        Appointment.store_id == store_id,
+        Appointment.appointment_datetime > now,
+        Appointment.status == 'Scheduled',
+        or_(
+            Owner.name.ilike(f'%{query}%'),
+            Owner.phone_number.ilike(f'%{query}%'),
+            Owner.email.ilike(f'%{query}%'),
+            Dog.name.ilike(f'%{query}%')
+        )
+    ).options(
+        joinedload(Appointment.dog).joinedload(Dog.owner)
+    ).order_by(Appointment.appointment_datetime.asc()).limit(10).all()
+
+    results = []
+    for appt in appointments:
+        results.append({
+            'id': appt.id,
+            'customer': {
+                'id': appt.dog.owner.id,
+                'name': appt.dog.owner.name
+            },
+            'pet': {
+                'id': appt.dog.id,
+                'name': appt.dog.name,
+                'breed': getattr(appt.dog, 'breed', 'Unknown')
+            },
+            'date': appt.appointment_datetime.isoformat(),
+            'services': appt.requested_services_text or 'No services specified'
+        })
+
+    return jsonify(results)
+
+
+@appointments_bp.route('/api/appointments/<int:appointment_id>/status', methods=['POST'])
+@subscription_required
+def api_update_appointment_status(appointment_id):
+    if 'store_id' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    store_id = session['store_id']
+    appt = Appointment.query.filter_by(id=appointment_id, store_id=store_id).first()
+    if not appt:
+        return jsonify({'error': 'Appointment not found'}), 404
+
+    data = request.get_json()
+    new_status = data.get('status')
+
+    valid_statuses = ['Checked In', 'In Progress', 'Ready for Pickup']
+    if new_status not in valid_statuses:
+        return jsonify({'error': 'Invalid status'}), 400
+
+    appt.status = new_status
+    db.session.commit()
+
+    store = Store.query.get(store_id)
+    owner = appt.dog.owner
+
+    try:
+        # Sync to Google Calendar
+        if store and store.user and store.user.google_token_json and appt.google_event_id:
+            creds_data = json.loads(store.user.google_token_json)
+            creds = Credentials.from_authorized_user_info(creds_data)
+            service = get_google_service('calendar', 'v3', credentials=creds)
+
+            event = service.events().get(calendarId=store.user.google_calendar_id, eventId=appt.google_event_id).execute()
+            desc = event.get('description', '')
+            if 'Status: ' in desc:
+                desc = re.sub(r'Status: .+\n', f'Status: {new_status}\n', desc, count=1)
+            else:
+                desc = f"Status: {new_status}\n" + desc
+            event['description'] = desc
+            service.events().update(calendarId=store.user.google_calendar_id, eventId=appt.google_event_id, body=event).execute()
+    except Exception as e:
+        current_app.logger.error(f"Error syncing status update to Google Calendar: {e}")
+
+    try:
+        # Send notifications
+        send_status_update_notification(store, owner, appt.dog, new_status)
+    except Exception as e:
+        current_app.logger.error(f"Error sending status update notification: {e}")
+
+    return jsonify({'success': True, 'status': new_status})
