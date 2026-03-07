@@ -566,8 +566,8 @@ def chat():
         response_text = ""
         try:
             # 1. Primary AI: Ollama
-            ollama_url = os.environ.get('OLLAMA_URL', 'http://localhost:11434')
-            ollama_model = os.environ.get('OLLAMA_MODEL', 'Gemma3:12b')
+            ollama_url = os.environ.get('OLLAMA_URL', 'https://erlene-nonadaptational-elden.ngrok-free.dev')
+            ollama_model = os.environ.get('OLLAMA_MODEL', 'llama3.1:8b')
             current_app.logger.info(f"[AI Chat Request] Attempting Ollama ({ollama_model}) at {ollama_url}")
 
             ollama_client = ollama.Client(host=ollama_url)
