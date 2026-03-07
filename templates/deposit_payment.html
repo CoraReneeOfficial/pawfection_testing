@@ -173,61 +173,51 @@ document.addEventListener('DOMContentLoaded', function() {
     simulateLookup(lookupValue);
   }
 
-  function simulateLookup(query) {
-    // This is a placeholder - in reality, you'd make an AJAX call to your backend
-    // For demo purposes, let's simulate finding some appointments
-    
+  async function simulateLookup(query) {
     // Clear previous results
-    searchResultsList.innerHTML = '';
+    searchResultsList.innerHTML = 'Loading...';
     
     // Show the search results container
     searchResultsContainer.style.display = 'block';
     
-    // Simulate some sample data (in real app, this comes from server)
-    const appointments = [
-      {
-        id: '1001',
-        customer: {id: '101', name: 'Jane Smith'},
-        pet: {id: '201', name: 'Buddy', breed: 'Golden Retriever'},
-        date: '2025-07-22T14:30:00',
-        services: 'Full Grooming, Bath & Haircut'
-      },
-      {
-        id: '1002',
-        customer: {id: '102', name: 'John Doe'},
-        pet: {id: '202', name: 'Max', breed: 'Poodle'},
-        date: '2025-07-25T10:00:00',
-        services: 'Bath & Nail Trim'
+    try {
+      const response = await fetch(`/api/appointments/search?q=${encodeURIComponent(query)}`);
+      if (!response.ok) throw new Error('Network response was not ok');
+      const appointments = await response.json();
+
+      searchResultsList.innerHTML = '';
+
+      // Render appointments as selectable items
+      if (appointments.length > 0) {
+        appointments.forEach(appt => {
+          const apptDate = new Date(appt.date);
+          const formattedDate = apptDate.toLocaleDateString() + ' at ' +
+                                apptDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+          const apptEl = document.createElement('div');
+          apptEl.className = 'appointment-item';
+          apptEl.style.padding = '0.75rem';
+          apptEl.style.marginBottom = '0.5rem';
+          apptEl.style.border = '1px solid var(--border-color)';
+          apptEl.style.borderRadius = 'var(--border-radius)';
+          apptEl.style.cursor = 'pointer';
+
+          apptEl.innerHTML = `
+            <div><strong>${appt.pet.name}</strong> (${appt.customer.name})</div>
+            <div>${formattedDate}</div>
+            <div><small>${appt.services}</small></div>
+          `;
+
+          apptEl.addEventListener('click', () => selectAppointment(appt));
+
+          searchResultsList.appendChild(apptEl);
+        });
+      } else {
+        searchResultsList.innerHTML = '<p>No upcoming appointments found. Use manual entry below.</p>';
       }
-    ];
-    
-    // Render appointments as selectable items
-    if (appointments.length > 0) {
-      appointments.forEach(appt => {
-        const apptDate = new Date(appt.date);
-        const formattedDate = apptDate.toLocaleDateString() + ' at ' + 
-                              apptDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        
-        const apptEl = document.createElement('div');
-        apptEl.className = 'appointment-item';
-        apptEl.style.padding = '0.75rem';
-        apptEl.style.marginBottom = '0.5rem';
-        apptEl.style.border = '1px solid var(--border-color)';
-        apptEl.style.borderRadius = 'var(--border-radius)';
-        apptEl.style.cursor = 'pointer';
-        
-        apptEl.innerHTML = `
-          <div><strong>${appt.pet.name}</strong> (${appt.customer.name})</div>
-          <div>${formattedDate}</div>
-          <div><small>${appt.services}</small></div>
-        `;
-        
-        apptEl.addEventListener('click', () => selectAppointment(appt));
-        
-        searchResultsList.appendChild(apptEl);
-      });
-    } else {
-      searchResultsList.innerHTML = '<p>No upcoming appointments found. Use manual entry below.</p>';
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+      searchResultsList.innerHTML = '<p>Error loading appointments. Please try again or use manual entry.</p>';
     }
   }
 

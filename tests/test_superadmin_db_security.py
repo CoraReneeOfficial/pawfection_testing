@@ -16,6 +16,8 @@ sys.modules['stripe'] = MagicMock()
 from app import create_app, db
 from models import User
 
+from unittest.mock import patch
+
 class TestSuperadminDBSecurity(unittest.TestCase):
     def setUp(self):
         self.app = create_app()
@@ -49,7 +51,8 @@ class TestSuperadminDBSecurity(unittest.TestCase):
                     sess['is_superadmin'] = True
                     sess['_fresh'] = True
 
-    def test_select_query_allowed(self):
+    @patch('app.csrf.protect')
+    def test_select_query_allowed(self, mock_csrf):
         self.login()
         response = self.client.post('/superadmin/database', data={
             'action': 'run_query',
@@ -58,7 +61,8 @@ class TestSuperadminDBSecurity(unittest.TestCase):
         # Check for success message or result table
         self.assertIn(b'Query executed successfully', response.data)
 
-    def test_drop_table_blocked(self):
+    @patch('app.csrf.protect')
+    def test_drop_table_blocked(self, mock_csrf):
         self.login()
         response = self.client.post('/superadmin/database', data={
             'action': 'run_query',
@@ -67,7 +71,8 @@ class TestSuperadminDBSecurity(unittest.TestCase):
         # Should fail with security message
         self.assertIn(b'Only SELECT queries are allowed', response.data)
 
-    def test_update_blocked(self):
+    @patch('app.csrf.protect')
+    def test_update_blocked(self, mock_csrf):
         self.login()
         response = self.client.post('/superadmin/database', data={
             'action': 'run_query',
@@ -75,7 +80,8 @@ class TestSuperadminDBSecurity(unittest.TestCase):
         }, follow_redirects=True)
         self.assertIn(b'Only SELECT queries are allowed', response.data)
 
-    def test_semicolon_blocked(self):
+    @patch('app.csrf.protect')
+    def test_semicolon_blocked(self, mock_csrf):
         self.login()
         response = self.client.post('/superadmin/database', data={
             'action': 'run_query',
@@ -84,7 +90,8 @@ class TestSuperadminDBSecurity(unittest.TestCase):
         # Check for specific semicolon error or generic security error
         self.assertTrue(b'Multiple statements (semicolons) are not allowed' in response.data or b'Only SELECT queries are allowed' in response.data)
 
-    def test_sql_comment_blocked(self):
+    @patch('app.csrf.protect')
+    def test_sql_comment_blocked(self, mock_csrf):
         self.login()
         response = self.client.post('/superadmin/database', data={
             'action': 'run_query',

@@ -3,760 +3,1004 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to Pawfection Grooming Solutions</title>
-    {# Link to your existing style.css - ensure it's correctly referenced by Flask #}
+    <title>Pawfection Grooming Solutions: The Ultimate All-in-One CRM for Professional Pet Groomers</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    
-    {# Google Fonts - Inter #}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        /* CSS Variables for easy theming */
         :root {
             --primary-color: #6D28D9; /* Professional Purple */
             --primary-color-dark: #5B21B6;
-            --secondary-color: #F3F4F6; /* Light Gray */
+            --primary-color-light: #8B5CF6;
             --accent-color: #EC4899; /* Pink accent */
-            --text-dark: #1F2937; /* Dark Gray for text */
-            --text-light: #6B7280; /* Lighter Gray for subtitles/descriptions */
-            --text-on-primary: #FFFFFF;
-            --background-color: #FFFFFF;
-            --card-background: #FFFFFF;
+            --accent-color-hover: #D946EF;
+            --text-dark: #1F2937;
+            --text-light: #6B7280;
+            --text-muted: #9CA3AF;
+            --bg-color: #FFFFFF;
+            --bg-alt: #F9FAFB;
+            --bg-gradient: linear-gradient(135deg, #f3e8ff 0%, #e0e7ff 100%);
             --border-color: #E5E7EB;
-            --border-radius-sm: 0.375rem; /* 6px */
-            --border-radius-md: 0.5rem; /* 8px */
-            --border-radius-lg: 0.75rem; /* 12px */
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            --font-family-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+            --border-radius-sm: 8px;
+            --border-radius-md: 12px;
+            --border-radius-lg: 24px;
+            --shadow-sm: 0 4px 6px rgba(0,0,0,0.05);
+            --shadow-md: 0 10px 15px -3px rgba(0,0,0,0.1);
+            --shadow-lg: 0 20px 25px -5px rgba(0,0,0,0.1);
+            --shadow-hover: 0 25px 50px -12px rgba(109, 40, 217, 0.25);
+            --transition-smooth: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        /* General Body Styles */
         body {
-            font-family: var(--font-family-sans);
-            background-color: var(--background-color);
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
             color: var(--text-dark);
             line-height: 1.6;
             margin: 0;
-            padding: 0;
+            overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
+            scroll-behavior: smooth;
         }
 
-        .home-page-wrapper {
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
-
+        /* Reusable Classes */
         .container {
             width: 90%;
-            max-width: 1100px; /* Max width for content */
-            margin-left: auto;
-            margin-right: auto;
-            padding-left: 1rem;
-            padding-right: 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
         }
 
-        /* Header Styles */
-        .home-header {
-            display: flex;
-            justify-content: space-between;
+        .btn {
+            display: inline-flex;
             align-items: center;
-            padding-top: 1.5rem;
-            padding-bottom: 1.5rem;
-            background-color: var(--background-color);
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .home-logo .logo-link {
-            display: flex;
-            align-items: center;
-            text-decoration: none;
-            color: var(--text-dark);
-        }
-
-        .home-logo .logo-icon {
-            font-size: 2rem; /* Larger paw icon */
-            margin-right: 0.5rem;
-            color: var(--primary-color);
-        }
-
-        .home-logo .logo-text {
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-
-        .home-nav {
-            display: flex;
-            gap: 0.75rem;
-        }
-
-        /* Button Styles (General - can be in style.css or overridden here) */
-        .button {
-            display: inline-block;
-            padding: 0.75rem 1.5rem;
-            border-radius: var(--border-radius-md);
-            text-decoration: none;
+            justify-content: center;
+            padding: 0.875rem 2rem;
+            border-radius: 50px;
             font-weight: 600;
-            font-size: 0.95rem;
-            transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
-            border: 1px solid transparent;
+            font-size: 1rem;
+            text-decoration: none;
+            transition: var(--transition-smooth);
             cursor: pointer;
-            text-align: center;
+            border: none;
+            gap: 0.5rem;
         }
 
-        .button-primary-filled {
+        .btn-primary {
             background-color: var(--primary-color);
-            color: var(--text-on-primary);
-            border-color: var(--primary-color);
-        }
-        .button-primary-filled:hover {
-            background-color: var(--primary-color-dark);
-            box-shadow: var(--shadow-md);
-            transform: translateY(-1px);
+            color: white;
+            box-shadow: 0 4px 14px 0 rgba(109, 40, 217, 0.39);
         }
 
-        .button-secondary-outline {
+        .btn-primary:hover {
+            background-color: var(--primary-color-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(109, 40, 217, 0.23);
+            color: white;
+            text-decoration: none;
+        }
+
+        .btn-accent {
+            background-color: var(--accent-color);
+            color: white;
+            box-shadow: 0 4px 14px 0 rgba(236, 72, 153, 0.39);
+        }
+
+        .btn-accent:hover {
+            background-color: var(--accent-color-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(236, 72, 153, 0.23);
+            color: white;
+            text-decoration: none;
+        }
+
+        .btn-outline {
             background-color: transparent;
             color: var(--primary-color);
             border: 2px solid var(--primary-color);
         }
-        .button-secondary-outline:hover {
+
+        .btn-outline:hover {
             background-color: var(--primary-color);
-            color: var(--text-on-primary);
-            box-shadow: var(--shadow-sm);
+            color: white;
+            text-decoration: none;
+        }
+
+        /* Animation Classes */
+        .fade-in-up {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
         }
         
-        .button-primary-cta { /* For main call to action buttons */
-            background-color: var(--primary-color);
-            color: var(--text-on-primary);
-            padding: 0.875rem 2rem; /* Slightly larger */
-            font-size: 1rem;
-            border-radius: var(--border-radius-lg);
-        }
-        .button-primary-cta:hover {
-            background-color: var(--primary-color-dark);
-            box-shadow: var(--shadow-lg);
-            transform: translateY(-2px);
+        .fade-in-up.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
 
-        .button-secondary-cta { /* For secondary call to action buttons */
-            background-color: var(--accent-color);
-            color: var(--text-on-primary);
-            padding: 0.875rem 2rem;
-            font-size: 1rem;
-            border-radius: var(--border-radius-lg);
-        }
-        .button-secondary-cta:hover {
-            background-color: #D946EF; /* Slightly darker pink */
-            box-shadow: var(--shadow-lg);
-            transform: translateY(-2px);
+        /* Header Navigation */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+            transition: var(--transition-smooth);
+            padding: 1rem 0;
         }
 
+        .header.scrolled {
+            box-shadow: var(--shadow-sm);
+            padding: 0.75rem 0;
+        }
 
-        /* Main Content Area */
-        main {
-            flex-grow: 1;
+        .nav-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-link {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            gap: 1rem;
+        }
+
+        .logo-img {
+            height: 45px;
+            width: auto;
+            object-fit: contain;
+            transition: var(--transition-smooth);
+        }
+
+        .logo-img:hover {
+            transform: scale(1.05);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
         }
 
         /* Hero Section */
-        .hero-section {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-color-dark) 100%);
-            color: var(--text-on-primary);
-            padding: 6rem 0;
+        .hero {
+            padding: 12rem 0 8rem;
+            background: var(--bg-gradient);
             position: relative;
             overflow: hidden;
+            text-align: center;
         }
-        .hero-section::before {
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 60%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .hero-logo-large {
+            max-width: 250px;
+            margin: 0 auto 2rem;
+            display: block;
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.1));
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, var(--primary-color-dark) 0%, var(--accent-color) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--text-light);
+            margin-bottom: 2.5rem;
+            max-width: 750px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* Feature Highlights - Tech Cards */
+        .features {
+            padding: 8rem 0;
+            background-color: var(--bg-color);
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 5rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .section-header h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 1rem;
+        }
+
+        .section-header p {
+            font-size: 1.125rem;
+            color: var(--text-light);
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2.5rem;
+        }
+
+        .feature-card {
+            background: var(--bg-color);
+            border-radius: var(--border-radius-lg);
+            padding: 2.5rem;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-color);
+            transition: var(--transition-smooth);
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            text-align: left;
+        }
+
+        .feature-card::before {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
-            right: 0;
-            bottom: 0;
-            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(109,40,217,0.05) 0%, rgba(236,72,153,0.05) 100%);
+            z-index: -1;
+            opacity: 0;
+            transition: var(--transition-smooth);
         }
-        .hero-content {
-            position: relative;
-            z-index: 1;
-            text-align: center;
-            max-width: 800px;
-            margin: 0 auto;
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: var(--shadow-hover);
+            border-color: rgba(109, 40, 217, 0.3);
         }
-        .hero-title {
-            font-size: 3.5rem;
-            font-weight: 800;
-            margin-bottom: 1.5rem;
-            line-height: 1.2;
-            background: linear-gradient(120deg, #ffffff 0%, #f0f0f0 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+
+        .feature-card:hover::before {
+            opacity: 1;
         }
-        .hero-subtitle {
-            font-size: 1.25rem;
-            color: rgba(255, 255, 255, 0.9);
-            margin-bottom: 2.5rem;
-            max-width: 700px;
-            margin-left: auto;
-            margin-right: auto;
-            line-height: 1.6;
-        }
-        .hero-cta-group {
+
+        .feature-icon-wrapper {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            background: var(--bg-gradient);
             display: flex;
-            gap: 1rem;
+            align-items: center;
             justify-content: center;
-            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+            color: var(--primary-color);
+            font-size: 1.75rem;
+            transition: var(--transition-smooth);
         }
-        
-        /* How It Works Section */
-        .how-it-works-section {
-            padding: 6rem 0;
-            background-color: var(--background-color);
-        }
-        .process-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 2rem;
-            margin-top: 3rem;
-        }
-        .process-item {
-            text-align: center;
-            padding: 2rem;
-            background: #ffffff;
-            border-radius: var(--border-radius-lg);
-            box-shadow: var(--shadow-md);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            position: relative;
-        }
-        .process-item:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--shadow-lg);
-        }
-        .process-number {
-            width: 40px;
-            height: 40px;
+
+        .feature-card:hover .feature-icon-wrapper {
             background: var(--primary-color);
             color: white;
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--text-dark);
+        }
+
+        .feature-card p {
+            color: var(--text-light);
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .feature-list li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-dark);
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .feature-list li::before {
+            content: '\f00c';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            left: 0;
+            color: var(--accent-color);
+            font-size: 0.875rem;
+        }
+
+        /* Full Details Section - Alternating Layout */
+        .details-section {
+            padding: 6rem 0;
+            background-color: var(--bg-alt);
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .detail-row {
+            display: flex;
+            align-items: center;
+            gap: 4rem;
+            margin-bottom: 6rem;
+        }
+
+        .detail-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .detail-row.reverse {
+            flex-direction: row-reverse;
+        }
+
+        .detail-content {
+            flex: 1;
+        }
+
+        .detail-content h3 {
+            font-size: 2.25rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            color: var(--text-dark);
+        }
+
+        .detail-content p {
+            font-size: 1.125rem;
+            color: var(--text-light);
+            margin-bottom: 2rem;
+        }
+
+        .detail-image-wrapper {
+            flex: 1;
+            position: relative;
+            border-radius: var(--border-radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(0,0,0,0.05);
+            background: white;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 350px;
+        }
+
+        .detail-image-wrapper i {
+            font-size: 8rem;
+            background: -webkit-linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            opacity: 0.8;
+            transition: var(--transition-smooth);
+        }
+
+        .detail-image-wrapper:hover i {
+            transform: scale(1.1);
+            opacity: 1;
+        }
+
+        .emoji-icon {
+            font-size: 8rem;
+            opacity: 0.8;
+            transition: var(--transition-smooth);
+            display: inline-block;
+            line-height: 1;
+        }
+
+        .detail-image-wrapper:hover .emoji-icon {
+            transform: scale(1.1);
+            opacity: 1;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .stat-item {
+            background: white;
+            padding: 1.5rem;
+            border-radius: var(--border-radius-md);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .stat-item h4 {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            margin: 0 0 0.25rem 0;
+        }
+
+        .stat-item p {
+            margin: 0;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        /* Creator Bio Section */
+        .creator-bio {
+            padding: 8rem 0;
+            background: var(--bg-color);
+            position: relative;
+        }
+
+        .bio-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-lg);
+            padding: 4rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            border-top: 5px solid var(--primary-color);
+            overflow: hidden;
+        }
+
+        .bio-container::before {
+             content: '\f10d'; /* quote left */
+             font-family: 'Font Awesome 6 Free';
+             font-weight: 900;
+             position: absolute;
+             top: 2rem;
+             left: 3rem;
+             font-size: 4rem;
+             color: var(--bg-alt);
+             z-index: 0;
+        }
+
+        .creator-avatar {
+            width: 120px;
+            height: 120px;
             border-radius: 50%;
+            background: var(--bg-gradient);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 600;
-            margin: 0 auto 1.5rem;
-        }
-        .process-title {
-            font-size: 1.25rem;
-            color: var(--text-dark);
-            margin-bottom: 1rem;
-            font-weight: 600;
-        }
-        .process-description {
-            color: var(--text-light);
-            line-height: 1.6;
-        }
-
-        /* Features Section */
-        .features-overview-section {
-            padding: 6rem 0;
-            background-color: var(--secondary-color);
-        }
-        .section-title {
-            text-align: center;
-            font-size: 2.25rem; /* Larger section title */
-            font-weight: 700;
-            color: var(--text-dark);
-            margin-bottom: 3rem;
-        }
-        .features-grid {
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 2rem;
-        }
-        .feature-item {
-            background: #ffffff;
-            padding: 2.5rem;
-            text-align: left;
-        }
-        .feature-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1.5rem;
-        }
-        .feature-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: var(--text-dark);
-            margin-bottom: 0.75rem;
-        }
-        .feature-description {
-            line-height: 1.8;
-        }
-
-        /* CTA Banner Section */
-        .cta-banner-section {
-            background-color: var(--primary-color);
-            color: var(--text-on-primary);
-            padding: 4rem 0;
-            text-align: center;
-        }
-        .cta-banner-content {
-             max-width: 700px;
-        }
-        .cta-banner-title {
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-        }
-        .cta-banner-text {
-            font-size: 1.1rem;
-            opacity: 0.9;
-            margin-bottom: 2rem;
-        }
-        /* .cta-banner-section .button-secondary-cta uses general button styles */
-
-
-        /* Footer Styles */
-        .home-footer {
-            padding-top: 2rem;
-            padding-bottom: 2rem;
-            text-align: center;
-            border-top: 1px solid var(--border-color);
-            background-color: var(--secondary-color);
-            color: var(--text-light);
-            font-size: 0.9rem;
-        }
-        .home-footer p {
-            margin-bottom: 0.5rem;
-        }
-        .footer-nav {
-            margin-top: 0.5rem;
-        }
-        .footer-nav a {
-            color: var(--text-light);
-            text-decoration: none;
-            margin: 0 0.75rem;
-            transition: color 0.2s ease;
-        }
-        .footer-nav a:hover {
+            font-size: 3rem;
             color: var(--primary-color);
-            text-decoration: underline;
+            margin-bottom: 2rem;
+            border: 4px solid white;
+            box-shadow: var(--shadow-md);
+            z-index: 1;
+            overflow: hidden;
         }
 
-        /* Responsive Adjustments */
-        @media (max-width: 768px) {
-            .hero-title {
-                font-size: 2.5rem;
-            }
-            .hero-subtitle {
-                font-size: 1.125rem;
-            }
-            .process-grid {
-                grid-template-columns: 1fr;
-            }
-            .section-title {
-                font-size: 1.875rem;
-            }
-            .cta-banner-title {
-                font-size: 1.75rem;
-            }
-            .home-header {
-                flex-direction: column;
-                gap: 1rem;
-            }
-            .home-nav {
-                margin-top: 1rem;
-            }
-        }
-        @media (max-width: 480px) {
-            .button {
-                padding: 0.6rem 1.2rem;
-                font-size: 0.9rem;
-            }
-            .button-primary-cta, .button-secondary-cta {
-                padding: 0.75rem 1.5rem;
-            }
-            .hero-title {
-                font-size: 2rem;
-            }
-            .hero-subtitle {
-                font-size: 1rem;
-            }
-            .features-grid {
-                grid-template-columns: 1fr; /* Single column on very small screens */
-            }
+        .bio-content {
+            z-index: 1;
         }
 
-        /* Testimonials Section Styles */
-        .testimonials-section {
-            padding: 6rem 0;
-            background: linear-gradient(to right, var(--primary-color-dark), var(--primary-color));
-            color: white;
+        .bio-content h3 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            color: var(--text-dark);
         }
-        .testimonials-section .section-title {
-            color: white;
-        }
-        .testimonials-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-top: 3rem;
-        }
-        .testimonial-item {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 2rem;
-            border-radius: var(--border-radius-lg);
-            backdrop-filter: blur(10px);
-        }
-        .testimonial-content {
-            font-size: 1.1rem;
-            line-height: 1.6;
-            margin-bottom: 1.5rem;
-            font-style: italic;
-        }
-        .testimonial-author {
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
-            padding-top: 1rem;
-        }
-        .author-name {
+
+        .bio-title {
+            color: var(--accent-color);
             font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-        .author-title {
-            font-size: 0.9rem;
-            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 2rem;
+            font-size: 0.875rem;
+            display: block;
         }
 
-        /* CTA Section Styles */
-        .cta-section {
-            padding: 6rem 0;
-            background-color: var(--background-color);
-            text-align: center;
+        .bio-quote {
+            font-size: 1.25rem;
+            line-height: 1.8;
+            color: var(--text-dark);
+            font-style: italic;
+            margin-bottom: 2rem;
+            position: relative;
         }
-        .cta-content {
+
+        .signature {
+            font-family: 'Brush Script MT', 'Caveat', cursive, sans-serif;
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            transform: rotate(-5deg);
+            display: inline-block;
+        }
+
+        /* Final CTA */
+        .final-cta {
+            padding: 6rem 0;
+            background: linear-gradient(135deg, var(--primary-color-dark) 0%, var(--primary-color) 100%);
+            text-align: center;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .final-cta::after {
+            content: '\f0f4'; /* Coffee/Tea icon just as tech abstract */
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            right: -5%;
+            bottom: -20%;
+            font-size: 25rem;
+            color: rgba(255,255,255,0.05);
+            transform: rotate(-15deg);
+            pointer-events: none;
+        }
+
+        .final-cta-content {
+            position: relative;
+            z-index: 1;
             max-width: 800px;
             margin: 0 auto;
         }
-        .cta-title {
-            font-size: 2.5rem;
+
+        .final-cta h2 {
+            font-size: 3rem;
+            font-weight: 800;
             margin-bottom: 1.5rem;
-            color: var(--text-dark);
-        }
-        .cta-description {
-            font-size: 1.25rem;
-            color: var(--text-light);
-            margin-bottom: 2rem;
-        }
-        .cta-features {
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-            margin-bottom: 2.5rem;
-        }
-        .cta-feature {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .cta-feature i {
-            color: var(--success-color);
-        }
-        .cta-buttons {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
+            color: white;
         }
 
-        /* Footer Styles */
-        .home-footer {
-            background-color: var(--primary-color-dark);
+        .final-cta p {
+            font-size: 1.25rem;
+            opacity: 0.9;
+            margin-bottom: 2.5rem;
             color: white;
-            padding: 4rem 0 2rem;
         }
+
+        /* Footer */
+        .footer {
+            background-color: #111827; /* Very Dark Gray */
+            color: #D1D5DB;
+            padding: 5rem 0 2rem;
+        }
+
         .footer-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 3rem;
-            margin-bottom: 3rem;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 4rem;
+            margin-bottom: 4rem;
         }
-        .footer-title {
-            font-size: 1.25rem;
+
+        .footer-brand .logo-img {
+            filter: brightness(0) invert(1);
             margin-bottom: 1.5rem;
-            color: white;
+            height: 40px;
         }
-        .footer-description {
+
+        .footer-brand p {
+            color: #9CA3AF;
+            max-width: 400px;
             line-height: 1.6;
-            opacity: 0.8;
+            margin-bottom: 1.5rem;
         }
+
+        .footer-title {
+            color: white;
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
         .footer-links {
             list-style: none;
             padding: 0;
             margin: 0;
         }
+
         .footer-links li {
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.875rem;
         }
+
         .footer-links a {
-            color: rgba(255, 255, 255, 0.8);
+            color: #9CA3AF;
             text-decoration: none;
-            transition: color 0.3s ease;
+            transition: var(--transition-smooth);
+            display: inline-flex;
+            align-items: center;
         }
+
         .footer-links a:hover {
-            color: white;
+            color: var(--accent-color);
+            transform: translateX(5px);
+            text-decoration: none;
         }
+
         .footer-bottom {
-            text-align: center;
+            border-top: 1px solid #374151;
             padding-top: 2rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #6B7280;
+            font-size: 0.875rem;
         }
-        .footer-bottom p {
-            opacity: 0.6;
+
+        /* Responsive */
+        @media (max-width: 992px) {
+            .hero h1 { font-size: 2.75rem; }
+            .detail-row, .detail-row.reverse { flex-direction: column; gap: 3rem; text-align: center; }
+            .footer-grid { grid-template-columns: 1fr; gap: 2.5rem; }
+            .bio-container { padding: 3rem 2rem; }
         }
+
+        /* Mobile visibility utilities */
+        .mobile-only { display: none !important; }
+        .desktop-only { display: flex !important; }
 
         @media (max-width: 768px) {
-            .cta-title {
-                font-size: 2rem;
-            }
-            .cta-features {
-                flex-direction: column;
-                gap: 1rem;
-            }
-            .cta-buttons {
-                flex-direction: column;
-            }
-            .footer-grid {
-                grid-template-columns: 1fr;
-                gap: 2rem;
-            }
-        }
+            .desktop-only { display: none !important; }
+            .mobile-only { display: block !important; }
+            .nav-menu-container { position: relative; }
+            .nav-menu-button { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 50px; border: none; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+            .nav-dropdown-menu { position: absolute; right: 0; background: white; box-shadow: var(--shadow-md); z-index: 110; display: flex; flex-direction: column; overflow: hidden; }
+            .nav-dropdown-item { text-decoration: none; color: var(--text-dark); transition: background-color 0.2s; }
+            .nav-dropdown-item:hover { background-color: var(--primary-lighter); }
+            [x-cloak] { display: none !important; }
 
+            .hero { padding: 8rem 0 5rem; }
+            .hero h1 { font-size: 2.25rem; }
+            .hero p { font-size: 1.1rem; }
+            .hero-actions { flex-direction: column; width: 100%; }
+            .hero-actions .btn { width: 100%; justify-content: center; }
+            .feature-grid { grid-template-columns: 1fr; }
+            .footer-bottom { flex-direction: column; gap: 1rem; text-align: center; }
+            .final-cta h2 { font-size: 2.25rem; }
+            .bio-quote { font-size: 1.1rem; }
+        }
     </style>
 </head>
 <body>
-    <div class="home-page-wrapper">
-        <header class="home-header container">
-            <div class="home-logo">
-                <a href="{{ url_for('home') }}" class="logo-link">
-                    <span class="logo-icon">🐾</span>
-                    <span class="logo-text">Pawfection Grooming Solutions</span>
-                </a>
+    <!-- Header -->
+    <header class="header" id="header" x-data="{ mobileMenuOpen: false }">
+        <div class="container nav-container">
+            <a href="/" class="logo-link">
+                <img src="{{ url_for('static', filename='images/nav_bar_logo.png') }}" alt="Pawfection Grooming Solutions" class="logo-img">
+            </a>
+
+            <!-- Desktop Nav Links -->
+            <div class="nav-links desktop-only">
+                <a href="{{ url_for('auth.login') }}" class="btn btn-outline">Log In</a>
+                <a href="{{ url_for('store_register') }}" class="btn btn-primary">Sign Up</a>
             </div>
-            <nav class="home-nav">
-                <a href="{{ url_for('auth.login') }}" class="button button-secondary-outline">Login</a>
-                <a href="{{ url_for('store_register') }}" class="button button-primary-filled">Sign Up</a>
-            </nav>
-        </header>
 
-        <main>
-            <section class="hero-section">
-                <div class="container hero-content">
-                    <h1 class="hero-title">Transform Your Pet Grooming Business</h1>
-                    <p class="hero-subtitle">Pawfection Grooming Solutions is an all-in-one solution that streamlines appointment scheduling, client management, and business operations. Say goodbye to paperwork and multiple apps to manage your grooming business and hello to more time with your furry clients.</p>
-                    <div class="hero-cta-group">
-                        <a href="{{ url_for('store_register') }}" class="button button-primary-cta hero-cta">View Live Demo</a>
-                        <a href="{{ url_for('store_register') }}" class="button button-secondary-cta">Start Free Trial</a>
-                    </div>
+            <!-- Mobile Menu Button -->
+            <div class="mobile-only nav-menu-container" @click.outside="mobileMenuOpen = false">
+                <button @click="mobileMenuOpen = !mobileMenuOpen" class="nav-menu-button" style="background-color: var(--primary-color); color: white; border: 1px solid var(--border-color); padding: 0.5rem; border-radius: var(--border-radius);" aria-label="Menu" :aria-expanded="mobileMenuOpen.toString()">
+                    <span class="nav-menu-text" style="margin-right: 0.25rem;">Menu</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 20px; height: 20px;" x-show="!mobileMenuOpen">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 20px; height: 20px; display: none;" x-show="mobileMenuOpen" x-cloak>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+                <div class="nav-dropdown-menu" x-show="mobileMenuOpen" x-cloak
+                     style="top: calc(100% + 1rem); right: 0; min-width: 150px; text-align: center; border: 1px solid var(--border-color); border-radius: var(--border-radius-md); position: absolute; background-color: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);"
+                     x-transition:enter="transition ease-out duration-100 transform"
+                     x-transition:enter-start="opacity-0 scale-95"
+                     x-transition:enter-end="opacity-100 scale-100"
+                     x-transition:leave="transition ease-in duration-75 transform"
+                     x-transition:leave-start="opacity-100 scale-100"
+                     x-transition:leave-end="opacity-0 scale-95">
+                    <a href="{{ url_for('auth.login') }}" class="nav-dropdown-item" style="padding: 1rem;">Log In</a>
+                    <div class="nav-dropdown-divider" style="margin: 0;"></div>
+                    <a href="{{ url_for('store_register') }}" class="nav-dropdown-item" style="padding: 1rem; color: var(--primary-color); font-weight: 600;">Sign Up</a>
                 </div>
-            </section>
+            </div>
+        </div>
+    </header>
 
-            <section class="how-it-works-section container">
-                <h2 class="section-title">How Pawfection Grooming Solutions Works</h2>
-                <div class="process-grid">
-                    <div class="process-item">
-                        <div class="process-number">1</div>
-                        <h3 class="process-title">Sign Up & Setup</h3>
-                        <p class="process-description">Create your account, customize your business settings, and invite your team members to join your grooming workspace with dedicated user roles to maintain access control to certain management features.</p>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container hero-content fade-in-up">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pawfection" class="hero-logo-large">
+            <h1>The Ultimate All-in-One CRM for Professional Pet Groomers</h1>
+            <p>Designed to be the best app of its kind. Streamline your entire workflow—from smart scheduling and POS checkout to detailed pet profiles—so you can spend less time on screens and more time doing what you love.</p>
+            <div class="hero-actions">
+                <a href="{{ url_for('store_register') }}" class="btn btn-primary btn-lg"><i class="fas fa-rocket"></i> Try for 15 days for free</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Grid (High level) -->
+    <section class="features">
+        <div class="container">
+            <div class="section-header fade-in-up">
+                <h2>Everything You Need in One Place</h2>
+                <p>We evaluated every pain point groomers face and built intuitive, robust tools to solve them. Experience software that works as hard as you do.</p>
+            </div>
+
+            <div class="feature-grid">
+                <!-- Feature 1 -->
+                <div class="feature-card fade-in-up" style="transition-delay: 0.1s;">
+                    <div class="feature-icon-wrapper">
+                        <span style="font-size: 32px;">📅</span>
                     </div>
-                    <div class="process-item">
-                        <div class="process-number">2</div>
-                        <h3 class="process-title">Add Your Clients</h3>
-                        <p class="process-description">Build your client database with detailed pet profiles, including grooming preferences, health notes, and photo records.</p>
-                    </div>
-                    <div class="process-item">
-                        <div class="process-number">3</div>
-                        <h3 class="process-title">Manage Appointments</h3>
-                        <p class="process-description">Schedule appointments, send automated reminders, and keep track of your daily grooming calendar with ease with 2-way sync with Google Calendar.</p>
-                    </div>
-                    <div class="process-item">
-                        <div class="process-number">4</div>
-                        <h3 class="process-title">Grow Your Business</h3>
-                        <p class="process-description">Monitor your business performance, track revenue, and build lasting relationships with your clients.</p>
-                    </div>
+                    <h3>Smart Scheduling</h3>
+                    <p>Effortlessly manage your day with a beautiful, responsive calendar system.</p>
+                    <ul class="feature-list">
+                        <li>Drag-and-drop appointment calendar</li>
+                        <li>Automated conflict prevention</li>
+                        <li>Real-time 2-Way Google Calendar Sync</li>
+                        <li>Automated buffer times & durations</li>
+                    </ul>
                 </div>
-            </section>
 
-            <section class="features-overview-section">
-                <div class="container">
-                    <h2 class="section-title">Powerful Features for Modern Pet Groomers</h2>
-                    <div class="features-grid">
-                        <div class="feature-item">
-                            <div class="feature-icon">📅</div>
-                            <h3 class="feature-title">Smart Scheduling</h3>
-                            <p class="feature-description">
-                                • Drag-and-drop appointment calendar<br>
-                                • Automated scheduling conflicts prevention<br>
-                                • Multiple groomer support<br>
-                                • Service duration management
-                            </p>
-                        </div>
-                        <div class="feature-item">
-                            <div class="feature-icon">🐕</div>
-                            <h3 class="feature-title">Comprehensive Pet Profiles</h3>
-                            <p class="feature-description">
-                                • Detailed grooming history<br>
-                                • Health and behavior notes<br>
-                                • Photo gallery for before/after shots<br>
-                                • Breed-specific grooming templates
-                            </p>
-                        </div>
-                        <div class="feature-item">
-                            <div class="feature-icon">💌</div>
-                            <h3 class="feature-title">Client Communication</h3>
-                            <p class="feature-description">
-                                • Automated appointment reminders<br>
-                                • Confirmation emails<br>
-                                • Cancellation notifications<br>
-                                • Custom email templates
-                            </p>
-                        </div>
-                        <div class="feature-item">
-                            <div class="feature-icon">📊</div>
-                            <h3 class="feature-title">Business Analytics</h3>
-                            <p class="feature-description">
-                                • Revenue tracking and reports<br>
-                                • Client retention metrics<br>
-                                • Popular services analysis<br>
-                                • Growth trend monitoring
-                            </p>
-                        </div>
-                        <div class="feature-item">
-                            <div class="feature-icon">⚙️</div>
-                            <h3 class="feature-title">Service Management</h3>
-                            <p class="feature-description">
-                                • Customizable service packages<br>
-                                • Pricing management<br>
-                                • Special add-ons tracking<br>
-                                • Service time estimates
-                            </p>
-                        </div>
-                        <div class="feature-item">
-                            <div class="feature-icon">👥</div>
-                            <h3 class="feature-title">Team Collaboration</h3>
-                            <p class="feature-description">
-                                • Multi-user access control<br>
-                                • Groomer schedule management<br>
-                                • Task assignments<br>
-                                • Internal notes sharing
-                            </p>
-                        </div>
+                <!-- Feature 2 -->
+                <div class="feature-card fade-in-up" style="transition-delay: 0.2s;">
+                    <div class="feature-icon-wrapper">
+                        <span style="font-size: 32px;">🐶</span>
                     </div>
+                    <h3>Comprehensive Profiles</h3>
+                    <p>Know every detail about your furry clients before they even walk through the door.</p>
+                    <ul class="feature-list">
+                        <li>Detailed grooming history & preferences</li>
+                        <li>Health, aggression, and anxiety notes</li>
+                        <li>Vaccine tracking</li>
+                        <li>Before & after photo galleries</li>
+                    </ul>
                 </div>
-            </section>
 
-            <section class="testimonials-section">
-                <div class="container">
-                    <h2 class="section-title">What Our Users Say</h2>
-                    <div class="testimonials-grid">
-                        <div class="testimonial-item">
-                            <div class="testimonial-content">
-                                "Pawfection has completely transformed how I run my grooming business. The automated reminders alone have reduced no-shows by 75%!"
-                            </div>
-                            <div class="testimonial-author">
-                                <div class="author-name">Sarah Johnson</div>
-                                <div class="author-title">Owner, Fluffy Friends Grooming</div>
-                            </div>
-                        </div>
-                        <div class="testimonial-item">
-                            <div class="testimonial-content">
-                                "The detailed pet profiles and photo management features help us maintain consistent quality across all our services. It's a game-changer!"
-                            </div>
-                            <div class="testimonial-author">
-                                <div class="author-name">Michael Chen</div>
-                                <div class="author-title">Lead Groomer, Paws & Claws</div>
-                            </div>
-                        </div>
-                        <div class="testimonial-item">
-                            <div class="testimonial-content">
-                                "Finally, a software that understands the unique needs of pet groomers. The business insights have helped us grow our revenue by 40%."
-                            </div>
-                            <div class="testimonial-author">
-                                <div class="author-name">Emily Rodriguez</div>
-                                <div class="author-title">Manager, The Grooming Studio</div>
-                            </div>
-                        </div>
+                <!-- Feature 3 -->
+                <div class="feature-card fade-in-up" style="transition-delay: 0.3s;">
+                    <div class="feature-icon-wrapper">
+                        <span style="font-size: 32px;">💳</span>
                     </div>
+                    <h3>Seamless Checkout & POS</h3>
+                    <p>Professional billing that makes getting paid simple and transparent.</p>
+                    <ul class="feature-list">
+                        <li>One-click checkout process</li>
+                        <li>Automatic tax & deposit calculations</li>
+                        <li>Customizable service pricing & fees</li>
+                        <li>Digital itemized receipts via email</li>
+                    </ul>
                 </div>
-            </section>
 
-            <section class="cta-section">
-                <div class="container">
-                    <div class="cta-content">
-                        <h2 class="cta-title">Ready to Transform Your Grooming Business?</h2>
-                        <p class="cta-description">Join thousands of professional groomers who have streamlined their business with Pawfection.</p>
-                        <div class="cta-features">
-                            <div class="cta-feature">
-                                <i class="fas fa-check-circle"></i>
-                                <span>30-day free trial</span>
-                            </div>
-                            <div class="cta-feature">
-                                <i class="fas fa-check-circle"></i>
-                                <span>No credit card required</span>
-                            </div>
-                            <div class="cta-feature">
-                                <i class="fas fa-check-circle"></i>
-                                <span>Free data migration</span>
-                            </div>
+                <!-- Feature 4 -->
+                <div class="feature-card fade-in-up" style="transition-delay: 0.4s;">
+                    <div class="feature-icon-wrapper">
+                        <span style="font-size: 32px;">✉️</span>
+                    </div>
+                    <h3>Automated Communication</h3>
+                    <p>Reduce no-shows and keep clients informed without lifting a finger.</p>
+                    <ul class="feature-list">
+                        <li>Automated SMS text notifications</li>
+                        <li>Automated email confirmations</li>
+                        <li>Customizable notification preferences</li>
+                        <li>Feedback loop integrations</li>
+                    </ul>
+                </div>
+
+                <!-- Feature 5 -->
+                <div class="feature-card fade-in-up" style="transition-delay: 0.5s;">
+                    <div class="feature-icon-wrapper">
+                        <span style="font-size: 32px;">📊</span>
+                    </div>
+                    <h3>Business Analytics</h3>
+                    <p>Understand your business growth with real-time actionable data.</p>
+                    <ul class="feature-list">
+                        <li>Daily and weekly revenue tracking</li>
+                        <li>Pending checkouts monitor</li>
+                        <li>New client acquisition stats</li>
+                        <li>Interactive dashboard overview</li>
+                    </ul>
+                </div>
+
+                <!-- Feature 6 -->
+                <div class="feature-card fade-in-up" style="transition-delay: 0.6s;">
+                    <div class="feature-icon-wrapper">
+                        <span style="font-size: 32px;">👥</span>
+                    </div>
+                    <h3>Team Management</h3>
+                    <p>Securely grow your business and add staff with ease.</p>
+                    <ul class="feature-list">
+                        <li>Multi-user role access (Admin vs. Groomer)</li>
+                        <li>Assign appointments to specific groomers</li>
+                        <li>Centralized internal notes</li>
+                        <li>Secure database isolation per store</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Deep Dive Sections -->
+    <section class="details-section">
+        <div class="container">
+            <!-- Row 1 -->
+            <div class="detail-row fade-in-up">
+                <div class="detail-content">
+                    <h3>Built to Save You Time & Sanity</h3>
+                    <p>Pawfection isn't just another booking link; it's a complete ecosystem. Say goodbye to fragmented apps, sticky notes, and missed texts. Our platform integrates your client roster, secure payment logic (including Stripe integration for your store), and team permissions into one smooth, web and mobile-optimized interface.</p>
+                    <div class="stat-grid">
+                        <div class="stat-item">
+                            <h4>100%</h4>
+                            <p>Cloud-Based Accessibility</p>
                         </div>
-                        <div class="cta-buttons">
-                            <a href="{{ url_for('store_register') }}" class="button button-primary-cta">Start Free Trial</a>
-                            <a href="{{ url_for('store_register') }}" class="button button-secondary-outline">Schedule Demo</a>
+                        <div class="stat-item">
+                            <h4>2-Way</h4>
+                            <p>Google Calendar Sync</p>
                         </div>
                     </div>
                 </div>
-            </section>
+                <div class="detail-image-wrapper">
+                    <span class="emoji-icon">📱</span>
+                </div>
+            </div>
 
-            <footer class="home-footer">
-                <div class="container">
-                    <div class="footer-grid">
-                        <div class="footer-column">
-                            <h3 class="footer-title">Pawfection</h3>
-                            <p class="footer-description">Professional pet grooming management software that helps you focus on what matters most - the pets.</p>
-                        </div>
-                        <div class="footer-column">
-                            <h3 class="footer-title">Features</h3>
-                            <ul class="footer-links">
-                                <li><a href="{{ url_for('home') }}">Appointment Scheduling</a></li>
-                                <li><a href="{{ url_for('home') }}">Pet Profiles</a></li>
-                                <li><a href="{{ url_for('home') }}">Client Management</a></li>
-                                <li><a href="{{ url_for('home') }}">Business Analytics</a></li>
-                            </ul>
-                        </div>
-                        <div class="footer-column">
-                            <h3 class="footer-title">Company</h3>
-                            <ul class="footer-links">
-                                <li><a href="{{ url_for('home') }}">About Us</a></li>
-                                <li><a href="{{ url_for('home') }}">Contact</a></li>
-                                <li><a href="{{ url_for('view_privacy_policy') }}">Privacy Policy</a></li>
-                                <li><a href="{{ url_for('view_user_agreement') }}">Terms of Service</a></li>
-                            </ul>
-                        </div>
-                        <div class="footer-column">
-                            <h3 class="footer-title">Connect</h3>
-                            <ul class="footer-links">
-                                <li><a href="{{ url_for('home') }}">Blog</a></li>
-                                <li><a href="{{ url_for('home') }}">Support</a></li>
-                                <li><a href="{{ url_for('home') }}">Resources</a></li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div class="footer-bottom">
-                        <p>&copy; {{ now_utc().year if now_utc else "" }} Pawfection Grooming Solutions. All rights reserved.</p>
+            <!-- Row 2 -->
+            <div class="detail-row reverse fade-in-up">
+                <div class="detail-content">
+                    <h3>Bank-Grade Security & Isolation</h3>
+                    <p>Your business data is yours. We've built Pawfection from the ground up utilizing robust multi-tenant architecture. Every appointment, client note, and transaction is strictly isolated to your store. Plus, with encrypted passwords and opt-in CSRF protection, your peace of mind is guaranteed.</p>
+                    <a href="{{ url_for('view_privacy_policy') }}" class="btn btn-outline" style="margin-top: 1rem;">Read our Privacy Policy</a>
+                </div>
+                <div class="detail-image-wrapper">
+                    <span class="emoji-icon">🛡️</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Creator Bio Section -->
+    <section class="creator-bio">
+        <div class="container">
+            <div class="bio-container fade-in-up">
+                <div class="creator-avatar">
+                    <img src="{{ url_for('static', filename='images/owner_photo.jpg') }}" alt="Cora Renee Kirkpatrick" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                </div>
+                <div class="bio-content">
+                    <h3>Meet the Creator</h3>
+                    <span class="bio-title">Sole Creator, Owner, & Operator</span>
+                    <p class="bio-quote">
+                        "I created Pawfection Grooming Solutions because my best friend is an incredibly talented groomer who was constantly bogged down by clunky software and paperwork. I was inspired to use my tech talent to build something smooth, modern, and beautiful to improve her workflow. Driven by my deep love for animals—especially my own dog, Atlas—I developed this app to be the very best tool available, so groomers can get back to focusing on the pets they love."
+                    </p>
+                    <div class="signature">Cora Renee Kirkpatrick</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA -->
+    <section class="final-cta">
+        <div class="container final-cta-content fade-in-up">
+            <h2>Ready to Elevate Your Grooming Business?</h2>
+            <p>Join the movement of groomers upgrading their tech. See why we claim to be the best.</p>
+            <a href="{{ url_for('store_register') }}" class="btn btn-accent btn-lg" style="font-size: 1.25rem; padding: 1rem 3rem;">
+                Try for 15 days for free <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Pawfection" class="logo-img">
+                    <p>Pawfection Grooming Solutions is the premier all-in-one software designed specifically for the modern pet grooming professional.</p>
+                    <div>
+                        <a href="{{ url_for('store_register') }}" class="btn btn-primary" style="padding: 0.5rem 1.5rem; font-size: 0.9rem;">Try for 15 days for free</a>
                     </div>
                 </div>
-            </footer>
-        </main>
-    </div>
+                <div>
+                    <h4 class="footer-title">Platform</h4>
+                    <ul class="footer-links">
+                        <li><a href="{{ url_for('store_register') }}"><i class="fas fa-chevron-right" style="font-size: 0.7rem; margin-right: 8px;"></i> Sign Up</a></li>
+                        <li><a href="{{ url_for('auth.login') }}"><i class="fas fa-chevron-right" style="font-size: 0.7rem; margin-right: 8px;"></i> Log In</a></li>
+                        <li><a href="#header"><i class="fas fa-chevron-right" style="font-size: 0.7rem; margin-right: 8px;"></i> Features</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="footer-title">Legal</h4>
+                    <ul class="footer-links">
+                        <li><a href="{{ url_for('view_privacy_policy') }}"><i class="fas fa-shield-alt" style="font-size: 0.8rem; margin-right: 8px;"></i> Privacy Policy</a></li>
+                        <li><a href="{{ url_for('view_user_agreement') }}"><i class="fas fa-file-contract" style="font-size: 0.8rem; margin-right: 8px;"></i> User Agreement</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; {{ now_utc().year if now_utc else "2024" }} Pawfection Grooming Solutions. All Rights Reserved.</p>
+                <p>Designed & Developed by Cora Renee Kirkpatrick</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <!-- Simple Scroll Animation Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Header scroll effect
+            const header = document.getElementById('header');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 50) {
+                    header.classList.add('scrolled');
+                } else {
+                    header.classList.remove('scrolled');
+                }
+            });
+
+            // Intersection Observer for fade-in animations
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.1
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        observer.unobserve(entry.target); // Stop observing once animated
+                    }
+                });
+            }, observerOptions);
+
+            const fadeElements = document.querySelectorAll('.fade-in-up');
+            fadeElements.forEach(el => observer.observe(el));
+        });
+    </script>
 </body>
 </html>

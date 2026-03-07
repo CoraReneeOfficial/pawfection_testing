@@ -4,6 +4,7 @@
 
 {% block styles %}
 {{ super() }}
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <style>
     .permission-wrapper {
         max-width: 1200px;
@@ -403,6 +404,7 @@
     </div>
     <div class="modal-body">
         <form id="add-user-form" action="/superadmin/users/add" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="form-group">
                 <label for="name" class="form-label">Full Name</label>
                 <input type="text" id="name" name="name" class="input-field" required>
@@ -453,6 +455,7 @@
     </div>
     <div class="modal-body">
         <form id="edit-user-form" action="/superadmin/users/edit" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <input type="hidden" id="edit_user_id" name="user_id">
             
             <div class="form-group">
@@ -499,6 +502,7 @@
     </div>
     <div class="modal-body">
         <form id="add-permission-form" action="/superadmin/permissions/add" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="form-group">
                 <label for="permission_name" class="form-label">Permission Name</label>
                 <input type="text" id="permission_name" name="name" class="input-field" required>
@@ -644,6 +648,7 @@
                 fetch('/superadmin/users/permissions/update', {
                     method: 'POST',
                     headers: {
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
@@ -681,6 +686,7 @@
                 fetch('/superadmin/roles/permissions/update', {
                     method: 'POST',
                     headers: {
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({

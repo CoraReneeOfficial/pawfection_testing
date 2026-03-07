@@ -226,6 +226,25 @@ a:hover {
   border-width: 0;
 }
 
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--primary-color);
+    color: var(--white);
+    padding: 8px;
+    z-index: 9999;
+    font-weight: bold;
+    border-bottom-right-radius: var(--border-radius);
+    transition: top 0.2s ease-in-out;
+}
+
+.skip-link:focus {
+    top: 0;
+    outline: 2px solid var(--white);
+    outline-offset: -2px;
+}
+
 /* --- Navigation Bar --- */
 .main-nav {
     background-color: var(--primary-color);
@@ -258,6 +277,13 @@ a:hover {
 .nav-brand a:hover {
     color: #dbeafe; /* Lighter blue on hover */
     text-decoration: none;
+}
+
+.nav-brand-logo {
+    height: 35px; /* Adjust as needed to fit the nav bar nicely */
+    width: auto;
+    object-fit: contain;
+    filter: brightness(0) invert(1); /* Makes the logo white to contrast with primary color background */
 }
 
 /* *** NEW: Container for User Pic and Menu Button *** */
@@ -1211,8 +1237,8 @@ textarea.form-input { min-height: 80px; }
         line-height: 1.1;
         gap: 0.25rem;
     }
-    .nav-menu-text {
-        display: none;
+    .nav-brand-logo {
+        height: 28px; /* Slightly smaller on mobile */
     }
     .nav-menu-button {
         padding: 0.5rem;
