@@ -1712,16 +1712,12 @@ def create_app():
         """
         from flask import send_from_directory, abort
         import os
-        from werkzeug.utils import secure_filename
         
         if not session.get('is_superadmin'):
             flash('Access denied.', 'danger')
             return redirect(url_for('superadmin_login'))
             
         # Validate filename to prevent path traversal
-        filename = secure_filename(filename)
-        if not filename:
-            abort(404)
         if '..' in filename or filename.startswith('/'):
             abort(404)
             
@@ -1752,16 +1748,12 @@ def create_app():
         csrf.protect()
         from flask import redirect, url_for, flash, abort
         import os
-        from werkzeug.utils import secure_filename
         
         if not session.get('is_superadmin'):
             flash('Access denied.', 'danger')
             return redirect(url_for('superadmin_login'))
             
         # Validate filename to prevent path traversal
-        filename = secure_filename(filename)
-        if not filename:
-            abort(404)
         if '..' in filename or filename.startswith('/'):
             abort(404)
             

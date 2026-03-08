@@ -78,10 +78,22 @@ class Store(SecurityMixin, db.Model):
     is_archived = db.Column(db.Boolean, default=False, nullable=False)  # Soft delete/archive flag
     tax_enabled = db.Column(db.Boolean, default=True, nullable=False)  # Enable/disable taxes for invoices/receipts
 
+    # --- Phase 3: Financials & Capacity ---
+    daily_capacity = db.Column(db.Integer, default=20, nullable=True) # Total dogs per day
+    salon_style = db.Column(db.String(50), default='appointment', nullable=True) # 'appointment' or 'kennel'
+
     # --- Stripe integration fields ---
     stripe_customer_id = db.Column(db.String(255), nullable=True)
     stripe_subscription_id = db.Column(db.String(255), nullable=True)
     
+    # --- Phase 2 Settings ---
+    capacity_type = db.Column(db.String(20), default='appointments', nullable=False) # 'dogs' or 'appointments'
+    capacity_limit = db.Column(db.Integer, nullable=True)
+    appointment_window_start = db.Column(db.String(10), nullable=True) # e.g., '09:00'
+    appointment_window_end = db.Column(db.String(10), nullable=True) # e.g., '17:00'
+    salon_style = db.Column(db.String(20), default='staggered', nullable=False) # 'staggered' or 'drop-off'
+    schedule_type = db.Column(db.String(20), default='system', nullable=False) # 'system' or 'manager'
+
     # Relationships to other models, ensuring data is linked to the store
     users = db.relationship('User', backref='store', lazy=True)
     owners = db.relationship('Owner', backref='store', lazy=True)
@@ -112,11 +124,24 @@ class User(SecurityMixin, db.Model):
     # Google OAuth token for system/superadmin accounts to send emails
     google_token_json = db.Column(db.Text, nullable=True)
 
+    # --- Phase 3: Financials & Commission ---
+    commission_type = db.Column(db.String(20), default="percentage", nullable=True) # "percentage" or "dollar"
+    commission_amount = db.Column(db.Float, default=100.0, nullable=True)
+    commission_recipient_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True) # Admin who receives the other cut
+
     # Stripe subscription fields
     stripe_customer_id = db.Column(db.String(255), nullable=True)
     stripe_subscription_id = db.Column(db.String(255), nullable=True)
     is_subscribed = db.Column(db.Boolean, default=False, nullable=False)
     
+    # --- Phase 2 Settings ---
+    employment_type = db.Column(db.String(20), nullable=True) # 'w2' or '1099'
+    address = db.Column(db.String(255), nullable=True)
+    deduction_type = db.Column(db.String(20), nullable=True) # 'dollar' or 'percentage'
+    deduction_amount = db.Column(db.Float, nullable=True)
+    deduction_frequency = db.Column(db.String(20), nullable=True) # 'per_appointment', 'weekly', 'bi_weekly', 'monthly'
+    other_withholdings = db.Column(db.Text, nullable=True)
+
     # Relationships to data created or assigned by this user
     activity_logs = db.relationship('ActivityLog', backref='user', lazy=True)
     created_owners = db.relationship('Owner', backref='creator', lazy='dynamic', foreign_keys='Owner.created_by_user_id')

@@ -1,1 +1,0 @@
-Hi {{ owner_name }}, {{ dog_name }} is checked in and we are starting their groom! We'll text you when they are ready. - {{ store_name }}
