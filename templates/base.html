@@ -197,7 +197,7 @@
         <div class="notification-popup-content" @click="if($event.target.tagName !== 'BUTTON' && currentNotification) window.location.href = currentNotification.link">
             <div class="notification-popup-header">
                 <strong x-text="currentNotification ? currentNotification.type.replace('_', ' ').toUpperCase() : 'Notification'"></strong>
-                <button @click.stop="popupShow = false; if(currentNotification) markPopupShown(currentNotification.id)" class="close-btn">&times;</button>
+                <button type="button" @click.stop="popupShow = false; if(currentNotification) markPopupShown(currentNotification.id)" class="close-btn" aria-label="Close notification">&times;</button>
             </div>
             <div class="notification-popup-body" x-text="currentNotification ? currentNotification.content : ''"></div>
             <div class="notification-popup-actions">
