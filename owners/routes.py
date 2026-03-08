@@ -68,6 +68,9 @@ def add_owner():
         phone_carrier = request.form.get('phone_carrier')
         text_notifications_enabled = 'text_notifications_enabled' in request.form
         email_notifications_enabled = 'email_notifications_enabled' in request.form
+        notify_appointment_reminders = 'notify_appointment_reminders' in request.form
+        notify_status_updates = 'notify_status_updates' in request.form
+        notify_marketing = 'notify_marketing' in request.form
         
         errors = {}
         if not name: errors['name'] = "Owner Name required."
