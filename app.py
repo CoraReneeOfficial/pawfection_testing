@@ -105,6 +105,7 @@ def create_app():
     app.config['STRIPE_SECRET_KEY'] = os.environ.get('STRIPE_SECRET_KEY')
     stripe.api_key = app.config['STRIPE_SECRET_KEY']
     app.config['STRIPE_PRICE_ID'] = os.environ.get('STRIPE_PRICE_ID')
+    app.config['STRIPE_LIFETIME_PRICE_ID'] = os.environ.get('STRIPE_LIFETIME_PRICE_ID')
 
     # Define base directories for persistent data and uploads.
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -3372,6 +3373,103 @@ def create_app():
             app.logger.error(f"[CHECKOUT] Stripe checkout session error: {e}")
             return jsonify(error=str(e)), 400
 
+    @app.route('/api/subscriptions/create', methods=['POST'])
+    @login_required
+    def api_create_subscription():
+        csrf.protect()
+        from flask_login import current_user
+        from models import Store
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify(error="Invalid payload"), 400
+            price_id = data.get('priceId')
+            if not price_id:
+                return jsonify(error="Missing price_id"), 400
+
+            store = None
+            if hasattr(current_user, 'store_id') and current_user.store_id:
+                store = Store.query.get(int(current_user.store_id))
+            if not store:
+                return jsonify(error='No store found for current user.'), 400
+
+            # Create or retrieve Stripe customer
+            customer_id = store.stripe_customer_id
+            if not customer_id:
+                customer = stripe.Customer.create(
+                    email=store.email or current_user.email,
+                    name=store.name,
+                    metadata={'store_id': store.id}
+                )
+                customer_id = customer.id
+                store.stripe_customer_id = customer_id
+                db.session.commit()
+
+            if store.subscription_status in ['active', 'lifetime']:
+                return jsonify(error="You already have an active subscription."), 400
+
+            # Calculate remaining trial days
+            from datetime import datetime, timezone, timedelta
+            trial_end_timestamp = None
+            if store.subscription_status == 'trial' and store.subscription_ends_at:
+                now = datetime.now(timezone.utc)
+                end_dt = store.subscription_ends_at.replace(tzinfo=timezone.utc) if store.subscription_ends_at.tzinfo is None else store.subscription_ends_at
+
+                if end_dt > now:
+                    # Stripe requires trial_end to be at least 48 hours in the future.
+                    min_future = now + timedelta(hours=48, minutes=5)
+                    if end_dt < min_future:
+                        end_dt = min_future
+                    trial_end_timestamp = int(end_dt.timestamp())
+
+            # Handle lifetime vs regular subscription
+            if price_id == app.config.get('STRIPE_LIFETIME_PRICE_ID') and price_id:
+                # We need to retrieve the price to get its amount for the PaymentIntent
+                price = stripe.Price.retrieve(price_id)
+                payment_intent = stripe.PaymentIntent.create(
+                    amount=price.unit_amount,
+                    currency=price.currency,
+                    customer=customer_id,
+                    automatic_payment_methods={"enabled": True},
+                    metadata={'store_id': store.id, 'type': 'lifetime'}
+                )
+                return jsonify({'clientSecret': payment_intent.client_secret, 'type': 'payment_intent'})
+            else:
+                sub_params = {
+                    'customer': customer_id,
+                    'items': [{'price': price_id}],
+                    'payment_behavior': 'default_incomplete',
+                    'expand': ['latest_invoice.payment_intent'],
+                    'metadata': {'store_id': store.id}
+                }
+
+                # Add trial_end if applicable
+                if trial_end_timestamp:
+                    sub_params['trial_end'] = trial_end_timestamp
+
+                subscription = stripe.Subscription.create(**sub_params)
+
+                # If the subscription is trialing, it might not require an immediate payment intent
+                client_secret = None
+                if subscription.latest_invoice and subscription.latest_invoice.payment_intent:
+                    client_secret = subscription.latest_invoice.payment_intent.client_secret
+                elif subscription.pending_setup_intent:
+                    # Stripe may create a SetupIntent instead if it's purely a trial with no immediate charge
+                    setup_intent = stripe.SetupIntent.retrieve(subscription.pending_setup_intent)
+                    client_secret = setup_intent.client_secret
+
+                if not client_secret:
+                    return jsonify(error="Could not determine client secret from Stripe."), 500
+
+                return jsonify({
+                    'clientSecret': client_secret,
+                    'type': 'subscription'
+                })
+
+        except Exception as e:
+            app.logger.error(f"[API CREATE SUB] Error: {e}")
+            return jsonify(error=str(e)), 400
+
 
     # --- Subscription Success Page ---
     @app.route('/subscription-success')
@@ -3461,6 +3559,7 @@ def create_app():
             customer_id = subscription.get('customer')
             subscription_id = subscription.get('id')
             status = subscription.get('status')
+            current_period_end = subscription.get('current_period_end')
             from models import Store
             store = Store.query.filter_by(stripe_customer_id=customer_id).first()
             if store:
@@ -3468,6 +3567,9 @@ def create_app():
                 # Only set to active if Stripe says it's active or trialing
                 if status in ['active', 'trialing']:
                     store.subscription_status = 'active'
+                    if current_period_end:
+                        from datetime import datetime, timezone
+                        store.subscription_ends_at = datetime.fromtimestamp(current_period_end, tz=timezone.utc)
                     db.session.commit()
                     app.logger.info(f"[WEBHOOK] Store {store.id} subscription set to active ({event['type']}). customer_id={customer_id}, subscription_id={subscription_id}, status={status}")
                 else:
@@ -3483,6 +3585,17 @@ def create_app():
                 store.subscription_status = 'inactive'
                 db.session.commit()
                 app.logger.info(f"[WEBHOOK] Store {store.id} subscription set to inactive (deleted event)")
+        elif event['type'] == 'payment_intent.succeeded':
+            payment_intent = event['data']['object']
+            customer_id = payment_intent.get('customer')
+            metadata = payment_intent.get('metadata', {})
+            if metadata.get('type') == 'lifetime':
+                from models import Store
+                store = Store.query.filter_by(stripe_customer_id=customer_id).first()
+                if store:
+                    store.subscription_status = 'lifetime'
+                    db.session.commit()
+                    app.logger.info(f"[WEBHOOK] Store {store.id} subscription set to lifetime via payment intent.")
         return '', 200
 
 
