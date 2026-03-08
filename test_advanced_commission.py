@@ -2,8 +2,17 @@ import sys
 import os
 from unittest.mock import Mock
 
+import builtins
 # mock dependencies
-sys.modules['psycopg2'] = Mock()
+
+class MockException(Exception):
+    pass
+
+class MockPsycopg2(Mock):
+    Error = MockException
+
+sys.modules['psycopg2'] = MockPsycopg2()
+sys.modules['psycopg2.sql'] = Mock()
 sys.modules['google'] = Mock()
 sys.modules['google.genai'] = Mock()
 sys.modules['google.genai.types'] = Mock()
@@ -26,6 +35,14 @@ sys.modules['markdown'] = Mock()
 from app import create_app
 from extensions import db
 from models import Store, User
+
+import os
+import app as main_app
+
+if 'DATABASE_URL' in main_app.os.environ:
+    del main_app.os.environ['DATABASE_URL']
+if 'DATABASE_URL' in os.environ:
+    del os.environ['DATABASE_URL']
 
 app = create_app()
 with app.app_context():
