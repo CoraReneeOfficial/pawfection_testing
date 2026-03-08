@@ -1768,7 +1768,7 @@ def edit_store():
         if errors:
             for err in errors:
                 flash(err, 'danger')
-            return render_template('edit_store.html', store=store, timezones=timezones, now=datetime.now(timezone.utc))
+            return render_template('edit_store.html', store=store, timezones=timezones, current_time=datetime.now(timezone.utc))
         # Audit log for sensitive changes
         if new_username != store.username:
             current_app.logger.info(f"[AUDIT] Store username changed for store {store.id}")
@@ -1781,7 +1781,7 @@ def edit_store():
         except Exception as e:
             db.session.rollback()
             flash('Failed to update store information.', 'danger')
-    return render_template('edit_store.html', store=store, timezones=timezones, now=datetime.now(timezone.utc))
+    return render_template('edit_store.html', store=store, timezones=timezones, current_time=datetime.now(timezone.utc))
 
 def sync_google_calendar_for_store(store, user, force=False):
     # Check cooldown cache

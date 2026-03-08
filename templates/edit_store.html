@@ -152,7 +152,7 @@
             <div style="margin-bottom:1rem; padding: 1rem; border: 1px solid var(--border-color); border-radius: var(--border-radius); background-color: #fafafa;">
                 <strong style="font-size: 1.1em; color: var(--primary-color);">Status:</strong> {{ store.subscription_status or 'Unknown' | capitalize }}<br/>
                 {% if store.subscription_status == 'trial' %}
-                    {% set diff = (store.subscription_ends_at.replace(tzinfo=None) - now.replace(tzinfo=None)).days if store.subscription_ends_at else 15 %}
+                    {% set diff = (store.subscription_ends_at.replace(tzinfo=None) - current_time.replace(tzinfo=None)).days if store.subscription_ends_at else 15 %}
                     <span style="color: var(--warning-color); font-weight: 600;">You are on a trial. {{ diff if diff >= 0 else 0 }} days left.</span>
                 {% elif store.subscription_status == 'active' %}
                     <span style="color: var(--success-color); font-weight: 600;">Subscription Active.</span><br/>
