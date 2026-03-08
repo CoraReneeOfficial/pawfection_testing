@@ -1,1 +1,0 @@
-Great news, {{ owner_name }}! {{ dog_name }} is all finished and ready for pickup. See you soon! - {{ store_name }}

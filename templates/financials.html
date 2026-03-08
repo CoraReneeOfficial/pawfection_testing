@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+
+{% block title %}Financials{% endblock %}
+
+{% block head %}
+<style>
+    .financials-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .financials-summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .summary-card {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: var(--box-shadow-sm);
+        text-align: center;
+    }
+
+    .summary-card h3 {
+        margin: 0 0 0.5rem 0;
+        color: var(--text-muted);
+        font-size: 1rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .summary-card .amount {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin: 0;
+    }
+
+    .summary-card.store-cut .amount {
+        color: var(--success-color);
+    }
+
+    .payouts-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+        background: #fff;
+        box-shadow: var(--box-shadow-sm);
+        border-radius: var(--border-radius);
+        overflow: hidden;
+    }
+
+    .payouts-table th, .payouts-table td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .payouts-table th {
+        background-color: #f8fafc;
+        font-weight: 600;
+        color: var(--text-muted);
+    }
+
+    .payouts-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .filter-form {
+        display: flex;
+        gap: 1rem;
+        align-items: flex-end;
+        background: #fff;
+        padding: 1rem;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow-sm);
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .filter-group label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-muted);
+    }
+
+    .filter-group select, .filter-group input {
+        padding: 0.5rem;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        font-size: 0.95rem;
+    }
+
+    .custom-dates {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-card" style="background: transparent; box-shadow: none; border: none; padding: 0;">
+    <div class="financials-header">
+        <div>
+            <h1 style="margin-bottom: 0.5rem;">Financials & Payouts</h1>
+            <p style="color: var(--text-muted); margin: 0;">{{ period_display }}</p>
+        </div>
+    </div>
+
+    <form method="GET" action="{{ url_for('management.financials') }}" class="filter-form">
+        <div class="filter-group">
+            <label for="date_range_type">Period</label>
+            <select name="date_range_type" id="date_range_type" onchange="toggleCustomDates()">
+                <option value="today" {% if date_range_type == 'today' %}selected{% endif %}>Today</option>
+                <option value="this_week" {% if date_range_type == 'this_week' %}selected{% endif %}>This Week</option>
+                <option value="this_month" {% if date_range_type == 'this_month' %}selected{% endif %}>This Month</option>
+                <option value="custom" {% if date_range_type == 'custom' %}selected{% endif %}>Custom Range</option>
+            </select>
+        </div>
+
+        <div class="custom-dates" id="custom_dates_container" style="display: {% if date_range_type == 'custom' %}flex{% else %}none{% endif %};">
+            <div class="filter-group">
+                <label for="start_date">Start Date</label>
+                <input type="date" name="start_date" id="start_date" value="{{ request.args.get('start_date', '') }}">
+            </div>
+            <div class="filter-group">
+                <label for="end_date">End Date</label>
+                <input type="date" name="end_date" id="end_date" value="{{ request.args.get('end_date', '') }}">
+            </div>
+        </div>
+
+        <button type="submit" class="button button-primary" style="height: 38px;">Apply Filter</button>
+    </form>
+
+    <div class="financials-summary">
+        <div class="summary-card">
+            <h3>Total Revenue</h3>
+            <p class="amount">${{ "{:,.2f}".format(total_revenue) }}</p>
+        </div>
+        <div class="summary-card store-cut">
+            <h3>Store Earnings (Retained)</h3>
+            <p class="amount">${{ "{:,.2f}".format(store_cut) }}</p>
+        </div>
+    </div>
+
+    <div style="background: #fff; border-radius: var(--border-radius); box-shadow: var(--box-shadow-sm); padding: 1.5rem; border: 1px solid var(--border-color);">
+        <h2 style="margin-top: 0; font-size: 1.25rem; color: var(--text-main);">Groomer Payouts (1099/W2)</h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">Calculated based on each groomer's configured commission percentage.</p>
+
+        {% if groomer_payouts %}
+        <div style="overflow-x: auto;">
+            <table class="payouts-table">
+                <thead>
+                    <tr>
+                        <th>Groomer</th>
+                        <th>Commission %</th>
+                        <th>Total Services Rendered</th>
+                        <th>Payout Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for gid, data in groomer_payouts.items() %}
+                    <tr>
+                        <td><strong>{{ data.name }}</strong></td>
+                        <td>{{ data.commission_pct }}%</td>
+                        <td>${{ "{:,.2f}".format(data.total_sales) }}</td>
+                        <td style="font-weight: 600; color: var(--primary-color);">${{ "{:,.2f}".format(data.payout) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 2rem; background: #f8fafc; border-radius: var(--border-radius); border: 1px dashed var(--border-color);">
+            <p style="color: var(--text-muted); margin: 0;">No completed appointments found for this period.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div style="margin-top: 2rem;">
+        <a href="{{ url_for('management.management') }}" class="button button-secondary">Back to Management</a>
+    </div>
+</div>
+
+<script>
+function toggleCustomDates() {
+    var select = document.getElementById('date_range_type');
+    var customDates = document.getElementById('custom_dates_container');
+    if (select.value === 'custom') {
+        customDates.style.display = 'flex';
+    } else {
+        customDates.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}
