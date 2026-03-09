@@ -9,3 +9,7 @@
 ## 2025-03-05 - Notification Queries Database Indexing
 **Learning:** Context processors (like `inject_notifications` in `app.py`) execute on *every single page load*, and the frontend AlpineJS notification polling hits the backend *every 10 seconds per active user*. Both of these trigger queries looking for unread notifications by `store_id` and `is_read`. Without a specific index covering these two columns, the database is forced to do sequential scans on the Notification table under extreme frequency, creating a hidden, massive performance tax as the data grows.
 **Action:** Always identify queries executed inside context processors and high-frequency polling endpoints, and ensure they are covered by dedicated, highly-specific composite database indexes (e.g., `db.Index('idx_notification_store_is_read', 'store_id', 'is_read')`) to turn O(N) table scans into fast index lookups.
+
+## 2025-03-06 - Unnecessary JOIN Optimization
+**Learning:** In the `/logs` route, `ActivityLog.query` was performing an unnecessary `.join(User)` just to filter by `store_id` (via `User.store_id == store_id`). Since `ActivityLog` already has a `store_id` column, the JOIN can be safely removed.
+**Action:** Review models for existing foreign keys or reference columns before performing JOINs solely for filtering, as JOIN operations are computationally expensive and can often be bypassed by directly querying the available relationships' keys.
