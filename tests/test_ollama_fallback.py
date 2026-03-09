@@ -91,20 +91,23 @@ class TestOllamaFallback(unittest.TestCase):
 
     @patch('ai_assistant.routes.ollama')
     @patch('ai_assistant.routes.genai')
-    def test_ollama_fallback_to_gemini(self, mock_genai, mock_ollama):
-        # Mock ollama to raise an exception
+    def test_gemini_fallback_to_ollama(self, mock_genai, mock_ollama):
+        # Mock gemini to raise an exception
+        mock_gemini_client = MagicMock()
+        mock_gemini_client.chats.create.side_effect = Exception("Rate limit exceeded")
+        mock_genai.Client.return_value = mock_gemini_client
+
+        # Mock ollama to return a valid response
         mock_ollama_client = MagicMock()
-        mock_ollama_client.chat.side_effect = Exception("Connection refused")
+        mock_response = MagicMock()
+        mock_response.message.content = "Hello from Ollama"
+        mock_response.message.tool_calls = None
+        mock_ollama_client.chat.return_value = mock_response
         mock_ollama.Client.return_value = mock_ollama_client
 
-        # Mock gemini to return a valid response
-        mock_gemini_client = MagicMock()
-        mock_chat = MagicMock()
-        mock_response = MagicMock()
-        mock_response.text = "Hello from Gemini"
-        mock_chat.send_message.return_value = mock_response
-        mock_gemini_client.chats.create.return_value = mock_chat
-        mock_genai.Client.return_value = mock_gemini_client
+        # Set environment variables for Ollama fallback
+        os.environ['OLLAMA_URL'] = 'http://localhost:11434'
+        os.environ['OLLAMA_MODEL'] = 'qwen2.5-coder:14b'
 
         with self.client.session_transaction() as sess:
             sess['user_id'] = self.user_id
@@ -114,9 +117,12 @@ class TestOllamaFallback(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
 
-        # Mock markdown is used to convert response_text, so the json response will just be whatever MagicMock returns, but we can verify the API called
-        mock_ollama.Client.assert_called_once()
         mock_genai.Client.assert_called_once()
+        mock_ollama.Client.assert_called_once()
+
+        # Cleanup
+        del os.environ['OLLAMA_URL']
+        del os.environ['OLLAMA_MODEL']
 
 if __name__ == '__main__':
     unittest.main()

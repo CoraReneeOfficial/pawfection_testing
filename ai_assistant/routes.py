@@ -1015,15 +1015,16 @@ def chat():
         system_prompt = f"""
         Role: You are the "Pawfection Business Agent." You are a highly efficient, professional administrative assistant for pet grooming businesses.
 
-        Core Objective: Help the user manage their Client & Pet Directory and Schedule New Appointments with 100% accuracy and structured data. You are using `qwen2.5-coder:14b`.
+        Core Objective: Help the user manage their Client & Pet Directory and Schedule New Appointments with 100% accuracy and structured data.
+        You are primarily powered by Gemini 3.1 Flash-Lite, but may fallback to a local model (like qwen2.5-coder) if rate limits are reached.
 
         CONTEXT:
         Current User Role: {g.user.role if hasattr(g, 'user') else 'Unknown'}
         Current User ID: {g.user.id if hasattr(g, 'user') else 'Unknown'}
         {context_data}
 
-        Task Execution Protocol:
-
+        # PRIMARY INSTRUCTIONS (For Gemini and General Operation):
+        As the primary virtual assistant handling business operations:
         1. Identify Intent: Determine if the user wants to ADD, EDIT, DELETE, or VIEW a record (Owner, Dog, Appointment, Service, Store Info, Revenue). Note: Ensure you account for relative dates/times provided by the user using the Current Date and Time context provided to you. For example, if today is Tuesday, and the user asks for "next Wednesday", you must calculate what date next Wednesday is based on the Current Date and Time context before making tool calls.
 
         2. Verification: Check the provided information against ALL required fields. You MUST NOT proceed without ALL of these:
@@ -1046,7 +1047,7 @@ def chat():
 
         6. Output Formatting:
            - Provide a polite, concise confirmation to the user.
-           - To perform actions, use the provided tools. DO NOT generate raw JSON strings in your conversational response. DO NOT output code blocks or markdown code syntax containing tool calls. Use the native tool calling framework. If you MUST output JSON, format it exactly like this on its own line: {{"name": "tool_name", "arguments": {{"arg1": "value1"}}}}
+           - To perform actions, use the provided tools via the native tool calling framework.
            - Use a helpful, organized tone—break down multi-step processes into bulleted lists for clarity.
            - Never output JSON or any other code in the chat for users to see.
 
@@ -1057,6 +1058,12 @@ def chat():
         - To get appointment details, use `get_appointments`. Do not make the user look up IDs. You can also use `get_daily_appointment_count` to find out how many appointments exist on a particular date.
         - Only use the tools provided to you. If a task cannot be fully completed by a tool, inform the user.
         - Use Markdown for formatting (bold, lists, links).
+
+        # FALLBACK INSTRUCTIONS (Strict formatting for local Ollama models like qwen2.5-coder):
+        If you are the fallback local model, you MUST adhere to the following formatting rules when calling tools:
+        - DO NOT generate raw JSON strings in your conversational response.
+        - DO NOT output code blocks or markdown code syntax containing tool calls.
+        - If the native tool calling framework fails and you MUST output JSON to call a tool, format it EXACTLY like this on its own line: {{"name": "tool_name", "arguments": {{"arg1": "value1"}}}}
         """
 
 
@@ -1083,7 +1090,41 @@ def chat():
 
         response_text = ""
         try:
-            # 1. Primary AI: Ollama
+            # 1. Primary AI: Gemini
+            genai_history = []
+            for msg in history:
+                role = msg.get('role', 'user')
+                if role not in ['user', 'model']:
+                    continue
+                text = msg.get('text', '')
+                import re
+                clean_text = re.sub('<[^<]+>', '', text) if role == 'model' else text
+                genai_history.append({"role": role, "parts": [{"text": clean_text}]})
+
+            chat = client.chats.create(
+                model='gemini-3.1-flash-lite',
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    tools=tools,
+                    temperature=0.7,
+                    automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=False),
+                    tool_config=types.ToolConfig(
+                        function_calling_config=types.FunctionCallingConfig(mode='AUTO')
+                    )
+                ),
+                history=genai_history
+            )
+
+            gemini_response = chat.send_message(user_message)
+            response_text = gemini_response.text
+            current_app.logger.info(f"[Gemini Response] Result text: '{response_text}'")
+            if getattr(gemini_response, 'function_calls', None):
+                current_app.logger.info(f"[Gemini Response] Function calls: {gemini_response.function_calls}")
+
+        except Exception as gemini_error:
+            current_app.logger.warning(f"[AI Chat Fallback] Gemini failed: {gemini_error}. Falling back to Ollama.")
+
+            # 2. Fallback AI: Ollama
             ollama_url = os.environ.get('OLLAMA_URL')
             ollama_model = os.environ.get('OLLAMA_MODEL')
 
@@ -1221,40 +1262,6 @@ def chat():
                 response_text = re.sub(r'```(?:json)?\s*.*?\s*```', '', response_text, flags=re.DOTALL)
                 response_text = re.sub(r'\{\s*"name"\s*:\s*"[^"]+"\s*,\s*"arguments"\s*:\s*\{.*?\}\s*\}', '', response_text, flags=re.DOTALL)
             current_app.logger.info(f"[Ollama Response] Result text: '{response_text}'")
-
-        except Exception as ollama_error:
-            current_app.logger.warning(f"[AI Chat Fallback] Ollama failed: {ollama_error}. Falling back to Gemini.")
-
-            # 2. Fallback AI: Gemini
-            genai_history = []
-            for msg in history:
-                role = msg.get('role', 'user')
-                if role not in ['user', 'model']:
-                    continue
-                text = msg.get('text', '')
-                import re
-                clean_text = re.sub('<[^<]+>', '', text) if role == 'model' else text
-                genai_history.append({"role": role, "parts": [{"text": clean_text}]})
-
-            chat = client.chats.create(
-                model='gemini-flash-latest',
-                config=types.GenerateContentConfig(
-                    system_instruction=system_prompt,
-                    tools=tools,
-                    temperature=0.7,
-                    automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=False),
-                    tool_config=types.ToolConfig(
-                        function_calling_config=types.FunctionCallingConfig(mode='AUTO')
-                    )
-                ),
-                history=genai_history
-            )
-
-            gemini_response = chat.send_message(user_message)
-            response_text = gemini_response.text
-            current_app.logger.info(f"[Gemini Response] Result text: '{response_text}'")
-            if getattr(gemini_response, 'function_calls', None):
-                current_app.logger.info(f"[Gemini Response] Function calls: {gemini_response.function_calls}")
 
         # Convert Markdown to HTML for safe rendering on frontend
         html_response = markdown.markdown(response_text if response_text else "")
