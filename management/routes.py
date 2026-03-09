@@ -8,6 +8,7 @@ import sqlite3
 import tempfile
 import zipfile
 import shutil
+import stripe
 import werkzeug
 import calendar
 import uuid
@@ -23,7 +24,7 @@ from decimal import Decimal, InvalidOperation
 from functools import wraps
 import datetime
 from models import User, Service, Appointment, ActivityLog, Store, Dog, Owner, AppointmentRequest
-from utils import allowed_file, log_activity, service_names_from_ids
+from utils import allowed_file, log_activity, service_names_from_ids, subscription_required
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from appointments.google_calendar_sync import get_google_service
@@ -2314,6 +2315,89 @@ def sync_google_calendar():
 
 
 # ... (Rest of file unchanged, already reviewed)
+
+
+@management_bp.route('/stripe/connect', methods=['POST'])
+@subscription_required
+@admin_required
+def connect_stripe():
+    """Initiates Stripe Connect onboarding for the store."""
+    if 'store_id' not in session:
+        return redirect(url_for('auth.login'))
+
+    store = Store.query.get(session['store_id'])
+    if not store:
+        flash("Store not found.", "danger")
+        return redirect(url_for('management.edit_store'))
+
+    try:
+        # 1. Create a Stripe Express account if one doesn't exist
+        if not store.stripe_account_id:
+            account = stripe.Account.create(
+                type='express',
+                country='US',
+                email=store.email,
+                business_type='company',
+                company={'name': store.name}
+            )
+            store.stripe_account_id = account.id
+            db.session.commit()
+
+        # 2. Create an AccountLink for onboarding
+        # Use url_for with _external=True to get absolute URLs for redirection
+        refresh_url = url_for('management.stripe_onboarding_refresh', _external=True)
+        return_url = url_for('management.stripe_onboarding_return', _external=True)
+
+        account_link = stripe.AccountLink.create(
+            account=store.stripe_account_id,
+            refresh_url=refresh_url,
+            return_url=return_url,
+            type='account_onboarding',
+        )
+
+        # 3. Redirect user to Stripe
+        return redirect(account_link.url)
+
+    except Exception as e:
+        current_app.logger.error(f"Error initiating Stripe Connect: {e}", exc_info=True)
+        flash(f"Could not connect to Stripe: {str(e)}", "danger")
+        return redirect(url_for('management.edit_store'))
+
+@management_bp.route('/stripe/onboarding/refresh')
+@subscription_required
+@admin_required
+def stripe_onboarding_refresh():
+    """Handles the user clicking 'cancel' or link expiration during Stripe onboarding."""
+    # To recover, we just redirect them back to the connect function to generate a new link
+    flash("Stripe session expired or was cancelled. Please try connecting again.", "warning")
+    return redirect(url_for('management.edit_store'))
+
+@management_bp.route('/stripe/onboarding/return')
+@subscription_required
+@admin_required
+def stripe_onboarding_return():
+    """Handles the user returning from Stripe onboarding."""
+    if 'store_id' not in session:
+        return redirect(url_for('auth.login'))
+
+    store = Store.query.get(session['store_id'])
+
+    if not store or not store.stripe_account_id:
+        flash("Stripe account configuration missing.", "danger")
+        return redirect(url_for('management.edit_store'))
+
+    try:
+        # Retrieve the account from Stripe to check if they completed onboarding
+        account = stripe.Account.retrieve(store.stripe_account_id)
+        if account.charges_enabled:
+            flash("Stripe account connected successfully! You can now process payments.", "success")
+        else:
+            flash("Stripe connection incomplete. Please provide the required information to process payments.", "warning")
+    except Exception as e:
+        current_app.logger.error(f"Error verifying Stripe account status: {e}", exc_info=True)
+        flash("Could not verify Stripe account status.", "danger")
+
+    return redirect(url_for('management.edit_store'))
 
 
 @management_bp.route('/manage/data', endpoint='data_management', methods=['GET'])

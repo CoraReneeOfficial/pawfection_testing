@@ -300,6 +300,28 @@
             <a href="{{ url_for('management.management') }}" class="button button-secondary">Cancel</a>
         </div>
     </form>
+
+    <h3 style="margin-top: 2rem; margin-bottom: 1rem; color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem;">Stripe Connect Integration</h3>
+    <div class="form-group" style="background: #f8fafc; padding: 1.5rem; border-radius: var(--border-radius); border: 1px solid var(--border-color);">
+        <p style="margin-top: 0;">Connect your Stripe account to securely process credit card payments directly in the POS Checkout.</p>
+
+        {% if store.stripe_account_id %}
+            <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--success-color); font-weight: bold; margin-bottom: 1rem;">
+                <i class="fas fa-check-circle"></i> Stripe Connected ({{ store.stripe_account_id }})
+            </div>
+            <p style="font-size: 0.9em; color: var(--text-muted);">Your account is linked. If you need to manage your banking details, please log in to your Stripe Express dashboard.</p>
+        {% else %}
+            <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--warning-color); font-weight: bold; margin-bottom: 1rem;">
+                <i class="fas fa-exclamation-circle"></i> Stripe Not Connected
+            </div>
+            <form method="POST" action="{{ url_for('management.connect_stripe') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <button type="submit" class="button button-primary" style="background-color: #635bff; border-color: #635bff;">
+                    <i class="fab fa-stripe-s"></i> Connect with Stripe
+                </button>
+            </form>
+        {% endif %}
+    </div>
 </div>
 
 <script src="https://js.stripe.com/v3/"></script>
