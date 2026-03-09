@@ -28,7 +28,7 @@ def migrate_sqlite():
         if conn:
             conn.close()
 
-def migrate_postgres():
+def migrate_postgres(db_url=None):
     try:
         import psycopg2
         from psycopg2 import sql
@@ -36,7 +36,8 @@ def migrate_postgres():
         print("psycopg2 not installed. Skipping PostgreSQL migration.")
         return
 
-    db_url = os.environ.get('DATABASE_URL')
+    if db_url is None:
+        db_url = os.environ.get('DATABASE_URL')
     if not db_url:
         print("DATABASE_URL environment variable not set. Skipping PostgreSQL migration.")
         return

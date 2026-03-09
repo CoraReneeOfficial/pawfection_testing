@@ -299,6 +299,17 @@ def create_app():
         except Exception as e:
             app.logger.error(f"Failed to run notification index migration: {e}")
 
+        # Check for and apply missing stripe_account_id column in store table
+        try:
+            if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
+                app.logger.info("Checking for store schema updates (SQLite)...")
+                migrate_stripe_account_id.migrate_sqlite()
+            else:
+                app.logger.info("Checking for store schema updates (Postgres)...")
+                migrate_stripe_account_id.migrate_postgres(app.config['SQLALCHEMY_DATABASE_URI'])
+        except Exception as e:
+            app.logger.error(f"Failed to run store migration: {e}")
+
     # Register blueprints for modular routes
     app.register_blueprint(auth_bp)
     app.register_blueprint(owners_bp)
