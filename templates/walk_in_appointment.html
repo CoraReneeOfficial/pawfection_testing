@@ -83,11 +83,11 @@
         </div>
       </div>
 
-      <div class="form-group" style="margin-top:2rem;">
-        <button type="submit" class="button button-primary" style="width:100%;">Continue to Checkout</button>
-      </div>
-      <div class="form-group">
-        <a href="{{ url_for('appointments.checkout_start') }}" class="button button-secondary" style="width:100%;">Cancel</a>
+      <div class="form-group" style="margin-top:2rem; display: flex; gap: 10px; flex-direction: column;">
+        <button type="submit" name="action" value="checkout" class="button button-primary" style="width:100%;">Checkout Now</button>
+        <button type="submit" name="action" value="deposit" class="button button-secondary" style="width:100%;">Pay Deposit</button>
+        <button type="submit" name="action" value="later" class="button button-secondary" style="width:100%;">Checkout Later</button>
+        <a href="{{ url_for('appointments.checkout_start') }}" class="button" style="width:100%; text-align: center; border: 1px solid #ccc;">Cancel</a>
       </div>
     </form>
   </div>

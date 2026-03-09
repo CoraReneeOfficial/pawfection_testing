@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, g, jsonify, current_app, session, abort
 from models import Appointment, Dog, Owner, User, ActivityLog, Store, Service, Receipt, Notification
 from appointments.details_needed_utils import appointment_needs_details
-from extensions import db
+from extensions import db, csrf
 from sqlalchemy import or_, desc, cast, String
 from sqlalchemy.orm import joinedload, contains_eager
 from functools import wraps
@@ -24,6 +24,7 @@ from notifications.email_utils import send_appointment_confirmation_email, send_
 import pytz
 from fpdf import FPDF
 import io
+import stripe
 
 appointments_bp = Blueprint('appointments', __name__)
 
@@ -777,6 +778,73 @@ def checkout_start():
     """Redirect to the new unified POS checkout."""
     return redirect(url_for('appointments.pos_checkout'))
 
+@appointments_bp.route('/checkout/api/create-payment-intent', methods=['POST'])
+@subscription_required
+@csrf.exempt # Handled with X-CSRFToken header or exempt since it's an internal API requiring session auth
+def create_payment_intent():
+    if 'store_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    store_id = session['store_id']
+    store = Store.query.get(store_id)
+
+    # We require a connected Stripe account to process payments on behalf of the store
+    stripe_account_id = store.stripe_account_id
+
+    # In sandbox/testing, we might allow bypassing connect and charging the platform directly
+    # But for a real Stripe Connect integration, the header is strictly required:
+    # if not stripe_account_id:
+    #     return jsonify({"error": "Stripe Connect is not configured for this store."}), 400
+
+    try:
+        data = request.get_json()
+        amount = float(data.get('amount', 0))
+        appointment_id = data.get('appointment_id')
+
+        if amount <= 0:
+            return jsonify({"error": "Invalid amount"}), 400
+
+        # Convert to cents
+        amount_cents = int(amount * 100)
+
+        # We also pass the application fee amount if we take a cut
+        # For simplicity, we'll do a direct charge on the connected account here.
+        intent_params = {
+            'amount': amount_cents,
+            'currency': 'usd',
+            'automatic_payment_methods': {
+                'enabled': True,
+            },
+            'metadata': {
+                'appointment_id': appointment_id,
+                'store_id': store_id
+            }
+        }
+
+        # If the store is connected via Stripe Connect, use the Stripe-Account header
+        request_options = {}
+        if stripe_account_id:
+            request_options['stripe_account'] = stripe_account_id
+
+        # Optional: Add an application fee if you take a percentage.
+        # e.g., platform_fee = int(amount_cents * 0.05)
+        # if stripe_account_id and platform_fee > 0:
+        #     intent_params['application_fee_amount'] = platform_fee
+
+        intent = stripe.PaymentIntent.create(
+            **intent_params,
+            **request_options
+        )
+
+        return jsonify({
+            'clientSecret': intent.client_secret,
+            'stripeAccountId': stripe_account_id
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error creating PaymentIntent: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
 @appointments_bp.route('/checkout/api/appointment/<int:appointment_id>')
 @subscription_required
 def api_get_appointment_details(appointment_id):
@@ -1118,13 +1186,17 @@ def walk_in_appointment():
         
         # Create walk-in appointment
         now = datetime.datetime.now(tz=BUSINESS_TIMEZONE)
+
+        action = request.form.get('action', 'checkout')
+        status = 'in-progress' if action in ['checkout', 'deposit'] else 'Scheduled'
+
         appointment = Appointment(
             dog_id=dog.id,
             appointment_datetime=now,
-            status='in-progress',  # Directly set to in-progress since it's a walk-in
+            status=status,
             requested_services_text=requested_services,
             store_id=store_id,
-            check_in_time=now,
+            check_in_time=now if status == 'in-progress' else None,
             walk_in=True
         )
         db.session.add(appointment)
@@ -1132,8 +1204,14 @@ def walk_in_appointment():
         
         log_activity(f"Created walk-in appointment for {dog_name}")
         
-        # Redirect to invoice screen
-        return redirect(url_for('appointments.invoice_checkout', appointment_id=appointment.id))
+        if action == 'deposit':
+            return redirect(url_for('appointments.deposit_payment', appointment_id=appointment.id))
+        elif action == 'later':
+            flash('Walk-in appointment saved. You can check them out later.', 'success')
+            return redirect(url_for('dashboard'))
+        else:
+            # Default to checkout
+            return redirect(url_for('appointments.invoice_checkout', appointment_id=appointment.id))
     
     return render_template('walk_in_appointment.html')
 
@@ -1362,6 +1440,16 @@ def payment_selection(appointment_id):
     if request.method == 'POST':
         payment_method = request.form.get('payment_method')
         checkout_data['payment_method'] = payment_method
+
+        # Save split payment details
+        payment_details_json = request.form.get('payment_details', '[]')
+        try:
+            checkout_data['payment_details'] = json.loads(payment_details_json)
+        except json.JSONDecodeError:
+            checkout_data['payment_details'] = []
+
+        checkout_data['tip_payment_method'] = request.form.get('tip_payment_method', 'same')
+
         session['checkout_data'] = checkout_data
         return redirect(url_for('appointments.preview_receipt', appointment_id=appointment_id))
         
@@ -1672,7 +1760,9 @@ def email_receipt_by_id(receipt_id):
             taxes=data.get('taxes', 0),
             deposit_deduction=data.get('deposit_deduction', 0),
             tip=data.get('tip', data.get('tip_amount', 0)),
-            total=data.get('final_total', data.get('total', 0))
+            total=data.get('final_total', data.get('total', 0)),
+            payment_details=data.get('payment_details', []),
+            payment_method=data.get('payment_method', '')
         )
         message = MIMEText(html_body, 'html')
         message['to'] = email
@@ -1831,6 +1921,9 @@ def email_receipt(appointment_id):
         flash('Checkout session expired. Cannot send receipt.', 'danger')
         return redirect(url_for('appointments.receipt_screen', appointment_id=appointment_id))
     # Compose HTML receipt
+    payment_details = session.get('checkout_data', {}).get('payment_details', [])
+    payment_method = session.get('checkout_data', {}).get('payment_method', '')
+
     html_body = render_template(
         'email/receipt_email.html',
         store_name=store.name if store else 'Pawfection',
@@ -1844,7 +1937,9 @@ def email_receipt(appointment_id):
         taxes=invoice.get('taxes', 0),
         deposit_deduction=invoice.get('deposit_deduction', 0),
         tip=tip.get('tip_amount', 0),
-        total=tip.get('final_total', invoice.get('total', 0))
+        total=tip.get('final_total', invoice.get('total', 0)),
+        payment_details=payment_details,
+        payment_method=payment_method
     )
     # Get recipient email
     customer_email = request.form.get('customer_email') or (owner.email if owner else None)

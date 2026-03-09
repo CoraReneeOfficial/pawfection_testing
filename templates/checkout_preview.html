@@ -65,7 +65,30 @@
         {% if is_deposit %}
         <p><strong>Payment Type:</strong> Deposit</p>
         {% endif %}
-        <p><strong>Payment Method:</strong> {{ checkout_data.payment_method|capitalize }}</p>
+        <p><strong>Payment Method:</strong>
+          {% if checkout_data.payment_method == 'split' %}
+            Split Payment
+          {% else %}
+            {{ checkout_data.payment_method|capitalize }}
+          {% endif %}
+        </p>
+
+        {% if checkout_data.payment_details and checkout_data.payment_details|length > 0 %}
+        <div style="margin-top: 1rem; border-top: 1px dashed #ccc; padding-top: 1rem; text-align: left;">
+          <strong>Payments Applied:</strong>
+          <ul style="list-style: none; padding-left: 0; margin-top: 0.5rem;">
+            {% for payment in checkout_data.payment_details %}
+              <li style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
+                <span>
+                  {{ payment.method|capitalize }}
+                  {% if payment.isTip %} (Tip) {% endif %}
+                </span>
+                <span>${{ '%.2f'|format(payment.amount|float) }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
       </div>
       <form method="POST" action="{{ url_for('appointments.finalize_checkout', appointment_id=appointment_id) }}">
         <button type="submit" class="button button-success" style="width:100%;margin:1.4rem 0 0.6rem 0;font-size:1.13em;background:#28a745;">{% if is_deposit %}Process Deposit{% else %}Complete Checkout{% endif %}</button>

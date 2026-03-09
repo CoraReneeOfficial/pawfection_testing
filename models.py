@@ -85,6 +85,7 @@ class Store(SecurityMixin, db.Model):
     # --- Stripe integration fields ---
     stripe_customer_id = db.Column(db.String(255), nullable=True)
     stripe_subscription_id = db.Column(db.String(255), nullable=True)
+    stripe_account_id = db.Column(db.String(255), nullable=True) # Stripe Connect Account ID
     
     # --- Phase 2 Settings ---
     capacity_type = db.Column(db.String(20), default='appointments', nullable=False) # 'dogs' or 'appointments'

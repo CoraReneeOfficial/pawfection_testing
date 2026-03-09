@@ -4,53 +4,375 @@
 
 {% block head %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<!-- Stripe.js -->
+<script src="https://js.stripe.com/v3/"></script>
 <style>
   .payment-btn-row { display: flex; gap: 1rem; margin-top: 1.3rem; }
-  .payment-btn { flex: 1 1 140px; font-size: 1.1em; }
+  .payment-btn { flex: 1; font-size: 1.1em; padding: 1rem; }
   .loading-indicator { display: none; margin: 1.2rem auto 0 auto; text-align: center; }
   .loading-indicator.active { display: block; }
+
+  .split-payment-section { margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem; }
+  .split-item { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 1rem; margin-bottom: 0.5rem; border-radius: 0.5rem; border: 1px solid #e2e8f0; }
+  .split-amount { font-weight: bold; font-size: 1.1em; }
+
+  .balance-due { font-size: 1.5rem; font-weight: bold; color: var(--danger-color); text-align: center; margin: 1rem 0; padding: 1rem; background: #fff1f2; border-radius: 0.5rem; }
+  .balance-paid { color: var(--success-color); background: #f0fdf4; }
+
+  .payment-input-group { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+  .payment-input-group input { flex: 1; font-size: 1.2rem; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 0.25rem; }
+
+  #payment-element { margin-bottom: 1.5rem; min-height: 200px; padding: 1rem; background: #f8fafc; border-radius: 0.5rem; }
+  #stripe-error-message { color: var(--danger-color); margin-bottom: 1rem; display: none; }
+
+  .tip-method-toggle { display: flex; gap: 1rem; margin-bottom: 1.5rem; padding: 1rem; background: #f1f5f9; border-radius: 0.5rem; align-items: center; justify-content: space-between; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container checkout-container">
+<div class="container checkout-container" x-data="paymentManager()">
   <div class="checkout-header">
-    <h1>Record Payment</h1>
-    <p>Enter total into Valor terminal, then select payment type below.</p>
+    <h1>Payment Processing</h1>
+    <p>Select payment method and handle split payments if necessary.</p>
   </div>
-  <div class="checkout-card" style="max-width:420px;margin:auto;">
-    <div style="margin-bottom:1.1rem;font-size:1.2em;">
-      Final Total: <b>${{ '%.2f'|format(final_total) }}</b>
-    </div>
-    <div style="margin-bottom:0.6rem;">
-      Tip: <span>${{ '%.2f'|format(tip_amount) }}</span>
-    </div>
-    <form id="payment-form" method="POST" action="{{ url_for('appointments.payment_selection', appointment_id=appointment_id) }}">
-      <input type="hidden" name="final_total" value="{{ final_total }}">
-      <input type="hidden" name="tip_amount" value="{{ tip_amount }}">
-      <div class="payment-btn-row">
-        <button type="button" class="button button-primary payment-btn" onclick="submitPayment('card')"><i class="fas fa-credit-card"></i> Card Payment</button>
-        <button type="button" class="button button-secondary payment-btn" onclick="submitPayment('cash')"><i class="fas fa-money-bill-wave"></i> Cash Payment</button>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 2rem; max-width: 900px; margin: 0 auto;">
+
+    <!-- Left Column: Order Summary & Cart -->
+    <div class="checkout-card" style="flex: 1; min-width: 300px;">
+      <h2>Order Summary</h2>
+
+      <div style="margin: 1rem 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+          <span>Subtotal + Taxes:</span>
+          <span>${{ '%.2f'|format(final_total - tip_amount) }}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+          <span>Tip:</span>
+          <span>${{ '%.2f'|format(tip_amount) }}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.2rem; margin-top:0.5rem; padding-top:0.5rem; border-top:1px dashed #cbd5e1;">
+          <span>Grand Total:</span>
+          <span>${{ '%.2f'|format(final_total) }}</span>
+        </div>
       </div>
-      <div id="loading-indicator" class="loading-indicator">
-        <i class="fas fa-spinner fa-spin"></i> Processing...
+
+      <!-- Tip Payment Method Toggle -->
+      {% if tip_amount > 0 %}
+      <div class="tip-method-toggle">
+        <div>
+          <strong style="display:block;">Tip Payment Method</strong>
+          <span style="font-size:0.85em; color:var(--text-muted);">How is the ${{ '%.2f'|format(tip_amount) }} tip being paid?</span>
+        </div>
+        <select x-model="tipPaymentMethod" @change="recalculateBalance()" class="form-input" style="width: auto; padding: 0.5rem;">
+          <option value="same">Included in Total</option>
+          <option value="cash_separate">Paid separately in Cash</option>
+        </select>
       </div>
-    </form>
+      {% endif %}
+
+      <div class="balance-due" :class="{'balance-paid': remainingBalance <= 0}">
+        Remaining Balance: $<span x-text="remainingBalance.toFixed(2)"></span>
+      </div>
+
+      <div class="split-payment-section" x-show="payments.length > 0">
+        <h3>Payments Applied</h3>
+        <template x-for="(payment, index) in payments" :key="index">
+          <div class="split-item">
+            <div>
+              <i class="fas" :class="payment.method === 'cash' ? 'fa-money-bill-wave' : 'fa-credit-card'"></i>
+              <span style="margin-left:0.5rem; text-transform:capitalize;" x-text="payment.method"></span>
+              <span x-show="payment.isTip" class="badge badge-info" style="font-size:0.7rem; margin-left:0.5rem;">Tip</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:1rem;">
+              <span class="split-amount">$<span x-text="payment.amount.toFixed(2)"></span></span>
+              <button class="button button-danger" style="padding: 0.2rem 0.5rem;" @click="removePayment(index)" x-show="!payment.isTip || tipPaymentMethod !== 'cash_separate'">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <form id="finalize-form" method="POST" action="{{ url_for('appointments.payment_selection', appointment_id=appointment_id) }}" x-show="remainingBalance <= 0" style="margin-top: 2rem;">
+        <input type="hidden" name="payment_method" value="split">
+        <input type="hidden" name="payment_details" :value="JSON.stringify(payments)">
+        <input type="hidden" name="tip_payment_method" :value="tipPaymentMethod">
+        <button type="submit" class="button button-primary" style="width:100%; font-size:1.2rem; padding:1rem;" @click="isProcessing = true">
+          <span x-show="!isProcessing"><i class="fas fa-check-circle"></i> Complete Checkout</span>
+          <span x-show="isProcessing"><i class="fas fa-spinner fa-spin"></i> Finalizing...</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- Right Column: Add Payment -->
+    <div class="checkout-card" style="flex: 1; min-width: 300px;" x-show="remainingBalance > 0">
+      <h2>Add Payment</h2>
+
+      <div style="margin-bottom: 1.5rem;">
+        <label style="font-weight:bold; display:block; margin-bottom:0.5rem;">Amount to Pay</label>
+        <div class="payment-input-group">
+          <span style="font-size:1.5rem; padding-top:0.5rem;">$</span>
+          <input type="number" x-model.number="currentPaymentAmount" @change="updateStripeIntent()" min="0.01" :max="remainingBalance" step="0.01">
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;">
+        <button class="button" :class="activeTab === 'card' ? 'button-primary' : 'button-secondary'" style="flex:1;" @click="setTab('card')">
+          <i class="fas fa-credit-card"></i> Card
+        </button>
+        <button class="button" :class="activeTab === 'cash' ? 'button-primary' : 'button-secondary'" style="flex:1;" @click="setTab('cash')">
+          <i class="fas fa-money-bill-wave"></i> Cash
+        </button>
+      </div>
+
+      <!-- Card Payment Section -->
+      <div x-show="activeTab === 'card'">
+        <div id="payment-element" x-show="stripeLoaded">
+          <!-- Stripe Element will be inserted here -->
+        </div>
+        <div x-show="!stripeLoaded && !stripeError" style="text-align:center; padding: 2rem; color: var(--text-muted);">
+          <i class="fas fa-spinner fa-spin fa-2x"></i><br>Loading secure payment...
+        </div>
+        <div id="stripe-error-message" x-show="stripeError" x-text="stripeError"></div>
+
+        <button class="button button-primary" style="width:100%; padding:1rem;" id="submit-stripe-btn" @click="processStripePayment()" :disabled="isProcessing || !stripeLoaded">
+          <span x-show="!isProcessing">Charge Card $<span x-text="currentPaymentAmount.toFixed(2)"></span></span>
+          <span x-show="isProcessing"><i class="fas fa-spinner fa-spin"></i> Processing...</span>
+        </button>
+      </div>
+
+      <!-- Cash Payment Section -->
+      <div x-show="activeTab === 'cash'">
+        <button class="button button-success" style="width:100%; padding:1rem;" @click="addCashPayment()">
+          Record Cash Payment of $<span x-text="currentPaymentAmount.toFixed(2)"></span>
+        </button>
+      </div>
+
+    </div>
+
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-function submitPayment(method) {
-  document.getElementById('loading-indicator').classList.add('active');
-  const form = document.getElementById('payment-form');
-  const input = document.createElement('input');
-  input.type = 'hidden';
-  input.name = 'payment_method';
-  input.value = method;
-  form.appendChild(input);
-  form.submit();
+// Expose variables from template
+const stripePublishableKey = "{{ config.get('STRIPE_PUBLISHABLE_KEY', '') }}";
+const appointmentId = {{ appointment_id }};
+const grandTotal = {{ final_total }};
+const tipAmount = {{ tip_amount }};
+
+function paymentManager() {
+    return {
+        grandTotal: grandTotal,
+        tipAmount: tipAmount,
+        tipPaymentMethod: 'same', // 'same' or 'cash_separate'
+
+        payments: [],
+        remainingBalance: grandTotal,
+        currentPaymentAmount: grandTotal,
+
+        activeTab: 'card', // 'card' or 'cash'
+        isProcessing: false,
+
+        // Stripe state
+        stripe: null,
+        elements: null,
+        clientSecret: null,
+        stripeLoaded: false,
+        stripeError: null,
+
+        init() {
+            // Watch for changes to tip method
+            this.$watch('tipPaymentMethod', value => {
+                this.recalculateBalance();
+            });
+
+            this.recalculateBalance();
+            this.initStripe();
+        },
+
+        recalculateBalance() {
+            // Rebuild payments array to handle separate cash tip logic
+            let nonTipPayments = this.payments.filter(p => !p.isTip);
+            this.payments = [...nonTipPayments];
+
+            let effectiveTotal = this.grandTotal;
+
+            if (this.tipAmount > 0 && this.tipPaymentMethod === 'cash_separate') {
+                // Remove tip from what needs to be paid via normal flow
+                effectiveTotal = this.grandTotal - this.tipAmount;
+                // Auto-add the cash tip as a completed payment
+                this.payments.push({
+                    method: 'cash',
+                    amount: this.tipAmount,
+                    isTip: true,
+                    reference: 'Separate Cash Tip'
+                });
+            }
+
+            // Calculate total paid so far
+            const totalPaid = this.payments.reduce((sum, p) => sum + p.amount, 0);
+
+            this.remainingBalance = Math.max(0, this.grandTotal - totalPaid);
+
+            // Default next payment amount to remaining balance
+            if (this.currentPaymentAmount > this.remainingBalance || this.currentPaymentAmount === 0 || this.payments.length > 0) {
+                this.currentPaymentAmount = this.remainingBalance;
+            }
+
+            // If balance is 0, we don't need Stripe element
+            if (this.remainingBalance > 0 && this.activeTab === 'card') {
+                this.updateStripeIntent();
+            }
+        },
+
+        setTab(tab) {
+            this.activeTab = tab;
+            if (tab === 'card' && this.remainingBalance > 0) {
+                this.updateStripeIntent();
+            }
+        },
+
+        addCashPayment() {
+            if (this.currentPaymentAmount <= 0 || this.currentPaymentAmount > this.remainingBalance) {
+                alert("Invalid payment amount.");
+                return;
+            }
+
+            this.payments.push({
+                method: 'cash',
+                amount: parseFloat(this.currentPaymentAmount),
+                isTip: false,
+                reference: 'Cash payment'
+            });
+
+            this.recalculateBalance();
+        },
+
+        removePayment(index) {
+            this.payments.splice(index, 1);
+            this.recalculateBalance();
+        },
+
+        // --- Stripe Connect Logic ---
+
+        async initStripe() {
+            if (!stripePublishableKey) {
+                this.stripeError = "Stripe is not configured on this server.";
+                return;
+            }
+
+            try {
+                // Wait for Alpine to settle, then initialize Stripe object
+                // We need the Stripe Account ID, which we'll get from our backend
+                this.updateStripeIntent();
+            } catch (e) {
+                console.error("Stripe init error:", e);
+                this.stripeError = "Failed to initialize payment system.";
+            }
+        },
+
+        async updateStripeIntent() {
+            if (this.remainingBalance <= 0 || !stripePublishableKey) return;
+
+            this.stripeLoaded = false;
+            this.stripeError = null;
+
+            try {
+                // Create a PaymentIntent on the backend for the *currentPaymentAmount*
+                const response = await fetch('/checkout/api/create-payment-intent', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        appointment_id: appointmentId,
+                        amount: this.currentPaymentAmount
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                this.clientSecret = data.clientSecret;
+                const stripeAccountId = data.stripeAccountId;
+
+                // Initialize Stripe with the connected account ID if provided
+                if (stripeAccountId) {
+                    this.stripe = Stripe(stripePublishableKey, { stripeAccount: stripeAccountId });
+                } else {
+                    this.stripe = Stripe(stripePublishableKey); // Fallback (direct integration)
+                }
+
+                // Create and mount Elements
+                const appearance = {
+                    theme: 'stripe',
+                    variables: { colorPrimary: '#A855F7' } // Purple theme
+                };
+
+                this.elements = this.stripe.elements({ clientSecret: this.clientSecret, appearance });
+
+                const paymentElement = this.elements.create('payment', {
+                    layout: 'tabs'
+                });
+
+                // Clear existing element if any
+                document.getElementById('payment-element').innerHTML = '';
+                paymentElement.mount('#payment-element');
+
+                paymentElement.on('ready', () => {
+                    this.stripeLoaded = true;
+                });
+
+            } catch (err) {
+                console.error("Payment Intent Error:", err);
+                this.stripeError = err.message || "Failed to setup payment. Ensure Stripe Connect is configured.";
+            }
+        },
+
+        async processStripePayment() {
+            if (!this.stripe || !this.elements) return;
+
+            this.isProcessing = true;
+            this.stripeError = null;
+
+            try {
+                const { error, paymentIntent } = await this.stripe.confirmPayment({
+                    elements: this.elements,
+                    confirmParams: {
+                        // We do NOT want to redirect, we want to handle success locally to add to our payments array
+                        // However, some payment methods require redirect.
+                    },
+                    redirect: 'if_required' // Crucial: don't redirect if not needed (e.g. cards)
+                });
+
+                if (error) {
+                    this.stripeError = error.message;
+                    this.isProcessing = false;
+                } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+                    // Success!
+                    const paidAmount = paymentIntent.amount / 100; // Convert cents to dollars
+
+                    this.payments.push({
+                        method: 'card',
+                        amount: paidAmount,
+                        isTip: false,
+                        reference: paymentIntent.id
+                    });
+
+                    this.isProcessing = false;
+                    this.recalculateBalance();
+                }
+
+            } catch (err) {
+                this.stripeError = "An unexpected error occurred.";
+                this.isProcessing = false;
+            }
+        }
+    }
 }
 </script>
 {% endblock %}
