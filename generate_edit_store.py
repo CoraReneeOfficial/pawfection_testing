@@ -1,4 +1,6 @@
-{% extends 'base.html' %}
+import sys
+
+content = """{% extends 'base.html' %}
 
 {% block title %}Edit Store Information{% endblock %}
 
@@ -416,3 +418,9 @@
     });
 </script>
 {% endblock %}
+"""
+
+with open('templates/edit_store.html', 'w') as f:
+    f.write(content)
+
+print("File generated successfully.")
