@@ -1012,6 +1012,109 @@ def chat():
             current_app.logger.info(f"[AI Tool Call] get_appointments returning {len(result)} appointments.")
             return result
 
+
+        def sync_calendar() -> str:
+            """
+            Manually triggers a synchronization of the store's appointments with their connected Google Calendar.
+            Use this only when the user explicitly asks to sync the calendar.
+
+            Returns:
+                A string indicating success or failure.
+            """
+            current_app.logger.info(f"[AI Tool Call] sync_calendar called")
+            try:
+                store_obj = Store.query.get(store_id)
+                if not store_obj or not store_obj.google_token_json or not store_obj.google_calendar_id:
+                    return "Failed to sync calendar. Make sure the store has connected their Google account and selected a calendar."
+
+                from management.routes import sync_google_calendar_for_store
+                success, msg = sync_google_calendar_for_store(store_id)
+                if success:
+                    return f"Successfully synchronized calendar: {msg}"
+                else:
+                    return f"Calendar sync failed: {msg}"
+            except Exception as e:
+                current_app.logger.error(f"[AI Tool Call] Error in sync_calendar: {e}")
+                return f"Error syncing calendar: {str(e)}"
+
+        def send_email(owner_id: Union[int, str], subject: str, message: str) -> str:
+            """
+            Sends a custom email to an owner. Make sure you ask the user for confirmation and show them the drafted message before sending it.
+
+            Args:
+                owner_id: Required. The integer ID of the owner, or their name as a string.
+                subject: Required string. The subject line of the email.
+                message: Required string. The main body of the email.
+
+            Returns:
+                A string indicating success or failure.
+            """
+            current_app.logger.info(f"[AI Tool Call] send_email called with owner_id={owner_id}")
+            try:
+                owner = None
+                if isinstance(owner_id, int) or (isinstance(owner_id, str) and owner_id.isdigit()):
+                    owner = Owner.query.filter_by(id=int(owner_id), store_id=store_id).first()
+                else:
+                    owners = Owner.query.filter(Owner.name.ilike(f"%{owner_id}%"), Owner.store_id == store_id).all()
+                    if len(owners) == 1:
+                        owner = owners[0]
+                    elif len(owners) > 1:
+                        return f"Multiple owners found matching '{owner_id}'. Please use the specific Owner ID."
+
+                if not owner:
+                    return f"Owner '{owner_id}' not found."
+
+                store_obj = Store.query.get(store_id)
+                from notifications.email_utils import send_custom_email
+                success = send_custom_email(store_obj, owner, subject, message)
+
+                if success:
+                    return f"Successfully sent email to {owner.name}."
+                else:
+                    return f"Failed to send email to {owner.name}. Make sure the store has email integration configured and the owner has a valid email address."
+            except Exception as e:
+                current_app.logger.error(f"[AI Tool Call] Error in send_email: {e}")
+                return f"Error sending email: {str(e)}"
+
+        def send_text(owner_id: Union[int, str], message: str) -> str:
+            """
+            Sends a custom text message to an owner. Make sure you ask the user for confirmation and show them the drafted message before sending it.
+
+            Args:
+                owner_id: Required. The integer ID of the owner, or their name as a string.
+                message: Required string. The main body of the text message.
+
+            Returns:
+                A string indicating success or failure.
+            """
+            current_app.logger.info(f"[AI Tool Call] send_text called with owner_id={owner_id}")
+            try:
+                owner = None
+                if isinstance(owner_id, int) or (isinstance(owner_id, str) and owner_id.isdigit()):
+                    owner = Owner.query.filter_by(id=int(owner_id), store_id=store_id).first()
+                else:
+                    owners = Owner.query.filter(Owner.name.ilike(f"%{owner_id}%"), Owner.store_id == store_id).all()
+                    if len(owners) == 1:
+                        owner = owners[0]
+                    elif len(owners) > 1:
+                        return f"Multiple owners found matching '{owner_id}'. Please use the specific Owner ID."
+
+                if not owner:
+                    return f"Owner '{owner_id}' not found."
+
+                store_obj = Store.query.get(store_id)
+                from notifications.email_utils import send_custom_text
+                success = send_custom_text(store_obj, owner, message)
+
+                if success:
+                    return f"Successfully sent text message to {owner.name}."
+                else:
+                    return f"Failed to send text to {owner.name}. Make sure the store has email/text integration configured and the owner has a valid phone number/carrier."
+            except Exception as e:
+                current_app.logger.error(f"[AI Tool Call] Error in send_text: {e}")
+                return f"Error sending text message: {str(e)}"
+
+
         system_prompt = f"""
         Role: You are the "Pawfection Business Agent." You are a highly efficient, professional administrative assistant for pet grooming businesses.
 
@@ -1025,11 +1128,19 @@ def chat():
 
         # PRIMARY INSTRUCTIONS (For Gemini and General Operation):
         As the primary virtual assistant handling business operations:
+        When the user asks you to send an email or a text to a certain customer:
+        1. Ask the user for the message they want to send.
+        2. Attempt to draft it to make it look and sound professional.
+        3. Give the user the option of using their original message or your updated version.
+        4. Wait for their confirmation before calling the send_email or send_text tool.
+
         1. Identify Intent: Determine if the user wants to ADD, EDIT, DELETE, or VIEW a record (Owner, Dog, Appointment, Service, Store Info, Revenue). Note: Ensure you account for relative dates/times provided by the user using the Current Date and Time context provided to you. For example, if today is Tuesday, and the user asks for "next Wednesday", you must calculate what date next Wednesday is based on the Current Date and Time context before making tool calls.
 
         2. Lookups & Actions:
            - To book an appointment, use `add_appointment`. Use the names provided by the user for dogs, groomers, and services. Only ask for clarification if a required piece of information is missing (like date or time), but do not ask for IDs. If you have the dog's name, groomer's name, date, time, and service, CALL THE TOOL IMMEDIATELY.
            - To edit or delete, use the names provided by the user (like Dog Name or Owner Name) as the IDs in the tools. DO NOT ask the user for IDs.
+           - Note: When you use `add_appointment`, `edit_appointment`, or `delete_appointment`, the system automatically syncs with the connected Google Calendar and sends the appropriate email/text notifications to the customer from the connected Google account. You do not need to manually call `send_email` or `send_text` after booking an appointment.
+
            - If a tool fails (e.g., because a name is ambiguous or not found), THEN use `get_dogs`, `get_owners`, `get_groomers`, or `get_appointments` to find the correct details, and try the action again. DO NOT tell the user to find the ID.
            - Only use the exact parameters requested by the tools.
            - IMPORTANT: When a user gives you information, DO NOT ask them for it again. If you ask a clarifying question and they answer, use that answer and immediately call the relevant tool.
@@ -1062,7 +1173,7 @@ def chat():
 
 
 
-        tools = [get_dogs, get_owners, add_appointment, get_groomers, get_services, add_owner, edit_owner, delete_owner, add_dog, edit_dog, delete_dog, edit_appointment, delete_appointment, get_store_info, update_store_info, get_revenue, add_service, get_appointments, get_current_time, get_daily_appointment_count]
+        tools = [get_dogs, get_owners, add_appointment, get_groomers, get_services, add_owner, edit_owner, delete_owner, add_dog, edit_dog, delete_dog, edit_appointment, delete_appointment, get_store_info, update_store_info, get_revenue, add_service, get_appointments, get_current_time, get_daily_appointment_count, send_email, send_text, sync_calendar]
 
         formatted_history = [{"role": "system", "content": system_prompt}]
         for msg in history:
