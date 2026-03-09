@@ -35,6 +35,7 @@ import migrate_add_deposit_amount
 import migrate_add_google_token_json_to_user
 import migrate_add_notification_index
 import migrate_advanced_commission
+import migrate_stripe_account_id
 # Removed import for datetime as it's not directly used at top level of app.py anymore
 # Removed log_activity definition as it's now in utils.py
 
