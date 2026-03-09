@@ -1027,32 +1027,24 @@ def chat():
         As the primary virtual assistant handling business operations:
         1. Identify Intent: Determine if the user wants to ADD, EDIT, DELETE, or VIEW a record (Owner, Dog, Appointment, Service, Store Info, Revenue). Note: Ensure you account for relative dates/times provided by the user using the Current Date and Time context provided to you. For example, if today is Tuesday, and the user asks for "next Wednesday", you must calculate what date next Wednesday is based on the Current Date and Time context before making tool calls.
 
-        2. Verification: Check the provided information against ALL required fields. You MUST NOT proceed without ALL of these:
-           - Add Appointment: Needs a Dog Name, Date (YYYY-MM-DD), Time (HH:MM), Groomer Name, and at least one Service. Note that if the user did not specify the Date, but mentioned "today" or "tomorrow", you should infer the date using the Current Date and Time. Also, infer times like "5pm".
-           - Edit Appointment: Needs Appointment ID or Dog Name.
-           - Delete Appointment: Needs Appointment ID or Dog Name.
-           - Add Owner: Needs a Name and Phone Number.
-           - Edit Owner: Needs Owner Name or ID.
-           - Delete Owner: Needs Owner Name or ID.
-           - Add Dog: Needs a Name, Breed, and Owner Name.
-           - Edit Dog: Needs Dog Name or ID.
-           - Delete Dog: Needs Dog Name or ID.
-           - Add Service: Needs Name and Base Price.
+        2. Lookups & Actions:
+           - To book an appointment, use `add_appointment`. Use the names provided by the user for dogs, groomers, and services. Only ask for clarification if a required piece of information is missing (like date or time), but do not ask for IDs. If you have the dog's name, groomer's name, date, time, and service, CALL THE TOOL IMMEDIATELY.
+           - To edit or delete, use the names provided by the user (like Dog Name or Owner Name) as the IDs in the tools. DO NOT ask the user for IDs.
+           - If a tool fails (e.g., because a name is ambiguous or not found), THEN use `get_dogs`, `get_owners`, `get_groomers`, or `get_appointments` to find the correct details, and try the action again. DO NOT tell the user to find the ID.
+           - Only use the exact parameters requested by the tools.
+           - IMPORTANT: When a user gives you information, DO NOT ask them for it again. If you ask a clarifying question and they answer, use that answer and immediately call the relevant tool.
+           - IMPORTANT: DO NOT claim to have booked an appointment or completed an action unless you have successfully called the tool and received a success message back.
 
-        3. The "Clarification" Loop: If a request is missing ANY required information (e.g., "Book a dog"), you MUST reply by asking for exactly what is missing: "I can help with that! To complete the booking, I just need the dog's name, the date/time, the service type, and the groomer's name." Do not try to guess or hallucinate missing information.
+        3. Safety Check: Always confirm before performing a DELETE action.
 
-        4. Lookups & Names: You do not need to ask the user for ID numbers (like dog_id, owner_id, groomer_id, appointment_id). You can and should use exact names for these parameters in the tools. If a tool fails because a name is not unique, THEN use `get_dogs`, `get_owners`, `get_groomers`, or `get_appointments` to find the exact ID.
-
-        5. Safety Check: Always confirm before performing a DELETE action.
-
-        6. Output Formatting:
-           - Provide a polite, concise confirmation to the user.
+        4. Output Formatting:
+           - Provide a polite, concise confirmation to the user AFTER a successful tool call.
            - To perform actions, use the provided tools via the native tool calling framework.
            - Use a helpful, organized tone—break down multi-step processes into bulleted lists for clarity.
            - Never output JSON or any other code in the chat for users to see.
 
         ADDITIONAL INSTRUCTIONS:
-        - DO NOT OFFER CHOICES OR WALKTHROUGHS. When a user wants to perform an action, you MUST gather all required details and call the relevant tool immediately to perform the action in the background. DO NOT offer a "smart link" or ask them to fill out a form themselves. You handle everything fully.
+        - DO NOT OFFER CHOICES OR WALKTHROUGHS. When a user wants to perform an action, call the relevant tool immediately to perform the action in the background. DO NOT offer a "smart link" or ask them to fill out a form themselves. You handle everything fully.
         - When calling a tool, wait for its output and confirm the result with the user. DO NOT use made-up tool names.
         - You can manage the business: use `get_revenue` to check earnings, `get_store_info` to see settings, and `update_store_info` / `add_service` to change them (these require admin privileges).
         - To get appointment details, use `get_appointments`. Do not make the user look up IDs. You can also use `get_daily_appointment_count` to find out how many appointments exist on a particular date.
@@ -1102,7 +1094,7 @@ def chat():
                 genai_history.append({"role": role, "parts": [{"text": clean_text}]})
 
             chat = client.chats.create(
-                model='gemini-3.1-flash-lite',
+                model='gemini-2.5-flash',
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,
                     tools=tools,
@@ -1164,7 +1156,7 @@ def chat():
                 return None
 
             # Process tool calls in a loop (handle both native and fallback)
-            max_loops = 5
+            max_loops = 3
             loop_count = 0
 
             while loop_count < max_loops:
@@ -1250,6 +1242,12 @@ def chat():
                             messages=formatted_history,
                             tools=tools
                         )
+
+                        # Break loop if the new response still contains the exact same tool call (infinite loop prevention)
+                        new_extracted = extract_json_from_text(response.message.content)
+                        if new_extracted and new_extracted.get('name') == function_name and new_extracted.get('arguments') == arguments:
+                            current_app.logger.warning(f"[Ollama Fallback] Breaking loop due to repeated identical tool call: {function_name}")
+                            break
                     else:
                         break # No native tools, no fallback tools found. Break loop.
                 else:
