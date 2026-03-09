@@ -603,3 +603,121 @@ def send_status_update_notification(store, owner, dog, status):
             logger.info(f"Status Email ({status}) sent to {owner.id}")
         except Exception as e:
             logger.error(f"Failed to send Status Email to {owner.id}: {str(e)}")
+
+def send_custom_email(store, owner, subject, message_body):
+    """
+    Sends a custom email to the owner using the store's Gmail API credentials.
+    """
+
+    logger = logging.getLogger('app.email')
+    if not owner.email:
+        logger.warning(f"No email for owner {getattr(owner, 'name', None)}, skipping custom email.")
+        return False
+    if not store or not store.google_token_json:
+        logger.warning(f"No Google token for store {getattr(store, 'id', None)}, cannot send email.")
+        return False
+    try:
+        token_data = json.loads(store.google_token_json)
+        scopes = token_data.get('scopes')
+        if not scopes:
+            scopes = token_data.get('scope', '').split()
+        if not scopes:
+            scopes = [
+                "https://www.googleapis.com/auth/calendar.calendars",
+                "https://www.googleapis.com/auth/calendar.events",
+                "https://www.googleapis.com/auth/gmail.send",
+                "https://www.googleapis.com/auth/userinfo.email",
+                "https://www.googleapis.com/auth/userinfo.profile",
+                "openid"
+            ]
+
+        credentials = Credentials(
+            token=token_data.get('access_token') or token_data.get('token'),
+            refresh_token=token_data.get('refresh_token'),
+            token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
+            client_id=token_data.get('client_id') or os.environ.get('GOOGLE_CLIENT_ID'),
+            client_secret=token_data.get('client_secret') or os.environ.get('GOOGLE_CLIENT_SECRET'),
+            scopes=scopes
+        )
+        service = get_google_service('gmail', 'v1', credentials=credentials)
+        if not service:
+            logger.error("Failed to build Gmail service")
+            return False
+
+        sender_email = token_data.get('sender_email') if token_data.get('sender_email') else 'me'
+
+        # Replace newlines with <br> for HTML email
+        html_body = message_body.replace('\n', '<br>')
+
+        message = MIMEText(html_body, 'html')
+        message['to'] = owner.email
+        message['from'] = sender_email
+        message['subject'] = subject
+        raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+        send_message = {'raw': raw}
+        service.users().messages().send(userId='me', body=send_message).execute()
+        logger.info(f"Sent custom email to {owner.email}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send custom email: {e}", exc_info=True)
+        return False
+
+def send_custom_text(store, owner, message_body):
+    """
+    Sends a custom text message to the owner using the store's Gmail API credentials and SMS gateways.
+    """
+    from notifications.carrier_utils import get_carrier_email
+
+    logger = logging.getLogger('app.email')
+
+    carrier_email = get_carrier_email(getattr(owner, 'phone_number', ''), getattr(owner, 'phone_carrier', None))
+    if not carrier_email:
+        logger.warning(f"No valid carrier email for owner {getattr(owner, 'name', None)}, skipping custom text.")
+        return False
+
+    if not store or not store.google_token_json:
+        logger.warning(f"No Google token for store {getattr(store, 'id', None)}, cannot send text.")
+        return False
+
+    try:
+        token_data = json.loads(store.google_token_json)
+        scopes = token_data.get('scopes')
+        if not scopes:
+            scopes = token_data.get('scope', '').split()
+        if not scopes:
+            scopes = [
+                "https://www.googleapis.com/auth/calendar.calendars",
+                "https://www.googleapis.com/auth/calendar.events",
+                "https://www.googleapis.com/auth/gmail.send",
+                "https://www.googleapis.com/auth/userinfo.email",
+                "https://www.googleapis.com/auth/userinfo.profile",
+                "openid"
+            ]
+
+        credentials = Credentials(
+            token=token_data.get('access_token') or token_data.get('token'),
+            refresh_token=token_data.get('refresh_token'),
+            token_uri=token_data.get('token_uri', 'https://oauth2.googleapis.com/token'),
+            client_id=token_data.get('client_id') or os.environ.get('GOOGLE_CLIENT_ID'),
+            client_secret=token_data.get('client_secret') or os.environ.get('GOOGLE_CLIENT_SECRET'),
+            scopes=scopes
+        )
+        service = get_google_service('gmail', 'v1', credentials=credentials)
+        if not service:
+            logger.error("Failed to build Gmail service")
+            return False
+
+        sender_email = token_data.get('sender_email') if token_data.get('sender_email') else 'me'
+
+        message = MIMEText(message_body)
+        message['to'] = carrier_email
+        message['from'] = sender_email
+        message['subject'] = "" # Texts typically don't need a subject, or it can be empty
+        raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+        send_message = {'raw': raw}
+        service.users().messages().send(userId='me', body=send_message).execute()
+        logger.info(f"Sent custom text to {carrier_email}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send custom text: {e}", exc_info=True)
+        return False
