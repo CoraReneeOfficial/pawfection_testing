@@ -1450,9 +1450,9 @@ def view_logs():
     log_activity("Viewed Activity Log page")
     page = request.args.get('page', 1, type=int)
     per_page = 50
-    # Filter activity logs by the current store's ID, joining with User to get store_id
-    logs_pagination = ActivityLog.query.options(db.joinedload(ActivityLog.user)).join(User).filter(
-        User.store_id == store_id
+    # Filter activity logs by the current store's ID using the ActivityLog.store_id column directly
+    logs_pagination = ActivityLog.query.options(db.joinedload(ActivityLog.user)).filter(
+        ActivityLog.store_id == store_id
     ).order_by(ActivityLog.timestamp.desc()).paginate(page=page, per_page=per_page, error_out=False)
     
     return render_template('logs.html', logs_pagination=logs_pagination)
