@@ -2379,7 +2379,7 @@ def export_database():
             export_data['owners'].append(owner_data)
 
         # Get Dogs
-        dogs = Dog.query.join(Owner).filter(Owner.store_id == store_id).all()
+        dogs = Dog.query.filter_by(store_id=store_id).all()
         for dog in dogs:
             dog_data = {c.name: getattr(dog, c.name) for c in dog.__table__.columns}
             export_data['dogs'].append(dog_data)
@@ -2395,7 +2395,7 @@ def export_database():
             export_data['services'].append(service_data)
 
         # Get Appointments
-        appointments = Appointment.query.join(Dog).join(Owner).filter(Owner.store_id == store_id).all()
+        appointments = Appointment.query.filter_by(store_id=store_id).all()
         for appt in appointments:
             appt_data = {c.name: getattr(appt, c.name) for c in appt.__table__.columns}
             # Handle datetime objects and decimals
@@ -2464,7 +2464,7 @@ def export_images():
         image_files.append(os.path.join('store_logos', store.logo_filename))
 
     # Dog images
-    dogs = Dog.query.join(Owner).filter(Owner.store_id == store_id).all()
+    dogs = Dog.query.filter_by(store_id=store_id).all()
     for dog in dogs:
         if dog.image_filename:
             image_files.append(os.path.join('dog_images', dog.image_filename))
