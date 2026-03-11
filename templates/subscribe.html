@@ -193,11 +193,17 @@
 </div>
 
 <script>
-    var stripe = Stripe("{{ stripe_publishable_key }}");
+    var stripeKey = "{{ stripe_publishable_key }}";
+    var stripe = stripeKey ? Stripe(stripeKey) : null;
     var checkoutButton = document.getElementById("checkout-button");
     var errorMessage = document.getElementById("error-message");
 
     checkoutButton.addEventListener("click", function () {
+        if (!stripe) {
+            errorMessage.textContent = "Stripe is not configured properly.";
+            return;
+        }
+
         checkoutButton.disabled = true;
         checkoutButton.textContent = "Processing...";
         errorMessage.textContent = "";
