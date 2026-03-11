@@ -16,7 +16,7 @@ for m in [
     'dotenv', 'google', 'google.genai', 'google.oauth2', 'google.oauth2.credentials',
     'google.auth', 'google.auth.transport', 'google.auth.transport.requests',
     'googleapiclient', 'googleapiclient.discovery', 'googleapiclient.errors',
-    'bcrypt', 'psutil', 'fpdf', 'markdown', 'pandas', 'xlsxwriter', 'stripe'
+    'bcrypt', 'psutil', 'fpdf', 'markdown', 'pandas', 'xlsxwriter', 'stripe', 'ollama'
 ]:
     sys.modules[m] = MockModule()
 

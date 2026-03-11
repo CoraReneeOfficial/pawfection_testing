@@ -13,3 +13,7 @@
 ## 2025-03-06 - Unnecessary JOIN Optimization
 **Learning:** In the `/logs` route, `ActivityLog.query` was performing an unnecessary `.join(User)` just to filter by `store_id` (via `User.store_id == store_id`). Since `ActivityLog` already has a `store_id` column, the JOIN can be safely removed.
 **Action:** Review models for existing foreign keys or reference columns before performing JOINs solely for filtering, as JOIN operations are computationally expensive and can often be bypassed by directly querying the available relationships' keys.
+
+## 2025-03-11 - In-Memory Aggregation of Fetched Data
+**Learning:** In the `superadmin_dashboard` endpoint, the code was fetching all stores with `Store.query.all()`, and then executing multiple `.count()` queries on the same table (e.g., `Store.query.filter_by(subscription_status='active').count()`). This causes redundant database queries (N+1 style aggregations) for data that is already fully loaded in memory.
+**Action:** When a full table or significant dataset is already loaded into a Python list (e.g., for rendering in a UI), avoid executing additional SQL aggregation queries (`.count()`, `.sum()`) on that same dataset. Instead, use Python list comprehensions or generator expressions (e.g., `sum(1 for x in items if condition)`) to calculate the aggregations in-memory.
