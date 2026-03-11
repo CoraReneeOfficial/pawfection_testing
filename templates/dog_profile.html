@@ -218,10 +218,15 @@
          <a href="{{ url_for('owners.view_owner', owner_id=dog.owner_id) }}" class="button button-secondary">Back to Owner Profile</a>
          <a href="{{ url_for('dogs.edit_dog', dog_id=dog.id) }}" class="button button-primary">Edit Dog Profile</a>
          <a href="{{ url_for('appointments.add_appointment') }}?dog_id={{ dog.id }}" class="button button-success">Book Appointment</a>
-         <form method="POST" action="{{ url_for('dogs.delete_dog', dog_id=dog.id) }}" class="delete-form"
-               onsubmit="return confirm('Are you absolutely sure you want to delete the profile for {{ dog.name }}? This action cannot be undone and will also delete any associated appointments.');">
-            <button type="submit" class="button button-danger">Delete Dog</button>
-         </form>
+         <div x-data="{ confirmingDelete: false }" class="delete-form">
+            <button x-show="!confirmingDelete" @click="confirmingDelete = true" type="button" class="button button-danger" aria-label="Delete Dog">Delete Dog</button>
+            <form x-show="confirmingDelete" x-cloak method="POST" action="{{ url_for('dogs.delete_dog', dog_id=dog.id) }}" class="delete-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <span class="flash-danger" style="padding: 0.2rem 0.5rem; border-radius: var(--border-radius); font-size: 0.8rem; font-weight: bold;" aria-label="Are you absolutely sure you want to delete the profile for {{ dog.name }}? This action cannot be undone and will also delete any associated appointments.">Are you sure?</span>
+                <button type="submit" class="button button-danger" style="padding: 0.1rem 0.4rem; font-size: 0.75rem;" aria-label="Confirm delete dog">Yes</button>
+                <button @click="confirmingDelete = false" type="button" class="button button-secondary" style="padding: 0.1rem 0.4rem; font-size: 0.75rem;" aria-label="Cancel delete dog">No</button>
+            </form>
+         </div>
     </div>
 </div>
 {% endblock %}
