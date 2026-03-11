@@ -852,9 +852,9 @@ def create_app():
             if admin.store_id in store_admins:
                 store_admins[admin.store_id].append(admin)
         
-        # Count active and expired subscriptions
-        active_subscriptions = Store.query.filter_by(subscription_status='active').count()
-        expired_subscriptions = Store.query.filter_by(subscription_status='expired').count()
+        # Bolt Optimization: Calculate counts in-memory since we already fetched all stores
+        active_subscriptions = sum(1 for store in stores if store.subscription_status == 'active')
+        expired_subscriptions = sum(1 for store in stores if store.subscription_status == 'expired')
         
         from models import ActivityLog
         from sqlalchemy.orm import joinedload
