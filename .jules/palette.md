@@ -1,0 +1,3 @@
+## 2026-03-07 - Replace Native Confirm with Inline Alpine.js Confirmation
+**Learning:** Native browser `confirm()` popups break immersion and can be inaccessible or difficult to style. Users often blindly dismiss them without reading.
+**Action:** Replaced the native `confirm()` on the Service deletion button with an inline Alpine.js component (`x-data="{ confirmingDelete: false }"`). This provides a smoother, context-aware interaction, preserves existing styling (`.flash-message`, `.flash-danger`), and ensures the warning text ("This action cannot be undone.") remains fully accessible to screen readers without using `aria-hidden="true"`.
