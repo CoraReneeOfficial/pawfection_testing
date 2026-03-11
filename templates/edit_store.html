@@ -140,10 +140,12 @@
                 {% endif %}
             </div>
 
-            {% if store.subscription_status in ['active', 'lifetime'] and store.stripe_customer_id %}
+            {% if store.subscription_status not in ['active', 'lifetime'] %}
+                <button type="button" class="button button-primary" id="open-subscribe-modal">Subscribe</button>
+            {% endif %}
+
+            {% if store.stripe_customer_id %}
                 <a href="{{ url_for('stripe_portal') }}" class="button button-primary" target="_blank">Manage Subscription</a>
-            {% else %}
-                <button type="button" class="button button-primary" id="open-manage-sub-modal">Manage Subscription</button>
             {% endif %}
             <small style="color:#888;display:block;margin-top:0.5rem;">All subscriptions are securely managed with Stripe.</small>
 
@@ -297,7 +299,7 @@
 
         <div class="form-actions">
             <button type="submit" class="button button-primary">Save Changes</button>
-            <a href="{{ url_for('management.management') }}" class="button button-secondary">Cancel</a>
+            <a href="{{ url_for('management.management') }}" class="button button-primary">Cancel</a>
         </div>
     </form>
 </div>
@@ -312,7 +314,7 @@
         }
 
         let elements;
-        const manageSubBtn = document.getElementById('open-manage-sub-modal');
+        const manageSubBtn = document.getElementById('open-subscribe-modal');
         const checkoutContainer = document.getElementById('stripe-checkout-container');
         const proceedBtn = document.getElementById('start-stripe-checkout');
         const paymentElementContainer = document.getElementById('payment-element-container');
