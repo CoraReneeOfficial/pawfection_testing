@@ -357,13 +357,17 @@
         }
 
         .feature-list li::before {
-            content: '\f1b0';
-            font-family: 'Font Awesome 6 Free';
-            font-weight: 900;
+            content: '';
             position: absolute;
             left: 0;
-            color: var(--accent-color);
-            font-size: 0.8rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0.95rem;
+            height: 0.95rem;
+            background-image: url("{{ url_for('static', filename='images/tab_photo.png') }}");
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
         }
 
         /* Full Details Section - Alternating Layout */
