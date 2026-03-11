@@ -163,9 +163,15 @@
                     <a href="{{ url_for('owners.view_owner', owner_id=owner.id) }}">View Profile</a>
                     <a href="{{ url_for('dogs.add_dog', owner_id=owner.id) }}">Add Dog</a>
                     <a href="{{ url_for('owners.edit_owner', owner_id=owner.id) }}">Edit Owner</a>
-                    <form method="POST" action="{{ url_for('owners.delete_owner', owner_id=owner.id) }}" class="delete-form" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this owner and all their dogs? This cannot be undone.');">
-                        <button type="submit" class="action-button button-danger">Delete Owner</button>
-                    </form>
+                    <div x-data="{ confirmingDelete: false }" class="delete-form">
+                        <button x-show="!confirmingDelete" @click="confirmingDelete = true" type="button" class="action-button button-danger" aria-label="Delete Owner">Delete Owner</button>
+                        <form x-show="confirmingDelete" x-cloak method="POST" action="{{ url_for('owners.delete_owner', owner_id=owner.id) }}" class="delete-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <span class="flash-danger" style="padding: 0.2rem 0.5rem; border-radius: var(--border-radius); font-size: 0.8rem; font-weight: bold;" aria-label="Are you sure you want to delete this owner and all their dogs? This cannot be undone.">Are you sure you want to delete this owner and all their dogs? This cannot be undone.</span>
+                            <button type="submit" class="button button-danger" style="padding: 0.1rem 0.4rem; font-size: 0.75rem;" aria-label="Confirm delete owner">Yes</button>
+                            <button @click="confirmingDelete = false" type="button" class="button button-secondary" style="padding: 0.1rem 0.4rem; font-size: 0.75rem;" aria-label="Cancel delete owner">No</button>
+                        </form>
+                    </div>
                 </div>
             </div>
 
@@ -182,9 +188,15 @@
                         <div class="action-links">
                              <a href="{{ url_for('dogs.view_dog', dog_id=dog.id) }}">View Dog Profile</a>
                              <a href="{{ url_for('dogs.edit_dog', dog_id=dog.id) }}">Edit Dog</a>
-                             <form method="POST" action="{{ url_for('dogs.delete_dog', dog_id=dog.id) }}" class="delete-form" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this dog and all their appointments? This cannot be undone.');">
-                                 <button type="submit" class="action-button button-danger">Delete Dog</button>
-                             </form>
+                             <div x-data="{ confirmingDelete: false }" class="delete-form">
+                                 <button x-show="!confirmingDelete" @click="confirmingDelete = true" type="button" class="action-button button-danger" aria-label="Delete Dog">Delete Dog</button>
+                                 <form x-show="confirmingDelete" x-cloak method="POST" action="{{ url_for('dogs.delete_dog', dog_id=dog.id) }}" class="delete-form">
+                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                     <span class="flash-danger" style="padding: 0.2rem 0.5rem; border-radius: var(--border-radius); font-size: 0.8rem; font-weight: bold;" aria-label="Are you sure you want to delete this dog and all their appointments? This cannot be undone.">Are you sure you want to delete this dog and all their appointments? This cannot be undone.</span>
+                                     <button type="submit" class="button button-danger" style="padding: 0.1rem 0.4rem; font-size: 0.75rem;" aria-label="Confirm delete dog">Yes</button>
+                                     <button @click="confirmingDelete = false" type="button" class="button button-secondary" style="padding: 0.1rem 0.4rem; font-size: 0.75rem;" aria-label="Cancel delete dog">No</button>
+                                 </form>
+                             </div>
                              <a href="{{ url_for('appointments.add_appointment') }}?dog_id={{ dog.id }}" class="action-button">Book Appointment</a>
                         </div>
                     </li>
