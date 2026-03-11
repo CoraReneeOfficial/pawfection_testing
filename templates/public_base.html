@@ -14,7 +14,7 @@
         {% block content %}{% endblock %}
     </main>
     <footer style="text-align:center; padding:1rem 0; color:#666;">
-        &copy; {{ now().year if now else "" }} {{ store.name }}
+        &copy; {{ now().year }} {{ store.name }}
     </footer>
     {% block scripts %}{% endblock %}
 </body>

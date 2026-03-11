@@ -36,7 +36,7 @@ import migrate_add_google_token_json_to_user
 import migrate_add_notification_index
 import migrate_advanced_commission
 import migrate_stripe_account_id
-# Removed import for datetime as it's not directly used at top level of app.py anymore
+import datetime
 # Removed log_activity definition as it's now in utils.py
 
 # Configure logging for the application
@@ -331,6 +331,10 @@ def create_app():
     from notification_system import bp as notification_system_bp
     app.register_blueprint(notification_system_bp)
     
+    @app.context_processor
+    def inject_now():
+        return {'now': datetime.datetime.now, 'now_utc': datetime.datetime.utcnow}
+
     # Context processor to make notification data available to all templates
     @app.context_processor
     def inject_notifications():
@@ -498,14 +502,14 @@ def create_app():
     def view_user_agreement():
         from flask import render_template
         from datetime import datetime
-        return render_template('user_agreement.html', now=datetime.now)
+        return render_template('user_agreement.html')
 
     # Privacy policy route
     @app.route('/privacy-policy')
     def view_privacy_policy():
         from flask import render_template
         from datetime import datetime
-        return render_template('privacy_policy.html', now=datetime.now)
+        return render_template('privacy_policy.html')
 
     # Old Dashboard route (Backup)
     @app.route('/dashboard/old')

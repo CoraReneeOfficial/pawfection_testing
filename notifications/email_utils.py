@@ -128,7 +128,6 @@ def send_appointment_confirmation_email(store, owner, dog, appointment, groomer=
             'services_names': services_names,
             'groomer_name': groomer_name,
             'BUSINESS_TIMEZONE_NAME': store_tz_str,
-            'now': datetime.datetime.now,
             'contact_address': getattr(store, 'address', None),
             'contact_phone': getattr(store, 'phone', None),
             'contact_email': getattr(store, 'email', None)
