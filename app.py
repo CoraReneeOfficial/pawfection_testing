@@ -608,6 +608,8 @@ def create_app():
         revenue_today = 0.0
         # Upcoming appointments
         upcoming_appointments = []
+        # Pending check-ins for today
+        pending_checkins_list = []
 
         if store_id:
             # Combined query for Appointments Today, Revenue Today, and Pending Checkouts
@@ -666,6 +668,22 @@ def create_app():
                 .all()
             )
 
+            # Pending checkins list for today
+            pending_checkins_list = (
+                Appointment.query.options(
+                    joinedload(Appointment.dog).joinedload(Dog.owner),
+                    joinedload(Appointment.groomer)
+                )
+                .filter(
+                    Appointment.status == 'Scheduled',
+                    Appointment.store_id == store_id,
+                    Appointment.appointment_datetime >= today_start,
+                    Appointment.appointment_datetime < today_end
+                )
+                .order_by(Appointment.appointment_datetime.asc())
+                .all()
+            )
+
         # Mock Revenue Trend Data for Chart
         revenue_trend = [
             {"date": (today_start - datetime.timedelta(days=i)).strftime('%m/%d'), "amount": 150 + (i * 10)}
@@ -700,6 +718,7 @@ def create_app():
             new_clients_week=new_clients_week,
             revenue_today=revenue_today,
             upcoming_appointments=upcoming_appointments,
+            pending_checkins_list=pending_checkins_list,
             my_appointments=my_appointments,
             revenue_trend=revenue_trend,
             capacity_percentage=capacity_percentage,

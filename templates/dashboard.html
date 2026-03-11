@@ -367,6 +367,65 @@
         border: 1px solid var(--border-subtle);
     }
 
+    /* Check-In List Styles */
+    .checkin-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        max-height: 400px;
+        overflow-y: auto;
+        padding-right: 0.5rem;
+    }
+
+    .checkin-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        background: var(--bg-color);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--border-radius);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .checkin-item:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-sm);
+        border-color: var(--primary-color);
+    }
+
+    .checkin-info h4 {
+        margin: 0 0 0.25rem 0;
+        font-size: 1.1rem;
+        color: var(--text-main);
+    }
+
+    .checkin-info p {
+        margin: 0;
+        font-size: 0.9rem;
+        color: var(--text-light);
+    }
+
+    .checkin-btn {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: var(--border-radius);
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .checkin-btn:hover {
+        background: #4c1d95; /* darker purple */
+    }
+
+    .checkin-btn.done {
+        background: var(--success-color);
+        cursor: default;
+        pointer-events: none;
+    }
 </style>
 {% endblock %}
 
@@ -393,6 +452,34 @@
         </div>
     </div>
 
+
+    <!-- Global Daily Check-In List -->
+    <div class="tech-card" style="margin-bottom: 2rem;">
+        <div class="tech-card-header">
+            <h3 class="tech-card-title">📋 Today's Pending Check-Ins</h3>
+        </div>
+        <div class="checkin-list">
+            {% if pending_checkins_list %}
+                {% for checkin in pending_checkins_list %}
+                <div class="checkin-item" data-appointment-id="{{ checkin.id }}">
+                    <div class="checkin-info">
+                        <h4>{{ checkin.dog.name }} ({{ checkin.dog.owner.name }})</h4>
+                        {% set local_time = checkin.appointment_datetime.replace(tzinfo=tz.tzutc()).astimezone(STORE_TIMEZONE) if STORE_TIMEZONE else checkin.appointment_datetime %}
+                        <p><strong>Time:</strong> {{ local_time.strftime('%I:%M %p') }} | <strong>Groomer:</strong> {{ checkin.groomer.username if checkin.groomer else 'Unassigned' }}</p>
+                    </div>
+                    <div>
+                        <button class="checkin-btn checkin-action-btn" data-appointment-id="{{ checkin.id }}">Check In</button>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="text-align: center; padding: 2rem; color: var(--text-light);">
+                    <p style="margin: 0; font-size: 1.1rem;">No pending check-ins for today!</p>
+                    <span style="font-size: 2rem;">🎉</span>
+                </div>
+            {% endif %}
+        </div>
+    </div>
 
     {% if g.user.is_admin and g.user.is_groomer %}
     <!-- ==================== HYBRID VIEW (Admin + Groomer) ==================== -->
@@ -954,6 +1041,45 @@
                     // Restore original text and enable buttons
                     this.innerText = originalText;
                     allBtns.forEach(b => b.disabled = false);
+                }
+            });
+        });
+
+        // --- 4. Pending Check-In List Logic ---
+        const checkinBtns = document.querySelectorAll('.checkin-action-btn');
+        checkinBtns.forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const appointmentId = this.getAttribute('data-appointment-id');
+                const originalText = this.innerText;
+
+                this.disabled = true;
+                this.innerText = 'Checking in...';
+
+                try {
+                    const response = await fetch(`/api/appointments/${appointmentId}/status`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ status: 'Checked In' })
+                    });
+
+                    if (response.ok) {
+                        this.innerText = 'Done';
+                        this.classList.add('done');
+                        // Optional: we could fade out the item or keep it as "Done"
+                    } else {
+                        console.error('Failed to update status');
+                        alert('Failed to check in dog. Please try again.');
+                        this.disabled = false;
+                        this.innerText = originalText;
+                    }
+                } catch (error) {
+                    console.error('Error updating status:', error);
+                    alert('Error checking in dog. Please try again.');
+                    this.disabled = false;
+                    this.innerText = originalText;
                 }
             });
         });

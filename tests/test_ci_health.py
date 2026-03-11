@@ -140,6 +140,12 @@ except ImportError:
 if 'DATABASE_URL' in os.environ:
     del os.environ['DATABASE_URL']
 
+try:
+    import stripe
+except ImportError:
+    sys.modules['stripe'] = MagicMock()
+
+
 # Unset DATABASE_URL to avoid connecting to production DB during import
 # Save it to restore later if needed (though os.environ changes are process-local)
 original_db_url = os.environ.get('DATABASE_URL')
@@ -151,6 +157,8 @@ class TestCIHealth(unittest.TestCase):
         # Patch the migration script to do nothing to avoid side effects on the file system
         self.migrate_patcher = patch('app.migrate_add_remind_at_to_notification')
         self.mock_migrate = self.migrate_patcher.start()
+        self.migrate_patcher2 = patch('app.migrate_add_notification_prefs')
+        self.mock_migrate2 = self.migrate_patcher2.start()
 
         # Patch stripe to avoid API key issues during app creation/request
         self.stripe_patcher = patch('app.stripe')
@@ -201,6 +209,7 @@ class TestCIHealth(unittest.TestCase):
 
         # Stop patches
         self.migrate_patcher.stop()
+        self.migrate_patcher2.stop()
         self.stripe_patcher.stop()
         self.gcal_patcher.stop()
 
