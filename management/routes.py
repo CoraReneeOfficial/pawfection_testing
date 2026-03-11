@@ -533,10 +533,14 @@ def management():
     public_page_url = None
     if store:
         public_page_url = url_for('public.public_store_page', store_username=store.username, _external=True)
+
+    current_time = datetime.now(timezone.utc)
     return render_template('management.html',
         public_page_url=public_page_url,
         is_google_calendar_connected=is_google_calendar_connected,
-        is_gmail_for_sending_connected=is_gmail_for_sending_connected)
+        is_gmail_for_sending_connected=is_gmail_for_sending_connected,
+        store=store,
+        current_time=current_time)
 
 @management_bp.route('/manage/users')
 @admin_required

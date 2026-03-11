@@ -1,6 +1,121 @@
 {% extends 'base.html' %} {# Inherits the base layout, navbar, footer, etc. #}
 
-{% block title %}Application Management{% endblock %} {# Sets the title for this specific page #}
+{% block title %}Application Management
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const stripeKey = '{{ config.get("STRIPE_PUBLISHABLE_KEY", "") }}';
+        let stripe = null;
+        if (stripeKey) {
+            stripe = Stripe(stripeKey);
+        }
+
+        let elements;
+        const manageSubBtn = document.getElementById('open-subscribe-modal');
+        const checkoutContainer = document.getElementById('stripe-checkout-container');
+        const proceedBtn = document.getElementById('start-stripe-checkout');
+        const paymentElementContainer = document.getElementById('payment-element-container');
+        const submitBtn = document.getElementById('payment-btn');
+
+        if (manageSubBtn) {
+            manageSubBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                checkoutContainer.style.display = checkoutContainer.style.display === 'none' ? 'block' : 'none';
+            });
+        }
+
+        let currentClientSecret = null;
+
+        if (proceedBtn) {
+            proceedBtn.addEventListener('click', async function() {
+                if (!stripe) {
+                    alert("Stripe is not configured.");
+                    return;
+                }
+                const selectedPrice = document.querySelector('input[name="plan_type"]:checked').value;
+                proceedBtn.disabled = true;
+                proceedBtn.textContent = "Loading...";
+
+                try {
+                    const response = await fetch("{{ url_for('api_create_subscription') }}", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": "{{ csrf_token() }}"
+                        },
+                        body: JSON.stringify({ priceId: selectedPrice })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.error) {
+                        alert(data.error);
+                        proceedBtn.disabled = false;
+                        proceedBtn.textContent = "Proceed to Checkout";
+                        return;
+                    }
+
+                    currentClientSecret = data.clientSecret;
+
+                    const appearance = { theme: 'stripe' };
+                    elements = stripe.elements({ appearance, clientSecret: currentClientSecret });
+
+                    const paymentElement = elements.create("payment");
+                    paymentElement.mount("#payment-element");
+
+                    proceedBtn.style.display = 'none';
+                    paymentElementContainer.style.display = 'block';
+
+                } catch (e) {
+                    console.error(e);
+                    alert("An error occurred loading the payment form.");
+                    proceedBtn.disabled = false;
+                    proceedBtn.textContent = "Proceed to Checkout";
+                }
+            });
+        }
+
+        if (submitBtn) {
+            submitBtn.addEventListener("click", async function(e) {
+                e.preventDefault();
+                if (!stripe) return;
+
+                submitBtn.disabled = true;
+                submitBtn.textContent = "Processing...";
+
+                let stripeError = null;
+
+                if (currentClientSecret && currentClientSecret.startsWith('seti_')) {
+                    const { error } = await stripe.confirmSetup({
+                        elements,
+                        confirmParams: {
+                            return_url: window.location.origin + "{{ url_for('management.management') }}"
+                        }
+                    });
+                    stripeError = error;
+                } else {
+                    const { error } = await stripe.confirmPayment({
+                        elements,
+                        confirmParams: {
+                            return_url: window.location.origin + "{{ url_for('management.management') }}"
+                        }
+                    });
+                    stripeError = error;
+                }
+
+                if (stripeError) {
+                    const messageContainer = document.querySelector("#payment-message");
+                    messageContainer.classList.remove("hidden");
+                    messageContainer.textContent = stripeError.message;
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "Pay now";
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
+ {# Sets the title for this specific page #}
 
 {% block head %}
 <style>
@@ -73,7 +188,122 @@
         color: #dc2626; /* Red-600 */
     }
 </style>
+
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const stripeKey = '{{ config.get("STRIPE_PUBLISHABLE_KEY", "") }}';
+        let stripe = null;
+        if (stripeKey) {
+            stripe = Stripe(stripeKey);
+        }
+
+        let elements;
+        const manageSubBtn = document.getElementById('open-subscribe-modal');
+        const checkoutContainer = document.getElementById('stripe-checkout-container');
+        const proceedBtn = document.getElementById('start-stripe-checkout');
+        const paymentElementContainer = document.getElementById('payment-element-container');
+        const submitBtn = document.getElementById('payment-btn');
+
+        if (manageSubBtn) {
+            manageSubBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                checkoutContainer.style.display = checkoutContainer.style.display === 'none' ? 'block' : 'none';
+            });
+        }
+
+        let currentClientSecret = null;
+
+        if (proceedBtn) {
+            proceedBtn.addEventListener('click', async function() {
+                if (!stripe) {
+                    alert("Stripe is not configured.");
+                    return;
+                }
+                const selectedPrice = document.querySelector('input[name="plan_type"]:checked').value;
+                proceedBtn.disabled = true;
+                proceedBtn.textContent = "Loading...";
+
+                try {
+                    const response = await fetch("{{ url_for('api_create_subscription') }}", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": "{{ csrf_token() }}"
+                        },
+                        body: JSON.stringify({ priceId: selectedPrice })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.error) {
+                        alert(data.error);
+                        proceedBtn.disabled = false;
+                        proceedBtn.textContent = "Proceed to Checkout";
+                        return;
+                    }
+
+                    currentClientSecret = data.clientSecret;
+
+                    const appearance = { theme: 'stripe' };
+                    elements = stripe.elements({ appearance, clientSecret: currentClientSecret });
+
+                    const paymentElement = elements.create("payment");
+                    paymentElement.mount("#payment-element");
+
+                    proceedBtn.style.display = 'none';
+                    paymentElementContainer.style.display = 'block';
+
+                } catch (e) {
+                    console.error(e);
+                    alert("An error occurred loading the payment form.");
+                    proceedBtn.disabled = false;
+                    proceedBtn.textContent = "Proceed to Checkout";
+                }
+            });
+        }
+
+        if (submitBtn) {
+            submitBtn.addEventListener("click", async function(e) {
+                e.preventDefault();
+                if (!stripe) return;
+
+                submitBtn.disabled = true;
+                submitBtn.textContent = "Processing...";
+
+                let stripeError = null;
+
+                if (currentClientSecret && currentClientSecret.startsWith('seti_')) {
+                    const { error } = await stripe.confirmSetup({
+                        elements,
+                        confirmParams: {
+                            return_url: window.location.origin + "{{ url_for('management.management') }}"
+                        }
+                    });
+                    stripeError = error;
+                } else {
+                    const { error } = await stripe.confirmPayment({
+                        elements,
+                        confirmParams: {
+                            return_url: window.location.origin + "{{ url_for('management.management') }}"
+                        }
+                    });
+                    stripeError = error;
+                }
+
+                if (stripeError) {
+                    const messageContainer = document.querySelector("#payment-message");
+                    messageContainer.classList.remove("hidden");
+                    messageContainer.textContent = stripeError.message;
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "Pay now";
+                }
+            });
+        }
+    });
+</script>
 {% endblock %}
+
 
 {% block content %} {# Defines the main content area for this page #}
 <div class="content-card"> 
@@ -127,6 +357,138 @@
         </a>
 
 
+
+        {# NEW: Subscription & Billing Card #}
+        <div class="management-card" style="grid-column: 1 / -1;">
+            <div style="width: 100%;">
+                <h3><span class="icon">💳</span> Subscription & Billing</h3>
+
+                <div style="margin-bottom:1rem; padding: 1rem; border: 1px solid var(--border-color); border-radius: var(--border-radius); background-color: #fafafa;">
+                    <strong style="font-size: 1.1em; color: var(--primary-color);">Status:</strong> {{ store.subscription_status or 'Unknown' | capitalize }}<br/>
+                    {% if store.subscription_status == 'trial' %}
+                        {% set diff = (store.subscription_ends_at.replace(tzinfo=None) - current_time.replace(tzinfo=None)).days if store.subscription_ends_at else 15 %}
+                        <span style="color: var(--warning-color); font-weight: 600;">You are on a trial. {{ diff if diff >= 0 else 0 }} days left.</span>
+                    {% elif store.subscription_status == 'active' %}
+                        <span style="color: var(--success-color); font-weight: 600;">Subscription Active.</span><br/>
+                        {% if store.subscription_ends_at %}
+                        <span style="color: var(--text-color);">Next recurring payment on or End date: {{ store.subscription_ends_at.strftime('%Y-%m-%d') }}.</span>
+                        <span style="display:block; font-size: 0.9em; color: var(--text-muted); margin-top: 0.2rem;">Recurring payment of $79 occurs every 30 days.</span>
+                        {% endif %}
+                    {% elif store.subscription_status == 'lifetime' %}
+                        <span style="color: var(--success-color); font-weight: 600;">Lifetime Subscription Active.</span>
+                    {% endif %}
+                </div>
+
+                <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
+                    {% if store.subscription_status not in ['active', 'lifetime'] %}
+                        <button type="button" class="button button-primary" id="open-subscribe-modal">Subscribe</button>
+                    {% endif %}
+
+                    {% if store.stripe_customer_id %}
+                        <a href="{{ url_for('stripe_portal') }}" class="button button-primary" target="_blank">Manage Subscription</a>
+                    {% endif %}
+                </div>
+                <small style="color:#888;display:block;">All subscriptions are securely managed with Stripe.</small>
+
+                <!-- Inline UI for Stripe Elements checkout -->
+                <div id="stripe-checkout-container" style="display: none; margin-top: 1rem; padding: 1rem; border: 1px solid var(--border-color); border-radius: var(--border-radius); background: #fff;">
+                    <h3 style="margin-top: 0;">Select Subscription Plan</h3>
+                    <p style="font-size: 0.9em; color: var(--text-muted); margin-bottom: 1rem;">
+                        If you subscribe to the Monthly plan while on a trial, you will not be billed until your trial ends.
+                        Lifetime plans are billed immediately.
+                    </p>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem;">
+                            <input type="radio" name="plan_type" value="{{ config['STRIPE_PRICE_ID'] }}" checked> Monthly Subscription ($79/mo)
+                        </label>
+                        {% if config['STRIPE_LIFETIME_PRICE_ID'] %}
+                        <label style="display: block; margin-bottom: 0.5rem;">
+                            <input type="radio" name="plan_type" value="{{ config['STRIPE_LIFETIME_PRICE_ID'] }}"> Lifetime Subscription (One-time)
+                        </label>
+                        {% endif %}
+                    </div>
+
+                    <button type="button" class="button button-primary" id="start-stripe-checkout">Proceed to Checkout</button>
+                    <div id="payment-element-container" style="display: none; margin-top: 1.5rem;">
+                        <div id="payment-element">
+                            <!-- Elements will create form elements here -->
+                        </div>
+                        <button id="payment-btn" type="button" class="button button-primary" style="margin-top: 1rem;">
+                            <div class="spinner hidden" id="spinner"></div>
+                            <span id="button-text">Pay now</span>
+                        </button>
+                        <div id="payment-message" class="hidden" style="color: var(--danger-color); margin-top: 0.5rem;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        {# NEW: Subscription & Billing Card #}
+        <div class="management-card" style="grid-column: 1 / -1;">
+            <div style="width: 100%;">
+                <h3><span class="icon">💳</span> Subscription & Billing</h3>
+
+                <div style="margin-bottom:1rem; padding: 1rem; border: 1px solid var(--border-color); border-radius: var(--border-radius); background-color: #fafafa;">
+                    <strong style="font-size: 1.1em; color: var(--primary-color);">Status:</strong> {{ store.subscription_status or 'Unknown' | capitalize }}<br/>
+                    {% if store.subscription_status == 'trial' %}
+                        {% set diff = (store.subscription_ends_at.replace(tzinfo=None) - current_time.replace(tzinfo=None)).days if store.subscription_ends_at else 15 %}
+                        <span style="color: var(--warning-color); font-weight: 600;">You are on a trial. {{ diff if diff >= 0 else 0 }} days left.</span>
+                    {% elif store.subscription_status == 'active' %}
+                        <span style="color: var(--success-color); font-weight: 600;">Subscription Active.</span><br/>
+                        {% if store.subscription_ends_at %}
+                        <span style="color: var(--text-color);">Next recurring payment on or End date: {{ store.subscription_ends_at.strftime('%Y-%m-%d') }}.</span>
+                        <span style="display:block; font-size: 0.9em; color: var(--text-muted); margin-top: 0.2rem;">Recurring payment of $79 occurs every 30 days.</span>
+                        {% endif %}
+                    {% elif store.subscription_status == 'lifetime' %}
+                        <span style="color: var(--success-color); font-weight: 600;">Lifetime Subscription Active.</span>
+                    {% endif %}
+                </div>
+
+                <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
+                    {% if store.subscription_status not in ['active', 'lifetime'] %}
+                        <button type="button" class="button button-primary" id="open-subscribe-modal">Subscribe</button>
+                    {% endif %}
+
+                    {% if store.stripe_customer_id %}
+                        <a href="{{ url_for('stripe_portal') }}" class="button button-primary" target="_blank">Manage Subscription</a>
+                    {% endif %}
+                </div>
+                <small style="color:#888;display:block;">All subscriptions are securely managed with Stripe.</small>
+
+                <!-- Inline UI for Stripe Elements checkout -->
+                <div id="stripe-checkout-container" style="display: none; margin-top: 1rem; padding: 1rem; border: 1px solid var(--border-color); border-radius: var(--border-radius); background: #fff;">
+                    <h3 style="margin-top: 0;">Select Subscription Plan</h3>
+                    <p style="font-size: 0.9em; color: var(--text-muted); margin-bottom: 1rem;">
+                        If you subscribe to the Monthly plan while on a trial, you will not be billed until your trial ends.
+                        Lifetime plans are billed immediately.
+                    </p>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem;">
+                            <input type="radio" name="plan_type" value="{{ config['STRIPE_PRICE_ID'] }}" checked> Monthly Subscription ($79/mo)
+                        </label>
+                        {% if config['STRIPE_LIFETIME_PRICE_ID'] %}
+                        <label style="display: block; margin-bottom: 0.5rem;">
+                            <input type="radio" name="plan_type" value="{{ config['STRIPE_LIFETIME_PRICE_ID'] }}"> Lifetime Subscription (One-time)
+                        </label>
+                        {% endif %}
+                    </div>
+
+                    <button type="button" class="button button-primary" id="start-stripe-checkout">Proceed to Checkout</button>
+                    <div id="payment-element-container" style="display: none; margin-top: 1.5rem;">
+                        <div id="payment-element">
+                            <!-- Elements will create form elements here -->
+                        </div>
+                        <button id="payment-btn" type="button" class="button button-primary" style="margin-top: 1rem;">
+                            <div class="spinner hidden" id="spinner"></div>
+                            <span id="button-text">Pay now</span>
+                        </button>
+                        <div id="payment-message" class="hidden" style="color: var(--danger-color); margin-top: 0.5rem;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         {# MODIFIED: Google Services Card #}
         <div class="management-card google-services-card">
             <div>
@@ -162,4 +524,232 @@
          <a href="{{ url_for('dashboard') }}" class="button button-secondary">Back to Dashboard</a>
     </div>
 </div>
+
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const stripeKey = '{{ config.get("STRIPE_PUBLISHABLE_KEY", "") }}';
+        let stripe = null;
+        if (stripeKey) {
+            stripe = Stripe(stripeKey);
+        }
+
+        let elements;
+        const manageSubBtn = document.getElementById('open-subscribe-modal');
+        const checkoutContainer = document.getElementById('stripe-checkout-container');
+        const proceedBtn = document.getElementById('start-stripe-checkout');
+        const paymentElementContainer = document.getElementById('payment-element-container');
+        const submitBtn = document.getElementById('payment-btn');
+
+        if (manageSubBtn) {
+            manageSubBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                checkoutContainer.style.display = checkoutContainer.style.display === 'none' ? 'block' : 'none';
+            });
+        }
+
+        let currentClientSecret = null;
+
+        if (proceedBtn) {
+            proceedBtn.addEventListener('click', async function() {
+                if (!stripe) {
+                    alert("Stripe is not configured.");
+                    return;
+                }
+                const selectedPrice = document.querySelector('input[name="plan_type"]:checked').value;
+                proceedBtn.disabled = true;
+                proceedBtn.textContent = "Loading...";
+
+                try {
+                    const response = await fetch("{{ url_for('api_create_subscription') }}", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": "{{ csrf_token() }}"
+                        },
+                        body: JSON.stringify({ priceId: selectedPrice })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.error) {
+                        alert(data.error);
+                        proceedBtn.disabled = false;
+                        proceedBtn.textContent = "Proceed to Checkout";
+                        return;
+                    }
+
+                    currentClientSecret = data.clientSecret;
+
+                    const appearance = { theme: 'stripe' };
+                    elements = stripe.elements({ appearance, clientSecret: currentClientSecret });
+
+                    const paymentElement = elements.create("payment");
+                    paymentElement.mount("#payment-element");
+
+                    proceedBtn.style.display = 'none';
+                    paymentElementContainer.style.display = 'block';
+
+                } catch (e) {
+                    console.error(e);
+                    alert("An error occurred loading the payment form.");
+                    proceedBtn.disabled = false;
+                    proceedBtn.textContent = "Proceed to Checkout";
+                }
+            });
+        }
+
+        if (submitBtn) {
+            submitBtn.addEventListener("click", async function(e) {
+                e.preventDefault();
+                if (!stripe) return;
+
+                submitBtn.disabled = true;
+                submitBtn.textContent = "Processing...";
+
+                let stripeError = null;
+
+                if (currentClientSecret && currentClientSecret.startsWith('seti_')) {
+                    const { error } = await stripe.confirmSetup({
+                        elements,
+                        confirmParams: {
+                            return_url: window.location.origin + "{{ url_for('management.management') }}"
+                        }
+                    });
+                    stripeError = error;
+                } else {
+                    const { error } = await stripe.confirmPayment({
+                        elements,
+                        confirmParams: {
+                            return_url: window.location.origin + "{{ url_for('management.management') }}"
+                        }
+                    });
+                    stripeError = error;
+                }
+
+                if (stripeError) {
+                    const messageContainer = document.querySelector("#payment-message");
+                    messageContainer.classList.remove("hidden");
+                    messageContainer.textContent = stripeError.message;
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "Pay now";
+                }
+            });
+        }
+    });
+</script>
+
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const stripeKey = '{{ config.get("STRIPE_PUBLISHABLE_KEY", "") }}';
+        let stripe = null;
+        if (stripeKey) {
+            stripe = Stripe(stripeKey);
+        }
+
+        let elements;
+        const manageSubBtn = document.getElementById('open-subscribe-modal');
+        const checkoutContainer = document.getElementById('stripe-checkout-container');
+        const proceedBtn = document.getElementById('start-stripe-checkout');
+        const paymentElementContainer = document.getElementById('payment-element-container');
+        const submitBtn = document.getElementById('payment-btn');
+
+        if (manageSubBtn) {
+            manageSubBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                checkoutContainer.style.display = checkoutContainer.style.display === 'none' ? 'block' : 'none';
+            });
+        }
+
+        let currentClientSecret = null;
+
+        if (proceedBtn) {
+            proceedBtn.addEventListener('click', async function() {
+                if (!stripe) {
+                    alert("Stripe is not configured.");
+                    return;
+                }
+                const selectedPrice = document.querySelector('input[name="plan_type"]:checked').value;
+                proceedBtn.disabled = true;
+                proceedBtn.textContent = "Loading...";
+
+                try {
+                    const response = await fetch("{{ url_for('api_create_subscription') }}", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": "{{ csrf_token() }}"
+                        },
+                        body: JSON.stringify({ priceId: selectedPrice })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.error) {
+                        alert(data.error);
+                        proceedBtn.disabled = false;
+                        proceedBtn.textContent = "Proceed to Checkout";
+                        return;
+                    }
+
+                    currentClientSecret = data.clientSecret;
+
+                    const appearance = { theme: 'stripe' };
+                    elements = stripe.elements({ appearance, clientSecret: currentClientSecret });
+
+                    const paymentElement = elements.create("payment");
+                    paymentElement.mount("#payment-element");
+
+                    proceedBtn.style.display = 'none';
+                    paymentElementContainer.style.display = 'block';
+
+                } catch (e) {
+                    console.error(e);
+                    alert("An error occurred loading the payment form.");
+                    proceedBtn.disabled = false;
+                    proceedBtn.textContent = "Proceed to Checkout";
+                }
+            });
+        }
+
+        if (submitBtn) {
+            submitBtn.addEventListener("click", async function(e) {
+                e.preventDefault();
+                if (!stripe) return;
+
+                submitBtn.disabled = true;
+                submitBtn.textContent = "Processing...";
+
+                let stripeError = null;
+
+                if (currentClientSecret && currentClientSecret.startsWith('seti_')) {
+                    const { error } = await stripe.confirmSetup({
+                        elements,
+                        confirmParams: {
+                            return_url: window.location.origin + "{{ url_for('management.management') }}"
+                        }
+                    });
+                    stripeError = error;
+                } else {
+                    const { error } = await stripe.confirmPayment({
+                        elements,
+                        confirmParams: {
+                            return_url: window.location.origin + "{{ url_for('management.management') }}"
+                        }
+                    });
+                    stripeError = error;
+                }
+
+                if (stripeError) {
+                    const messageContainer = document.querySelector("#payment-message");
+                    messageContainer.classList.remove("hidden");
+                    messageContainer.textContent = stripeError.message;
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "Pay now";
+                }
+            });
+        }
+    });
+</script>
 {% endblock %}
