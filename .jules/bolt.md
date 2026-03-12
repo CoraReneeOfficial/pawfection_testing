@@ -17,3 +17,6 @@
 ## 2025-03-11 - In-Memory Aggregation of Fetched Data
 **Learning:** In the `superadmin_dashboard` endpoint, the code was fetching all stores with `Store.query.all()`, and then executing multiple `.count()` queries on the same table (e.g., `Store.query.filter_by(subscription_status='active').count()`). This causes redundant database queries (N+1 style aggregations) for data that is already fully loaded in memory.
 **Action:** When a full table or significant dataset is already loaded into a Python list (e.g., for rendering in a UI), avoid executing additional SQL aggregation queries (`.count()`, `.sum()`) on that same dataset. Instead, use Python list comprehensions or generator expressions (e.g., `sum(1 for x in items if condition)`) to calculate the aggregations in-memory.
+## 2026-03-12 - Combine related aggregate queries
+**Learning:** Performing multiple independent `.count()` queries on the same table (e.g., `Store.query.count()` and `Store.query.filter_by(...).count()`) requires a full network round-trip per query, leading to N+1 style aggregation overhead.
+**Action:** When calculating multiple aggregate metrics on the same table, merge them into a single query using SQLAlchemy's `db.session.query()` combined with `func.count()` and `func.sum(case(...))` to retrieve all metrics in one efficient round-trip.

@@ -935,12 +935,21 @@ def create_app():
         # Get active users in the last 24 hours
         from models import User, Store, ActivityLog
         from datetime import datetime, timedelta
+        from sqlalchemy import func, case
         
         yesterday = datetime.now() - timedelta(days=1)
         
         # System statistics
-        total_stores = Store.query.count()
-        active_stores = Store.query.filter_by(subscription_status='active').count()
+        # Bolt Optimization: Combine total_stores and active_stores into a single query using func.count and func.sum
+        # This reduces database queries by eliminating an unnecessary second round-trip for the Store table.
+        store_stats = db.session.query(
+            func.count(Store.id),
+            func.sum(case((Store.subscription_status == 'active', 1), else_=0))
+        ).first()
+
+        total_stores = store_stats[0] or 0
+        active_stores = store_stats[1] or 0
+
         total_users = User.query.count()
         recent_activity = ActivityLog.query.filter(ActivityLog.timestamp >= yesterday).count()
         
