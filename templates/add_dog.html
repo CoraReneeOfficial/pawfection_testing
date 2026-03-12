@@ -9,7 +9,7 @@
         <p class="form-description">Enter the details for the new dog belonging to <strong>{{ owner.name }}</strong>.</p>
 
         {# *** IMPORTANT: Add enctype="multipart/form-data" to the form tag for file uploads *** #}
-        <form method="POST" action="{{ url_for('dogs.add_dog', owner_id=owner.id) }}" enctype="multipart/form-data" novalidate>
+        <form method="POST" action="{{ url_for('dogs.add_dog', owner_id=owner.id) }}" enctype="multipart/form-data" novalidate x-data="{ submitting: false }" @submit="submitting = true">
             <div class="form-group">
                 <label for="dog_name">Dog Name *</label>
                 {# Use get() on the 'dog' dict passed back on error #}
@@ -67,7 +67,10 @@
             <div class="form-button-wrapper" style="display: flex; gap: 1rem; justify-content: flex-end;">
                  {# Cancel button goes back to the main directory page #}
                  <a href="{{ url_for('owners.view_owner', owner_id=owner.id) }}" class="button button-secondary">Cancel</a>
-                <button type="submit" class="button button-primary">Add Dog</button>
+                <button type="submit" class="button button-primary" :disabled="submitting" :class="{ 'opacity-50 cursor-not-allowed': submitting }">
+                    <span x-show="!submitting">Add Dog</span>
+                    <span x-show="submitting" style="display: none;">Adding...</span>
+                </button>
             </div>
         </form>
     </div>

@@ -91,7 +91,7 @@
         <h2 class="form-title">Edit Profile for {{ dog.name }}</h2>
         <p class="form-description">Update the details for {{ dog.name }}. Owner: <a href="{{ url_for('owners.view_owner', owner_id=dog.owner_id) }}">{{ dog.owner.name }}</a></p>
 
-        <form method="POST" action="{{ url_for('dogs.edit_dog', dog_id=dog.id) }}" enctype="multipart/form-data" novalidate>
+        <form method="POST" action="{{ url_for('dogs.edit_dog', dog_id=dog.id) }}" enctype="multipart/form-data" novalidate x-data="{ submitting: false }" @submit="submitting = true">
             <div class="form-group">
                 <label for="dog_name">Dog Name *</label>
                 <input type="text" id="dog_name" name="dog_name" required class="form-input" value="{{ dog.name or '' }}" autofocus>
@@ -169,7 +169,10 @@
 
             <div class="form-button-wrapper">
                  <a href="{{ url_for('dogs.view_dog', dog_id=dog.id) }}" class="button button-secondary">Cancel</a>
-                <button type="submit" class="button button-primary">Save Changes</button>
+                <button type="submit" class="button button-primary" :disabled="submitting" :class="{ 'opacity-50 cursor-not-allowed': submitting }">
+                    <span x-show="!submitting">Save Changes</span>
+                    <span x-show="submitting" style="display: none;">Saving...</span>
+                </button>
             </div>
         </form>
     </div>
