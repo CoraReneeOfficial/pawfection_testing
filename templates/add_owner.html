@@ -8,7 +8,7 @@
         <h2 class="form-title">Add New Owner</h2>
         <p class="form-description">Enter the details for the new client.</p>
 
-        <form method="POST" action="{{ url_for('owners.add_owner') }}" novalidate>
+        <form method="POST" action="{{ url_for('owners.add_owner') }}" novalidate x-data="{ submitting: false }" @submit="submitting = true">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
                 <label for="name">Owner Name *</label>
@@ -54,7 +54,10 @@
 
             <div class="form-button-wrapper" style="display: flex; gap: 1rem; justify-content: flex-end;">
                  <a href="{{ url_for('owners.directory') }}" class="button button-secondary">Cancel</a>
-                <button type="submit" class="button button-primary">Add Owner</button>
+                <button type="submit" class="button button-primary" :disabled="submitting" :class="{ 'opacity-50 cursor-not-allowed': submitting }">
+                    <span x-show="!submitting">Add Owner</span>
+                    <span x-show="submitting" style="display: none;">Adding...</span>
+                </button>
             </div>
         </form>
     </div>

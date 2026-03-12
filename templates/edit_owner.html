@@ -11,7 +11,7 @@
 
         {# Form submits data back to the '/owner/<owner_id>/edit' route using POST #}
         {# The owner.id is passed from the Flask route to ensure we're editing the correct owner #}
-        <form method="POST" action="{{ url_for('owners.edit_owner', owner_id=owner.id) }}" novalidate>
+        <form method="POST" action="{{ url_for('owners.edit_owner', owner_id=owner.id) }}" novalidate x-data="{ submitting: false }" @submit="submitting = true">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
                 <label for="name">Owner Name *</label>
@@ -62,7 +62,10 @@
             <div class="form-button-wrapper" style="display: flex; gap: 1rem; justify-content: flex-end;">
                  {# Cancel button goes back to the main directory page #}
                  <a href="{{ url_for('owners.directory') }}" class="button" style="background-color: var(--secondary-color); color: white;">Cancel</a>
-                <button type="submit" class="button button-primary">Save Changes</button>
+                <button type="submit" class="button button-primary" :disabled="submitting" :class="{ 'opacity-50 cursor-not-allowed': submitting }">
+                    <span x-show="!submitting">Save Changes</span>
+                    <span x-show="submitting" style="display: none;">Saving...</span>
+                </button>
             </div>
         </form>
     </div>
