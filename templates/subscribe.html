@@ -190,6 +190,47 @@
         <button id="checkout-button" class="button button-primary subscribe-btn">Subscribe Now</button>
         <div id="error-message" style="color: var(--danger-color); margin-top: 1rem; font-weight: 500;"></div>
     </div>
+
+    <!-- Data Export & Account Deletion Options -->
+    <div style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border-color); text-align: left;">
+        <h3 style="color: var(--danger-color); margin-bottom: 1rem;">Leaving Us?</h3>
+        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+            We're sad to see you go! If you've decided not to subscribe, you can export your data to take with you, or completely delete your account.
+        </p>
+
+        <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+            <!-- Export Options -->
+            <div style="flex: 1; min-width: 300px; background: var(--bg-color); padding: 1.5rem; border-radius: var(--border-radius); border: 1px solid var(--border-color);">
+                <h4 style="margin-top: 0; margin-bottom: 1rem;">Export Your Data</h4>
+                <p style="font-size: 0.9em; color: var(--text-muted); margin-bottom: 1rem;">Download your information to migrate to another platform.</p>
+
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <a href="{{ url_for('export_data', format='full_json') }}" class="button button-secondary" style="text-align: center; font-size: 0.9em;">📥 Full Migration Export (JSON)</a>
+                    <a href="{{ url_for('export_data', format='owners_csv') }}" class="button button-secondary" style="text-align: center; font-size: 0.9em;">📥 Export Owners (CSV)</a>
+                    <a href="{{ url_for('export_data', format='dogs_csv') }}" class="button button-secondary" style="text-align: center; font-size: 0.9em;">📥 Export Dogs (CSV)</a>
+                    <a href="{{ url_for('export_data', format='appointments_csv') }}" class="button button-secondary" style="text-align: center; font-size: 0.9em;">📥 Export Appointments (CSV)</a>
+                    <a href="{{ url_for('export_data', format='receipts_csv') }}" class="button button-secondary" style="text-align: center; font-size: 0.9em;">📥 Export Receipts (CSV)</a>
+                </div>
+            </div>
+
+            <!-- Account Deletion -->
+            <div style="flex: 1; min-width: 300px; background: #fff1f2; padding: 1.5rem; border-radius: var(--border-radius); border: 1px solid #fecdd3;">
+                <h4 style="margin-top: 0; margin-bottom: 1rem; color: #be123c;">Delete Account</h4>
+                <p style="font-size: 0.9em; color: #9f1239; margin-bottom: 1rem;">
+                    <strong>Warning:</strong> This action is permanent and cannot be undone. All your store data, user accounts, clients, and appointments will be permanently deleted.
+                </p>
+
+                <form action="{{ url_for('delete_account_permanently') }}" method="POST" onsubmit="return confirm('Are you absolutely sure you want to permanently delete your account and all associated data? This cannot be undone.');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="button" style="background-color: #e11d48; color: white; width: 100%;">🚨 Leave the app PERMANENTLY</button>
+                </form>
+
+                <div style="margin-top: 1rem; text-align: center;">
+                    <a href="{{ url_for('auth.logout') }}" style="color: var(--text-muted); text-decoration: underline; font-size: 0.9em;">Or simply Log Out for now</a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
