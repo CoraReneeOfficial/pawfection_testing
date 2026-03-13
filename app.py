@@ -3358,7 +3358,143 @@ def create_app():
         return render_template('subscribe.html',
                               stripe_publishable_key=app.config['STRIPE_PUBLISHABLE_KEY'])
 
+
+    # --- Data Export & Account Deletion (from Subscribe/Lockout Screen) ---
+    @app.route('/export-data/<format>')
+    @login_required
+    def export_data(format):
+        # We allow this route even if they aren't subscribed, so they can get their data out
+        from flask_login import current_user
+        from models import Store, Dog, Owner, Appointment, Receipt
+        import csv
+        import json
+        from io import StringIO, BytesIO
+        from flask import make_response
+
+        store_id = current_user.store_id
+        if not store_id:
+            flash("No store associated with your account.", "danger")
+            return redirect(url_for('subscribe'))
+
+        store = Store.query.get(store_id)
+        if not store:
+            flash("Store not found.", "danger")
+            return redirect(url_for('subscribe'))
+
+        def _generate_csv_response(headers, rows, filename):
+            si = StringIO()
+            cw = csv.writer(si)
+            cw.writerow(headers)
+            cw.writerows(rows)
+            output = make_response(si.getvalue())
+            output.headers["Content-Disposition"] = f"attachment; filename={filename}"
+            output.headers["Content-type"] = "text/csv"
+            return output
+
+        if format == 'owners_csv':
+            owners = Owner.query.filter_by(store_id=store_id).all()
+            headers = ['id', 'first_name', 'last_name', 'phone', 'email', 'address']
+            rows = [[o.id, o.first_name, o.last_name, o.phone, o.email, o.address] for o in owners]
+            return _generate_csv_response(headers, rows, 'owners_export.csv')
+
+        elif format == 'dogs_csv':
+            dogs = Dog.query.filter_by(store_id=store_id).all()
+            headers = ['id', 'name', 'breed', 'weight', 'color', 'birthdate', 'vet_info', 'medical_notes', 'behavioral_notes', 'grooming_notes', 'owner_id']
+            rows = [[d.id, d.name, d.breed, d.weight, d.color, d.birthdate, d.vet_info, d.medical_notes, d.behavioral_notes, d.grooming_notes, d.owner_id] for d in dogs]
+            return _generate_csv_response(headers, rows, 'dogs_export.csv')
+
+        elif format == 'appointments_csv':
+            appointments = Appointment.query.filter_by(store_id=store_id).all()
+            headers = ['id', 'dog_id', 'start_time', 'end_time', 'status', 'total_price', 'notes', 'groomer_id']
+            rows = [[a.id, a.dog_id, a.start_time.isoformat() if a.start_time else '', a.end_time.isoformat() if a.end_time else '', a.status, a.total_price, a.notes, a.groomer_id] for a in appointments]
+            return _generate_csv_response(headers, rows, 'appointments_export.csv')
+
+        elif format == 'receipts_csv':
+            receipts = Receipt.query.filter_by(store_id=store_id).all()
+            headers = ['id', 'appointment_id', 'receipt_text', 'amount', 'created_at']
+            rows = [[r.id, r.appointment_id, r.receipt_text, float(r.amount) if r.amount else 0, r.created_at.isoformat() if r.created_at else ''] for r in receipts]
+            return _generate_csv_response(headers, rows, 'receipts_export.csv')
+
+        elif format == 'full_json':
+            owners = Owner.query.filter_by(store_id=store_id).all()
+            dogs = Dog.query.filter_by(store_id=store_id).all()
+            appointments = Appointment.query.filter_by(store_id=store_id).all()
+
+            data = {
+                'store': {
+                    'name': store.name,
+                    'email': store.email,
+                    'timezone': store.timezone
+                },
+                'owners': [{'id': o.id, 'first_name': o.first_name, 'last_name': o.last_name, 'phone': o.phone, 'email': o.email, 'address': o.address} for o in owners],
+                'dogs': [{'id': d.id, 'name': d.name, 'breed': d.breed, 'weight': float(d.weight) if d.weight else None, 'color': d.color, 'birthdate': d.birthdate.isoformat() if d.birthdate else None, 'vet_info': d.vet_info, 'medical_notes': d.medical_notes, 'behavioral_notes': d.behavioral_notes, 'grooming_notes': d.grooming_notes, 'owner_id': d.owner_id} for d in dogs],
+                'appointments': [{'id': a.id, 'dog_id': a.dog_id, 'start_time': a.start_time.isoformat() if a.start_time else None, 'end_time': a.end_time.isoformat() if a.end_time else None, 'status': a.status, 'total_price': float(a.total_price) if a.total_price else None, 'notes': a.notes, 'groomer_id': a.groomer_id} for a in appointments],
+                'receipts': [{'id': r.id, 'appointment_id': r.appointment_id, 'receipt_text': r.receipt_text, 'amount': float(r.amount) if r.amount else 0, 'created_at': r.created_at.isoformat() if r.created_at else None} for r in Receipt.query.filter_by(store_id=store_id).all()]
+            }
+
+            output = make_response(json.dumps(data, indent=2))
+            output.headers["Content-Disposition"] = "attachment; filename=full_migration_export.json"
+            output.headers["Content-type"] = "application/json"
+            return output
+
+        else:
+            flash("Invalid export format requested.", "danger")
+            return redirect(url_for('subscribe'))
+
+    @app.route('/delete-account-permanently', methods=['POST'])
+    @login_required
+    def delete_account_permanently():
+        csrf.protect()
+        from flask_login import current_user, logout_user
+        from models import Store, User, Dog, Owner, Appointment, Receipt, ActivityLog, FormTemplate
+
+        store_id = current_user.store_id
+        if not store_id:
+            flash("No store associated with your account.", "danger")
+            return redirect(url_for('subscribe'))
+
+        # Optional: verify if user is admin. Usually, only the store owner should be able to do this.
+        if not getattr(current_user, 'is_admin', False):
+            flash("Only store administrators can delete the account.", "danger")
+            return redirect(url_for('subscribe'))
+
+        try:
+            # We delete the store, which should cascade delete everything else if models are set up that way.
+            # However, depending on SQLAlchemy relationships, we might need to manually delete associated records.
+            # To be safe and thorough, we explicitly delete associated records for the store.
+
+            # 1. Activity Logs
+            ActivityLog.query.filter_by(store_id=store_id).delete()
+            # 2. Form Templates
+            FormTemplate.query.filter_by(store_id=store_id).delete()
+            # 3. Appointments and Receipts
+            # (Appointments cascade to Receipts if configured, but let's be explicit if not)
+            appointments = Appointment.query.filter_by(store_id=store_id).all()
+            for appt in appointments:
+                Receipt.query.filter_by(appointment_id=appt.id).delete()
+            Appointment.query.filter_by(store_id=store_id).delete()
+            # 4. Dogs and Owners
+            Dog.query.filter_by(store_id=store_id).delete()
+            Owner.query.filter_by(store_id=store_id).delete()
+            # 5. Users
+            User.query.filter_by(store_id=store_id).delete()
+            # 6. Store itself
+            Store.query.filter_by(id=store_id).delete()
+
+            db.session.commit()
+
+            logout_user()
+            flash("Your account and all associated data have been permanently deleted.", "success")
+            return redirect(url_for('auth.login'))
+
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error deleting account permanently: {str(e)}")
+            flash(f"An error occurred while deleting your account: {str(e)}", "danger")
+            return redirect(url_for('subscribe'))
+
     # --- Create Stripe Checkout Session ---
+
     @app.route('/create-checkout-session', methods=['POST'])
     @login_required
     def create_checkout_session():
