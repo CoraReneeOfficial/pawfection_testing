@@ -1139,7 +1139,7 @@ def manage_services():
     fees = [item for item in all_items if item.item_type == 'fee']
     store = Store.query.get(store_id)
     tax_enabled = getattr(store, 'tax_enabled', True)
-    return render_template('manage_services.html', services=services, fees=fees, tax_enabled=tax_enabled)
+    return render_template('manage_services.html', services=services, fees=fees, tax_enabled=tax_enabled, store=store)
 
 @management_bp.route('/manage/toggle_taxes', methods=['POST'])
 @admin_required
@@ -1154,6 +1154,89 @@ def toggle_taxes():
     store.tax_enabled = tax_enabled
     db.session.commit()
     flash(f'Taxes have been {"enabled" if tax_enabled else "disabled"} for all invoices and receipts.', 'success')
+    return redirect(url_for('management.manage_services'))
+
+@management_bp.route('/manage/stripe/connect', methods=['POST'])
+@admin_required
+def stripe_connect():
+    csrf.protect()
+    store_id = session.get('store_id')
+    store = Store.query.get(store_id)
+    if not store:
+        flash('Store not found.', 'danger')
+        return redirect(url_for('management.manage_services'))
+
+    try:
+        import stripe
+        # Ensure Stripe API key is set
+        stripe.api_key = current_app.config.get('STRIPE_SECRET_KEY')
+
+        if not store.stripe_account_id:
+            # Create a new Express or Standard account
+            account = stripe.Account.create(type="standard")
+            store.stripe_account_id = account.id
+            db.session.commit()
+
+        # Create an account link
+        refresh_url = url_for('management.stripe_connect_refresh', _external=True)
+        return_url = url_for('management.stripe_connect_return', _external=True)
+
+        account_link = stripe.AccountLink.create(
+            account=store.stripe_account_id,
+            refresh_url=refresh_url,
+            return_url=return_url,
+            type="account_onboarding",
+        )
+        return redirect(account_link.url)
+    except Exception as e:
+        current_app.logger.error(f"Stripe Connect error: {e}", exc_info=True)
+        flash(f'Failed to connect with Stripe: {str(e)}', 'danger')
+        return redirect(url_for('management.manage_services'))
+
+@management_bp.route('/manage/stripe/refresh')
+@admin_required
+def stripe_connect_refresh():
+    flash('Stripe connection session expired. Please try again.', 'warning')
+    return redirect(url_for('management.manage_services'))
+
+@management_bp.route('/manage/stripe/return')
+@admin_required
+def stripe_connect_return():
+    flash('Returned from Stripe. If you completed onboarding, your account is now connected.', 'success')
+    return redirect(url_for('management.manage_services'))
+
+@management_bp.route('/manage/update_stripe_account', methods=['POST'])
+@admin_required
+def update_stripe_account():
+    csrf.protect()
+    store_id = session.get('store_id')
+    store = Store.query.get(store_id)
+    if not store:
+        flash('Store not found.', 'danger')
+        return redirect(url_for('management.manage_services'))
+
+    stripe_account_id = request.form.get('stripe_account_id', '').strip()
+
+    # Simple validation for Stripe Connect Account IDs
+    if stripe_account_id and not stripe_account_id.startswith('acct_'):
+        flash('Invalid Stripe Account ID format. It should start with "acct_".', 'danger')
+        return redirect(url_for('management.manage_services'))
+
+    store.stripe_account_id = stripe_account_id if stripe_account_id else None
+
+    try:
+        db.session.commit()
+        if stripe_account_id:
+            flash('Stripe account connected successfully.', 'success')
+            log_activity("Connected Stripe Account", details=f"Store ID: {store_id}, Account ID: {stripe_account_id}")
+        else:
+            flash('Stripe account disconnected.', 'success')
+            log_activity("Disconnected Stripe Account", details=f"Store ID: {store_id}")
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating Stripe account: {e}", exc_info=True)
+        flash('Failed to update Stripe account settings.', 'danger')
+
     return redirect(url_for('management.manage_services'))
 
 @management_bp.route('/manage/services/add', methods=['GET', 'POST'])

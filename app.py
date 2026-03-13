@@ -2381,7 +2381,7 @@ def create_app():
                 {'id': 'manage_customers', 'name': 'Manage Customers', 'description': 'Manage customer data'},
                 {'id': 'manage_groomers', 'name': 'Manage Groomers', 'description': 'Manage groomer settings'},
                 {'id': 'view_reports', 'name': 'View Reports', 'description': 'Access to store reports'},
-                {'id': 'manage_services', 'name': 'Manage Services', 'description': 'Manage grooming services'},
+                {'id': 'manage_services', 'name': 'Checkout and Services Settings', 'description': 'Manage grooming services and checkout settings'},
                 {'id': 'manage_billing', 'name': 'Manage Billing', 'description': 'Access to billing and invoices'},
                 {'id': 'view_store_analytics', 'name': 'View Store Analytics', 'description': 'Access to store-specific analytics'},
                 {'id': 'view_appointments', 'name': 'View Appointments', 'description': 'Read-only access to appointments'},

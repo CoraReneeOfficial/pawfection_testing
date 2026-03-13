@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Manage Services & Fees{% endblock %}
+{% block title %}Checkout and Services Settings{% endblock %}
 
 {% block head %}
 <style>
@@ -46,25 +46,96 @@
         font-size: 1.4rem;
     }
 
+    /* Tooltip styles */
+    .tooltip:hover .tooltiptext {
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="content-card">
     <div class="content-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-        <h1>Manage Services & Fees</h1>
+        <h1>Checkout and Services Settings</h1>
         {# Button still goes to the same 'add_service' route, which handles both types #}
         <a href="{{ url_for('management.add_service') }}" class="button button-primary">Add New Item</a>
     </div>
 
-    <p>Here you can add, edit, and delete grooming services and additional fees.</p>
-    <form method="POST" action="{{ url_for('management.toggle_taxes') }}" style="margin-bottom:1.5rem;">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-      <label for="tax-enabled-toggle" style="font-weight:600;font-size:1.08em;">Taxes:
-        <input type="checkbox" id="tax-enabled-toggle" name="tax_enabled" value="1" onchange="this.form.submit()" {% if tax_enabled %}checked{% endif %} style="margin-left:0.5em;">
-        <span style="font-size:0.98em;font-weight:400;">Enable taxes for all invoices and receipts</span>
-      </label>
-    </form>
+    <p>Here you can add, edit, and delete grooming services and additional fees, as well as configure checkout settings.</p>
+
+    <div class="section-header">
+        <h2>Checkout Settings</h2>
+    </div>
+    <div style="background-color: #fafafa; border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 1.5rem; margin-bottom: 2rem;">
+        <form method="POST" action="{{ url_for('management.toggle_taxes') }}" style="margin-bottom:1.5rem;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <label for="tax-enabled-toggle" style="font-weight:600;font-size:1.08em;">Taxes:
+            <input type="checkbox" id="tax-enabled-toggle" name="tax_enabled" value="1" onchange="this.form.submit()" {% if tax_enabled %}checked{% endif %} style="margin-left:0.5em;">
+            <span style="font-size:0.98em;font-weight:400;">Enable taxes for all invoices and receipts</span>
+          </label>
+        </form>
+
+        <div style="border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+            <h3 style="margin-top: 0; display: flex; align-items: center; gap: 0.5rem;">
+                Stripe Integration
+            </h3>
+            <p style="color: var(--text-muted); font-size: 0.9em; margin-bottom: 1rem;">
+                Connect your Stripe account to accept credit card payments during checkout.
+            </p>
+
+            <div style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 600px;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <span style="font-weight: 600;">Status:</span>
+                        {% if store.stripe_account_id %}
+                            <span style="color: var(--success-color); font-weight: 600; margin-left: 0.5rem;">
+                                <i class="fas fa-check-circle"></i> Connected
+                            </span>
+                        {% else %}
+                            <span style="color: var(--warning-color); font-weight: 600; margin-left: 0.5rem;">
+                                <i class="fas fa-exclamation-circle"></i> Not Connected
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <form method="POST" action="{{ url_for('management.stripe_connect') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button type="submit" class="button" style="background-color: #635bff; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; font-weight: 600; cursor: pointer;">
+                            <i class="fab fa-stripe" style="margin-right: 0.5rem; font-size: 1.2em;"></i>
+                            {% if store.stripe_account_id %}Reconnect / Manage Account{% else %}Connect with Stripe{% endif %}
+                        </button>
+                    </form>
+                </div>
+
+                <div style="border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                    <form method="POST" action="{{ url_for('management.update_stripe_account') }}" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="stripe_account_id" style="display: flex; align-items: center; gap: 0.5rem;">
+                                Manual Stripe Account ID
+                                <div class="tooltip" style="position: relative; display: inline-block;">
+                                    <i class="fas fa-info-circle text-muted" style="cursor: help;"></i>
+                                    <span class="tooltiptext" style="visibility: hidden; width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 6px; padding: 5px 10px; position: absolute; z-index: 1; bottom: 125%; left: 50%; margin-left: -125px; opacity: 0; transition: opacity 0.3s; font-weight: normal; font-size: 0.8em; line-height: 1.4;">
+                                        If automatic connection fails, you can find your Account ID in your Stripe Dashboard under Connect > Accounts. It starts with 'acct_'.
+                                    </span>
+                                </div>
+                            </label>
+                            <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                                <input type="text" id="stripe_account_id" name="stripe_account_id" class="form-input"
+                                       value="{{ store.stripe_account_id or '' }}"
+                                       placeholder="e.g., acct_123456789"
+                                       style="flex-grow: 1;">
+                                <button type="submit" class="button button-primary">Save Manual ID</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
     {# --- Services Section --- #}
     <div class="section-header">
