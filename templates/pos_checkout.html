@@ -389,7 +389,7 @@
                                 <div class="pos-cart-item-type" x-text="item.type"></div>
                             </div>
                             <div class="pos-cart-item-price" x-text="'$' + (parseFloat(item.price)).toFixed(2)"></div>
-                            <button type="button" class="pos-cart-item-remove" @click="removeFromCart(index)" title="Remove">
+                            <button type="button" class="pos-cart-item-remove" @click="removeFromCart(index)" title="Remove" aria-label="Remove item">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
                         </li>
