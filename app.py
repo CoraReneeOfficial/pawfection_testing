@@ -3661,6 +3661,40 @@ def create_app():
         flash('Your subscription was successful!', 'success')
         return redirect(url_for('dashboard'))
 
+    # --- Stripe Debug Endpoint (for diagnosing Stripe config) ---
+    @app.route('/debug/stripe-config')
+    @login_required
+    def debug_stripe_config():
+        """Debug endpoint to validate Stripe configuration. Remove in production."""
+        pub_key = app.config.get('STRIPE_PUBLISHABLE_KEY', '')
+        sec_key = app.config.get('STRIPE_SECRET_KEY', '')
+        price_id = app.config.get('STRIPE_PRICE_ID', '')
+        lifetime_price_id = app.config.get('STRIPE_LIFETIME_PRICE_ID', '')
+
+        result = {
+            'STRIPE_PUBLISHABLE_KEY_SET': bool(pub_key),
+            'STRIPE_PUBLISHABLE_KEY_PREFIX': pub_key[:15] if pub_key else None,
+            'STRIPE_SECRET_KEY_SET': bool(sec_key),
+            'STRIPE_SECRET_KEY_PREFIX': sec_key[:12] if sec_key else None,
+            'STRIPE_PRICE_ID': price_id or 'NOT SET',
+            'STRIPE_LIFETIME_PRICE_ID': lifetime_price_id or 'NOT SET',
+            'stripe_module_api_key_set': bool(stripe.api_key),
+            'stripe_module_api_key_prefix': stripe.api_key[:12] if stripe.api_key else None,
+        }
+
+        # Try fetching the price from Stripe to test connectivity
+        if sec_key and price_id:
+            try:
+                price = stripe.Price.retrieve(price_id)
+                result['stripe_price_fetch'] = 'OK: ' + str(price.unit_amount) + ' ' + price.currency
+            except stripe.error.StripeError as e:
+                result['stripe_price_fetch'] = 'ERROR: ' + str(e.user_message or e)
+            except Exception as e:
+                result['stripe_price_fetch'] = 'ERROR: ' + str(e)
+        else:
+            result['stripe_price_fetch'] = 'SKIPPED (missing key or price_id)'
+
+        return jsonify(result)
 
     # --- Stripe Webhook ---
     @app.route('/feedback', methods=['GET', 'POST'])

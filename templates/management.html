@@ -149,15 +149,16 @@
                 </div>
 
                 <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
-                    {% if not store.stripe_customer_id %}
+                    {% if store.subscription_status not in ['active', 'lifetime'] %}
                         <button type="button" class="button button-primary" id="open-subscribe-modal">Subscribe</button>
-                    {% else %}
-                        <a href="{{ url_for('stripe_portal') }}" class="button button-primary" target="_blank">Manage Subscription</a>
+                    {% endif %}
+                    {% if store.stripe_customer_id %}
+                        <a href="{{ url_for('stripe_portal') }}" class="button button-secondary" target="_blank">Manage Billing</a>
                     {% endif %}
                 </div>
                 <small style="color:#888;display:block;">All subscriptions are securely managed with Stripe.</small>
 
-                {% if not store.stripe_customer_id %}
+                {% if store.subscription_status not in ['active', 'lifetime'] %}
                 <!-- Inline UI for Stripe Elements checkout -->
                 <div id="stripe-checkout-container" style="display: none; margin-top: 1rem; padding: 1rem; border: 1px solid var(--border-color); border-radius: var(--border-radius); background: #fff;">
                     <h3 style="margin-top: 0;">Select Subscription Plan</h3>
