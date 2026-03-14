@@ -272,10 +272,15 @@
                         body: JSON.stringify({ priceId: selectedPrice })
                     });
 
-                    const data = await response.json();
+                    let data;
+                    try {
+                        data = await response.json();
+                    } catch (err) {
+                        throw new Error("Server returned an invalid response (not JSON). Please check Railway logs.");
+                    }
 
-                    if (data.error) {
-                        alert(data.error);
+                    if (data.error || !response.ok) {
+                        alert("Error setting up checkout: " + (data.error || "HTTP " + response.status));
                         proceedBtn.disabled = false;
                         proceedBtn.textContent = "Proceed to Checkout";
                         return;
@@ -293,8 +298,8 @@
                     paymentElementContainer.style.display = 'block';
 
                 } catch (e) {
-                    console.error(e);
-                    alert("An error occurred loading the payment form.");
+                    console.error("Stripe Checkout Error:", e);
+                    alert("An error occurred loading the payment form: " + e.message);
                     proceedBtn.disabled = false;
                     proceedBtn.textContent = "Proceed to Checkout";
                 }

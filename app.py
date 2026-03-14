@@ -3646,6 +3646,10 @@ def create_app():
                     'type': 'subscription'
                 })
 
+        except stripe.error.StripeError as e:
+            app.logger.error(f"[API CREATE SUB] StripeError: {e.user_message or str(e)}")
+            # For debugging on Railway, we specifically want to send stringified Stripe error to UI if user_message is missing.
+            return jsonify(error=e.user_message or str(e)), 400
         except Exception as e:
             app.logger.error(f"[API CREATE SUB] Error: {e}")
             return jsonify(error=str(e)), 400

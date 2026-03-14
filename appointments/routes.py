@@ -840,6 +840,9 @@ def create_payment_intent():
             'clientSecret': intent.client_secret,
             'stripeAccountId': stripe_account_id
         })
+    except stripe.error.StripeError as e:
+        current_app.logger.error(f"Stripe Error creating PaymentIntent: {e.user_message or str(e)}", exc_info=True)
+        return jsonify({"error": e.user_message or str(e)}), 400
     except Exception as e:
         current_app.logger.error(f"Error creating PaymentIntent: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
