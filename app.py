@@ -82,6 +82,10 @@ def create_app():
     This function acts as the application factory.
     """
     app = Flask(__name__)
+    # Fix for Railway/HTTPS forwarded URLs
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+    
     # Set security headers (HSTS, CSP, etc.)
     init_secure_headers(app)
     
@@ -3619,7 +3623,8 @@ def create_app():
                     'customer': customer_id,
                     'items': [{'price': price_id}],
                     'payment_behavior': 'default_incomplete',
-                    'expand': ['latest_invoice.payment_intent'],
+                    'payment_settings': {'save_default_payment_method': 'on_subscription'},
+                    'expand': ['latest_invoice.payment_intent', 'pending_setup_intent'],
                     'metadata': {'store_id': store.id}
                 }
 
@@ -3634,8 +3639,10 @@ def create_app():
                 if subscription.latest_invoice and subscription.latest_invoice.payment_intent:
                     client_secret = subscription.latest_invoice.payment_intent.client_secret
                 elif subscription.pending_setup_intent:
-                    # Stripe may create a SetupIntent instead if it's purely a trial with no immediate charge
-                    setup_intent = stripe.SetupIntent.retrieve(subscription.pending_setup_intent)
+                    # pending_setup_intent is expanded, so it's a dict containing client_secret
+                    setup_intent = subscription.pending_setup_intent
+                    if isinstance(setup_intent, str):
+                        setup_intent = stripe.SetupIntent.retrieve(setup_intent)
                     client_secret = setup_intent.client_secret
 
                 if not client_secret:
