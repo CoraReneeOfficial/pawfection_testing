@@ -45,6 +45,13 @@
             </thead>
             <tbody>
                 {% if users %}
+                    {% set total_admins = namespace(value=0) %}
+                    {% for u in users %}
+                        {% if u.is_admin %}
+                            {% set total_admins.value = total_admins.value + 1 %}
+                        {% endif %}
+                    {% endfor %}
+
                     {% for user_account in users %}
                     <tr>
                         <td>
@@ -84,9 +91,7 @@
                             {% if user_account.id != g.user.id %}
                                 {% set is_last_admin = False %}
                                 {% if user_account.is_admin %}
-                                    {% set admin_count = namespace(value=0) %}
-                                    {% for u_check in users %}{% if u_check.is_admin %}{% set admin_count.value = admin_count.value + 1 %}{% endif %}{% endfor %}
-                                    {% if admin_count.value <= 1 %}{% set is_last_admin = True %}{% endif %}
+                                    {% if total_admins.value <= 1 %}{% set is_last_admin = True %}{% endif %}
                                 {% endif %}
 
                                 {% if not is_last_admin %}
