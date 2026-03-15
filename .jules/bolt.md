@@ -20,3 +20,7 @@
 ## 2026-03-12 - Combine related aggregate queries
 **Learning:** Performing multiple independent `.count()` queries on the same table (e.g., `Store.query.count()` and `Store.query.filter_by(...).count()`) requires a full network round-trip per query, leading to N+1 style aggregation overhead.
 **Action:** When calculating multiple aggregate metrics on the same table, merge them into a single query using SQLAlchemy's `db.session.query()` combined with `func.count()` and `func.sum(case(...))` to retrieve all metrics in one efficient round-trip.
+
+## 2025-03-15 - Jinja Template O(N^2) Iteration Optimization
+**Learning:** In the `manage_users.html` template, checking if a user was the "last admin" involved iterating over the entire `users` list to count total admins for *every single admin user row rendered*. This caused an O(N^2) rendering bottleneck in Jinja when scaling the number of users in a store.
+**Action:** Always extract aggregations and list counts outside of main rendering loops in Jinja templates (e.g., using `{% set total_admins = namespace(value=0) %}` before the main loop) to compute values once and reduce template rendering complexity from O(N^2) to O(N).
