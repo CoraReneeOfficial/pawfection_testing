@@ -77,7 +77,7 @@
                                 <div class="no-notifications">No new notifications</div>
                             {% endif %}
                             <div class="notification-footer">
-                                <a href="{{ url_for('notification_system.view_all') }}" class="see-all-link">See All</a>
+                                <a href="{{ url_for('notification_system.view_all') }}" class="see-all-link" aria-label="See all notifications">See All</a>
                             </div>
                         </div>
                     </div>
@@ -202,9 +202,9 @@
             </div>
             <div class="notification-popup-body" x-text="currentNotification ? currentNotification.content : ''"></div>
             <div class="notification-popup-actions">
-                <button @click.stop="openReminderModal(currentNotification)" class="btn-small">Remind</button>
-                <button @click.stop="markRead(currentNotification.id)" class="btn-small">Mark Read</button>
-                <button @click.stop="popupShow = false; markPopupShown(currentNotification.id)" class="btn-small">Dismiss</button>
+                <button @click.stop="openReminderModal(currentNotification)" class="btn-small" aria-label="Remind me later about this notification">Remind</button>
+                <button @click.stop="markRead(currentNotification.id)" class="btn-small" aria-label="Mark notification as read">Mark Read</button>
+                <button @click.stop="popupShow = false; markPopupShown(currentNotification.id)" class="btn-small" aria-label="Dismiss notification">Dismiss</button>
             </div>
         </div>
     </div>
